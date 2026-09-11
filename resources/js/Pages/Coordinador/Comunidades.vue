@@ -12,81 +12,92 @@
             </button>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
+        <TablaBuscable
+            :items="comunidades"
+            :campos-busqueda="[
+                'com_nombre',
+                'com_ubicacion',
+                'tipo_organizacion.tor_nombre',
+            ]"
+            :por-pagina="8"
+            placeholder="Buscar por nombre, ubicación o tipo..."
         >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Nombre</th>
-                            <th>Ubicación</th>
-                            <th>Tipo</th>
-                            <th>Estado</th>
-                            <th class="text-end pe-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-if="comunidades.length === 0">
-                            <td colspan="5" class="text-center text-muted py-4">
-                                No hay comunidades registradas
-                            </td>
-                        </tr>
-                        <tr v-for="com in comunidades" :key="com.com_id">
-                            <td class="ps-4 fw-semibold">
-                                {{ com.com_nombre }}
-                            </td>
-                            <td class="text-muted small">
-                                {{ com.com_ubicacion }}
-                            </td>
-                            <td>
-                                <span
-                                    class="badge bg-primary bg-opacity-10 text-primary"
-                                >
-                                    {{ com.tipo_organizacion?.tor_nombre }}
-                                </span>
-                            </td>
-                            <td>
-                                <span
-                                    class="badge"
-                                    :class="
-                                        com.com_status
-                                            ? 'bg-success'
-                                            : 'bg-secondary'
-                                    "
-                                >
-                                    {{ com.com_status ? "Activa" : "Inactiva" }}
-                                </span>
-                            </td>
-                            <td class="text-end pe-4">
-                                <button
-                                    class="btn btn-sm btn-outline-primary me-1"
-                                    @click="abrirModal(com)"
-                                >
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button
-                                    class="btn btn-sm btn-outline-danger"
-                                    @click="desactivar(com)"
-                                >
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <template #default="{ registros }">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Nombre</th>
+                                    <th>Ubicación</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="registros.length === 0">
+                                    <td
+                                        colspan="5"
+                                        class="text-center text-muted py-4"
+                                    >
+                                        No se encontraron comunidades
+                                    </td>
+                                </tr>
+                                <tr v-for="com in registros" :key="com.com_id">
+                                    <td class="ps-4 fw-semibold">
+                                        {{ com.com_nombre }}
+                                    </td>
+                                    <td class="text-muted small">
+                                        {{ com.com_ubicacion }}
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge bg-primary bg-opacity-10 text-primary"
+                                        >
+                                            {{
+                                                com.tipo_organizacion
+                                                    ?.tor_nombre
+                                            }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge"
+                                            :class="
+                                                com.com_status
+                                                    ? 'bg-success'
+                                                    : 'bg-secondary'
+                                            "
+                                        >
+                                            {{
+                                                com.com_status
+                                                    ? "Activa"
+                                                    : "Inactiva"
+                                            }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button
+                                            class="btn btn-sm btn-outline-primary me-1"
+                                            @click="abrirModal(com)"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click="desactivar(com)"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+        </TablaBuscable>
 
         <!-- Modal -->
         <div class="modal fade" id="modalComunidad" tabindex="-1">
@@ -217,6 +228,7 @@
 </template>
 
 <script setup>
+import TablaBuscable from "@/Components/TablaBuscable.vue";
 import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";

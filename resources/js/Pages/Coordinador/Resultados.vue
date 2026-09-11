@@ -12,18 +12,6 @@
             </button>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
-        >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">

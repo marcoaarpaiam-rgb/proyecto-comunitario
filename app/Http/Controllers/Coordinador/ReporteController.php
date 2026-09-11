@@ -11,6 +11,7 @@ use App\Models\Seccion;
 use App\Models\Trayecto;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReporteController extends Controller
 {
@@ -119,5 +120,70 @@ class ReporteController extends Controller
             'seccion' => $seccion,
             'reporte' => $reporte,
         ]);
+    }
+    public function exportarSolvenciaPdf(Request $request)
+    {
+        $request->validate(['sec_id' => 'required|exists:seccion,sec_id']);
+
+        $seccion = Seccion::with(['trayecto','turno'])->findOrFail($request->sec_id);
+        $equipos = Equipo::where('equ_id_sec', $request->sec_id)
+            ->where('equ_status', true)
+            ->with([
+                'integrantes.usuario',
+                'seguimientos.asistencias',
+                'proyectoComunidad.comunidad',
+                'resultadoProyecto.estadoProyecto',
+            ])->get();
+
+        $reporte = [];
+        foreach ($equipos as $equipo) {
+            $integrantes = [];
+            foreach ($equipo->integrantes as $integrante) {
+                $totalPuntos  = $equipo->seguimientos->count();
+                $asistencias  = 0;
+                foreach ($equipo->seguimientos as $seq) {
+                    $asistio = $seq->asistencias
+                        ->where('apc_id_usu', $integrante->ein_id_usu)->first();
+                    if ($asistio && $asistio->apc_asistio) $asistencias++;
+                }
+                $porcentaje = $totalPuntos > 0
+                    ? round($asistencias / $totalPuntos * 100) : 0;
+                $integrantes[] = [
+                    'nombre'     => $integrante->usuario?->usu_primer_nombre
+                        . ' ' . $integrante->usuario?->usu_primer_apellido,
+                    'cedula'     => $integrante->usuario?->usu_cedula,
+                    'es_lider'   => $integrante->ein_es_lider,
+                    'asistencias'=> $asistencias,
+                    'total'      => $totalPuntos,
+                    'porcentaje' => $porcentaje,
+                    'solvente'   => $porcentaje >= 75,
+                ];
+            }
+            $reporte[] = [
+                'equipo'     => $equipo->equ_codigo,
+                'titulo'     => $equipo->equ_titulo,
+                'comunidad'  => $equipo->proyectoComunidad?->comunidad?->com_nombre,
+                'resultado'  => $equipo->resultadoProyecto?->estadoProyecto?->epr_nombre,
+                'integrantes'=> $integrantes,
+            ];
+        }
+
+        $pdf = Pdf::loadView('pdf.reporte_solvencia', compact('seccion','reporte'))
+            ->setPaper('letter', 'portrait');
+
+        return $pdf->download("Solvencia_{$seccion->sec_codigo}.pdf");
+    }
+
+    public function exportarGeneralPdf()
+    {
+        $secciones = Seccion::with(['trayecto','turno','equipos.resultadoProyecto.estadoProyecto'])
+            ->where('sec_status', true)->get();
+
+        $resumen = $this->resumenGeneral();
+
+        $pdf = Pdf::loadView('pdf.reporte_general', compact('secciones','resumen'))
+            ->setPaper('letter', 'landscape');
+
+        return $pdf->download('Reporte_General_' . now()->format('Y-m-d') . '.pdf');
     }
 }

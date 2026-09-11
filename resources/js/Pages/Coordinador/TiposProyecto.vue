@@ -12,75 +12,81 @@
             </button>
         </div>
 
-        <!-- Alerta de éxito -->
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
-            role="alert"
-        >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
         <!-- Tabla -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">#</th>
-                            <th>Nombre</th>
-                            <th>Estado</th>
-                            <th class="text-end pe-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-if="tipos.length === 0">
-                            <td colspan="4" class="text-center text-muted py-4">
-                                No hay tipos de proyecto registrados
-                            </td>
-                        </tr>
-                        <tr v-for="tipo in tipos" :key="tipo.tpr_id">
-                            <td class="ps-4 text-muted">{{ tipo.tpr_id }}</td>
-                            <td class="fw-semibold">{{ tipo.tpr_nombre }}</td>
-                            <td>
-                                <span
-                                    class="badge"
-                                    :class="
-                                        tipo.tpr_status
-                                            ? 'bg-success'
-                                            : 'bg-secondary'
-                                    "
+        <TablaBuscable
+            :items="tipos"
+            :campos-busqueda="['tpr_nombre']"
+            :por-pagina="10"
+            placeholder="Buscar tipo de proyecto..."
+        >
+            <template #default="{ registros }">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">#</th>
+                                    <th>Nombre</th>
+                                    <th>Estado</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="registros.length === 0">
+                                    <td
+                                        colspan="4"
+                                        class="text-center text-muted py-4"
+                                    >
+                                        No se encontraron tipos de proyecto
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="tipo in registros"
+                                    :key="tipo.tpr_id"
                                 >
-                                    {{
-                                        tipo.tpr_status ? "Activo" : "Inactivo"
-                                    }}
-                                </span>
-                            </td>
-                            <td class="text-end pe-4">
-                                <button
-                                    class="btn btn-sm btn-outline-primary me-1"
-                                    @click="abrirModal(tipo)"
-                                >
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button
-                                    class="btn btn-sm btn-outline-danger"
-                                    @click="desactivar(tipo)"
-                                >
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
+                                    <td class="ps-4 text-muted">
+                                        {{ tipo.tpr_id }}
+                                    </td>
+                                    <td class="fw-semibold">
+                                        {{ tipo.tpr_nombre }}
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge"
+                                            :class="
+                                                tipo.tpr_status
+                                                    ? 'bg-success'
+                                                    : 'bg-secondary'
+                                            "
+                                        >
+                                            {{
+                                                tipo.tpr_status
+                                                    ? "Activo"
+                                                    : "Inactivo"
+                                            }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button
+                                            class="btn btn-sm btn-outline-primary me-1"
+                                            @click="abrirModal(tipo)"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click="desactivar(tipo)"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+        </TablaBuscable>
         <!-- Modal -->
         <div class="modal fade" id="modalTipo" tabindex="-1">
             <div class="modal-dialog">
@@ -161,6 +167,7 @@
 </template>
 
 <script setup>
+import TablaBuscable from "@/Components/TablaBuscable.vue";
 import { ref } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";

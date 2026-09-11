@@ -12,18 +12,6 @@
             </button>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
-        >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
         <!-- Info del equipo -->
         <div
             v-if="equipo"

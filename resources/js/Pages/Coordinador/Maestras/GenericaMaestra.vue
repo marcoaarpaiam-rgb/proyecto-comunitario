@@ -10,86 +10,85 @@
             </button>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
+        <TablaBuscable
+            :items="registros"
+            :campos-busqueda="[config.campo]"
+            :por-pagina="10"
+            placeholder="Buscar..."
         >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">#</th>
-                            <th>Nombre</th>
-                            <th v-if="config.extra">Trayecto</th>
-                            <th>Estado</th>
-                            <th class="text-end pe-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-if="registros.length === 0">
-                            <td
-                                :colspan="config.extra ? 5 : 4"
-                                class="text-center text-muted py-4"
-                            >
-                                No hay registros
-                            </td>
-                        </tr>
-                        <tr v-for="reg in registros" :key="reg[config.pk]">
-                            <td class="ps-4 text-muted">
-                                {{ reg[config.pk] }}
-                            </td>
-                            <td class="fw-semibold">{{ reg[config.campo] }}</td>
-                            <td v-if="config.extra">
-                                <span
-                                    class="badge bg-primary bg-opacity-10 text-primary"
-                                >
-                                    Trayecto {{ reg[config.extra] }}
-                                </span>
-                            </td>
-                            <td>
-                                <span
-                                    class="badge"
-                                    :class="
-                                        reg[config.status]
-                                            ? 'bg-success'
-                                            : 'bg-secondary'
-                                    "
-                                >
-                                    {{
-                                        reg[config.status]
-                                            ? "Activo"
-                                            : "Inactivo"
-                                    }}
-                                </span>
-                            </td>
-                            <td class="text-end pe-4">
-                                <button
-                                    class="btn btn-sm btn-outline-primary me-1"
-                                    @click="abrirModal(reg)"
-                                >
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button
-                                    class="btn btn-sm btn-outline-danger"
-                                    @click="desactivar(reg)"
-                                >
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <template #default="{ registros: items }">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">#</th>
+                                    <th>Nombre</th>
+                                    <th v-if="config.extra">Trayecto</th>
+                                    <th>Estado</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="items.length === 0">
+                                    <td
+                                        :colspan="config.extra ? 5 : 4"
+                                        class="text-center text-muted py-4"
+                                    >
+                                        No se encontraron registros
+                                    </td>
+                                </tr>
+                                <tr v-for="reg in items" :key="reg[config.pk]">
+                                    <td class="ps-4 text-muted">
+                                        {{ reg[config.pk] }}
+                                    </td>
+                                    <td class="fw-semibold">
+                                        {{ reg[config.campo] }}
+                                    </td>
+                                    <td v-if="config.extra">
+                                        <span
+                                            class="badge bg-primary bg-opacity-10 text-primary"
+                                        >
+                                            Trayecto {{ reg[config.extra] }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge"
+                                            :class="
+                                                reg[config.status]
+                                                    ? 'bg-success'
+                                                    : 'bg-secondary'
+                                            "
+                                        >
+                                            {{
+                                                reg[config.status]
+                                                    ? "Activo"
+                                                    : "Inactivo"
+                                            }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button
+                                            class="btn btn-sm btn-outline-primary me-1"
+                                            @click="abrirModal(reg)"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click="desactivar(reg)"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+        </TablaBuscable>
 
         <!-- Modal -->
         <div class="modal fade" id="modalMaestra" tabindex="-1">
@@ -183,6 +182,7 @@
 </template>
 
 <script setup>
+import TablaBuscable from "@/Components/TablaBuscable.vue";
 import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";

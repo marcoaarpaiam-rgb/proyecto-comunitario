@@ -7,18 +7,6 @@
             </p>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
-        >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
         <div class="row g-4">
             <!-- Solicitudes pendientes -->
             <div class="col-12">

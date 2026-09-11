@@ -6,6 +6,17 @@
                 Estadísticas y solvencia estudiantil
             </p>
         </div>
+        <!-- Agrega estos botones en la sección de reportes -->
+        <div class="d-flex gap-2 mt-3">
+            <a
+                href="/coordinador/reportes/exportar-general"
+                class="btn btn-outline-danger fw-semibold"
+                target="_blank"
+            >
+                <i class="bi bi-file-earmark-pdf me-2"></i>
+                Exportar Reporte General PDF
+            </a>
+        </div>
 
         <!-- Resumen General -->
         <div class="row g-3 mb-4">
@@ -124,12 +135,12 @@
                             <option value="">Seleccionar...</option>
                             <option
                                 v-for="sec in secciones"
-                                :key="sec.sec_id"
-                                :value="sec.sec_id"
+                                :key="sec?.sec_id"
+                                :value="sec?.sec_id"
                             >
-                                {{ sec.sec_codigo }} —
-                                {{ sec.trayecto?.tra_nombre }} ({{
-                                    sec.turno?.tur_nombre
+                                {{ sec?.sec_codigo }} —
+                                {{ sec?.trayecto?.tra_nombre }} ({{
+                                    sec?.turno?.tur_nombre
                                 }})
                             </option>
                         </select>
@@ -144,6 +155,14 @@
                             Reporte
                         </button>
                     </div>
+                    <a
+                        :href="`/coordinador/reportes/exportar-solvencia?sec_id=${seccionSeleccionada}`"
+                        class="btn btn-outline-danger fw-semibold"
+                        target="_blank"
+                    >
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        Exportar PDF
+                    </a>
                 </div>
             </div>
         </div>

@@ -160,69 +160,111 @@
                     </ol>
                 </nav>
 
-                <!-- Notificaciones -->
+                <!-- Panel de notificaciones -->
                 <div class="position-relative" ref="notiRef">
                     <button
                         class="btn btn-link text-dark position-relative p-1"
-                        @click="verNotificaciones = !verNotificaciones"
+                        @click="toggleNotificaciones"
                         title="Notificaciones"
                     >
                         <i class="bi bi-bell fs-5"></i>
                         <span
-                            v-if="notificaciones > 0"
+                            v-if="sinLeer > 0"
                             class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                             style="font-size: 0.6rem"
                         >
-                            {{ notificaciones }}
+                            {{ sinLeer }}
                         </span>
                     </button>
 
-                    <!-- Panel de notificaciones -->
                     <div
                         v-if="verNotificaciones"
                         class="position-absolute end-0 mt-2 shadow-lg rounded-3 bg-white border"
-                        style="width: 320px; z-index: 1050; top: 100%"
+                        style="width: 340px; z-index: 1050; top: 100%"
                     >
                         <div
                             class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center"
                         >
-                            <span class="fw-bold small">Notificaciones</span>
-                            <button
-                                class="btn btn-sm btn-link text-muted p-0"
-                                @click="verNotificaciones = false"
-                            >
-                                <i class="bi bi-x-lg"></i>
-                            </button>
+                            <span class="fw-bold small">
+                                Notificaciones
+                                <span
+                                    v-if="sinLeer > 0"
+                                    class="badge bg-danger ms-1"
+                                    >{{ sinLeer }}</span
+                                >
+                            </span>
+                            <div class="d-flex gap-2">
+                                <button
+                                    v-if="sinLeer > 0"
+                                    class="btn btn-sm btn-link text-muted p-0 small"
+                                    @click="leerTodas"
+                                >
+                                    Marcar todas leídas
+                                </button>
+                                <button
+                                    class="btn btn-sm btn-link text-muted p-0"
+                                    @click="verNotificaciones = false"
+                                >
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
                         </div>
+
                         <div
                             v-if="listaNotificaciones.length === 0"
                             class="text-center text-muted py-4 small"
                         >
+                            <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>
                             No hay notificaciones
                         </div>
+
                         <ul
                             v-else
                             class="list-group list-group-flush"
-                            style="max-height: 300px; overflow-y: auto"
+                            style="max-height: 350px; overflow-y: auto"
                         >
                             <li
                                 v-for="not in listaNotificaciones"
                                 :key="not.not_id"
-                                class="list-group-item px-3 py-2"
-                                :class="{ 'bg-light': !not.not_leida }"
+                                class="list-group-item px-3 py-2 cursor-pointer"
+                                :class="!not.not_leida ? 'bg-light' : ''"
+                                @click="marcarLeida(not)"
                             >
-                                <div class="small fw-semibold">
-                                    {{ not.not_mensaje }}
-                                </div>
-                                <div
-                                    class="text-muted"
-                                    style="font-size: 0.72rem"
-                                >
-                                    {{
-                                        new Date(
-                                            not.not_fecha_generacion,
-                                        ).toLocaleString("es-VE")
-                                    }}
+                                <div class="d-flex gap-2 align-items-start">
+                                    <div class="mt-1">
+                                        <span
+                                            v-if="!not.not_leida"
+                                            class="d-inline-block rounded-circle bg-danger"
+                                            style="width: 8px; height: 8px"
+                                        ></span>
+                                        <span
+                                            v-else
+                                            class="d-inline-block rounded-circle bg-transparent"
+                                            style="width: 8px; height: 8px"
+                                        ></span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div
+                                            class="small"
+                                            :class="
+                                                !not.not_leida
+                                                    ? 'fw-semibold'
+                                                    : ''
+                                            "
+                                        >
+                                            {{ not.not_mensaje }}
+                                        </div>
+                                        <div
+                                            class="text-muted"
+                                            style="font-size: 0.72rem"
+                                        >
+                                            {{
+                                                formatFecha(
+                                                    not.not_fecha_generacion,
+                                                )
+                                            }}
+                                        </div>
+                                    </div>
                                 </div>
                             </li>
                         </ul>
@@ -235,18 +277,74 @@
                 <slot />
             </div>
         </div>
+        <Toast ref="toastRef" />
     </div>
 </template>
 
 <script setup>
 import { router, usePage } from "@inertiajs/vue3";
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import Toast from "@/Components/Toast.vue";
 
 const verNotificaciones = ref(false);
-const notiRef = ref(null);
 const listaNotificaciones = ref([]);
+const notiRef = ref(null);
 
-// Cerrar panel al hacer click fuera
+const sinLeer = computed(
+    () => listaNotificaciones.value.filter((n) => !n.not_leida).length,
+);
+
+const toggleNotificaciones = () => {
+    verNotificaciones.value = !verNotificaciones.value;
+    if (verNotificaciones.value) cargarNotificaciones();
+};
+
+const cargarNotificaciones = () => {
+    if (!page.props.auth?.user) return;
+    fetch("/notificaciones/lista")
+        .then((r) => r.json())
+        .then((data) => {
+            listaNotificaciones.value = data;
+        })
+        .catch(() => {});
+};
+
+const marcarLeida = (not) => {
+    if (not.not_leida) return;
+    fetch(`/notificaciones/${not.not_id}/leer`, {
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": document.querySelector("meta[name=csrf-token]")
+                ?.content,
+        },
+    }).then(() => {
+        not.not_leida = true;
+        not.not_fecha_lectura = new Date().toISOString();
+    });
+};
+
+const leerTodas = () => {
+    fetch("/notificaciones/leer-todas", {
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": document.querySelector("meta[name=csrf-token]")
+                ?.content,
+        },
+    }).then(() => {
+        listaNotificaciones.value.forEach((n) => (n.not_leida = true));
+    });
+};
+
+const formatFecha = (fecha) => {
+    const d = new Date(fecha);
+    const ahora = new Date();
+    const diff = Math.floor((ahora - d) / 1000);
+    if (diff < 60) return "Hace un momento";
+    if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+    if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} h`;
+    return d.toLocaleDateString("es-VE");
+};
+
 const cerrarPanel = (e) => {
     if (notiRef.value && !notiRef.value.contains(e.target)) {
         verNotificaciones.value = false;
@@ -255,15 +353,7 @@ const cerrarPanel = (e) => {
 
 onMounted(() => {
     document.addEventListener("click", cerrarPanel);
-    // Cargar notificaciones si el usuario tiene acceso
-    if (page.props.auth?.user) {
-        fetch("/notificaciones/lista")
-            .then((r) => r.json())
-            .then((data) => {
-                listaNotificaciones.value = data;
-            })
-            .catch(() => {});
-    }
+    cargarNotificaciones();
 });
 
 onUnmounted(() => {
@@ -278,6 +368,18 @@ const props = defineProps({
 const page = usePage();
 const collapsed = ref(false);
 const openMenu = ref(null);
+
+const toastRef = ref(null);
+
+// Escuchar flash messages de Inertia y convertirlos en toasts
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.success) toastRef.value?.agregar(flash.success, "success");
+        if (flash?.error) toastRef.value?.agregar(flash.error, "error");
+    },
+    { deep: true },
+);
 
 const user = computed(() => page.props.auth.user);
 
@@ -335,7 +437,7 @@ const menuCoordinador = [
                 href: "/coordinador/maestras/tipos-entregable",
             },
             {
-                label: "Tipos de Evento Equipo",
+                label: "Tipos Evento Equipo",
                 icon: "bi bi-calendar-event",
                 href: "/coordinador/maestras/tipos-evento-equipo",
             },
@@ -395,6 +497,11 @@ const menuCoordinador = [
         label: "Bitácora",
         icon: "bi bi-journal-text",
         href: "/coordinador/bitacora",
+    },
+    {
+        label: "Configuración",
+        icon: "bi bi-gear-fill",
+        href: "/coordinador/configuracion",
     },
 ];
 const menuProfesor = [

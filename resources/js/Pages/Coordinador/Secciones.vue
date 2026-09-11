@@ -12,77 +12,87 @@
             </button>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
+        <TablaBuscable
+            :items="secciones"
+            :campos-busqueda="[
+                'sec_codigo',
+                'trayecto.tra_nombre',
+                'turno.tur_nombre',
+            ]"
+            :por-pagina="8"
+            placeholder="Buscar por código, trayecto o turno..."
         >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Código</th>
-                            <th>Trayecto</th>
-                            <th>Turno</th>
-                            <th>Estado</th>
-                            <th class="text-end pe-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-if="secciones.length === 0">
-                            <td colspan="5" class="text-center text-muted py-4">
-                                No hay secciones registradas
-                            </td>
-                        </tr>
-                        <tr v-for="sec in secciones" :key="sec.sec_id">
-                            <td class="ps-4 fw-bold">{{ sec.sec_codigo }}</td>
-                            <td>{{ sec.trayecto?.tra_nombre }}</td>
-                            <td>{{ sec.turno?.tur_nombre }}</td>
-                            <td>
-                                <span
-                                    class="badge"
-                                    :class="
-                                        sec.sec_status
-                                            ? 'bg-success'
-                                            : 'bg-secondary'
-                                    "
-                                >
-                                    {{ sec.sec_status ? "Activa" : "Inactiva" }}
-                                </span>
-                            </td>
-                            <td class="text-end pe-4">
-                                <a
-                                    :href="`/coordinador/secciones/${sec.sec_id}/detalle`"
-                                    class="btn btn-sm btn-outline-info me-1"
-                                >
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <button
-                                    class="btn btn-sm btn-outline-primary me-1"
-                                    @click="abrirModal(sec)"
-                                >
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button
-                                    class="btn btn-sm btn-outline-danger"
-                                    @click="desactivar(sec)"
-                                >
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <template #default="{ registros }">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Código</th>
+                                    <th>Trayecto</th>
+                                    <th>Turno</th>
+                                    <th>Estado</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="registros.length === 0">
+                                    <td
+                                        colspan="5"
+                                        class="text-center text-muted py-4"
+                                    >
+                                        No se encontraron secciones
+                                    </td>
+                                </tr>
+                                <tr v-for="sec in registros" :key="sec.sec_id">
+                                    <td class="ps-4 fw-bold">
+                                        {{ sec.sec_codigo }}
+                                    </td>
+                                    <td>{{ sec.trayecto?.tra_nombre }}</td>
+                                    <td>{{ sec.turno?.tur_nombre }}</td>
+                                    <td>
+                                        <span
+                                            class="badge"
+                                            :class="
+                                                sec.sec_status
+                                                    ? 'bg-success'
+                                                    : 'bg-secondary'
+                                            "
+                                        >
+                                            {{
+                                                sec.sec_status
+                                                    ? "Activa"
+                                                    : "Inactiva"
+                                            }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <a
+                                            :href="`/coordinador/secciones/${sec.sec_id}/detalle`"
+                                            class="btn btn-sm btn-outline-info me-1"
+                                        >
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <button
+                                            class="btn btn-sm btn-outline-primary me-1"
+                                            @click="abrirModal(sec)"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click="desactivar(sec)"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+        </TablaBuscable>
 
         <!-- Modal -->
         <div class="modal fade" id="modalSeccion" tabindex="-1">
@@ -216,6 +226,7 @@
 </template>
 
 <script setup>
+import TablaBuscable from "@/Components/TablaBuscable.vue";
 import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";

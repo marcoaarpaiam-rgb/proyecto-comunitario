@@ -12,90 +12,119 @@
             </button>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
-        >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
         <!-- Tabla -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Equipo</th>
-                            <th>Comunidad</th>
-                            <th>Tipo</th>
-                            <th>Modalidad</th>
-                            <th>Fecha Límite</th>
-                            <th>Aprobación</th>
-                            <th class="text-end pe-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-if="proyectos.length === 0">
-                            <td colspan="7" class="text-center text-muted py-4">
-                                No hay proyectos registrados
-                            </td>
-                        </tr>
-                        <tr v-for="pco in proyectos" :key="pco.pco_id">
-                            <td class="ps-4">
-                                <div class="fw-semibold text-danger">
-                                    {{ pco.equipo?.equ_codigo }}
-                                </div>
-                                <div
-                                    class="text-muted small text-truncate"
-                                    style="max-width: 180px"
+        <TablaBuscable
+            :items="proyectos"
+            :campos-busqueda="[
+                'equipo.equ_codigo',
+                'equipo.equ_titulo',
+                'comunidad.com_nombre',
+                'tipo_proyecto.tpr_nombre',
+                'modalidad.mpr_nombre',
+            ]"
+            :por-pagina="8"
+            placeholder="Buscar por equipo, comunidad o tipo..."
+        >
+            <template #filtros>
+                <select
+                    v-model="filtroAprobacion"
+                    class="form-select form-select-sm"
+                    style="width: 180px"
+                >
+                    <option value="">Todos los estados</option>
+                    <option value="aprobado">Aprobados</option>
+                    <option value="pendiente">Pendientes</option>
+                </select>
+            </template>
+
+            <template #default="{ registros }">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Equipo</th>
+                                    <th>Comunidad</th>
+                                    <th>Tipo</th>
+                                    <th>Modalidad</th>
+                                    <th>Fecha Límite</th>
+                                    <th>Aprobación</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-if="
+                                        proyectosFiltrados(registros).length ===
+                                        0
+                                    "
                                 >
-                                    {{ pco.equipo?.equ_titulo }}
-                                </div>
-                            </td>
-                            <td class="small">
-                                {{ pco.comunidad?.com_nombre }}
-                            </td>
-                            <td class="small">
-                                {{ pco.tipo_proyecto?.tpr_nombre }}
-                            </td>
-                            <td>
-                                <span class="badge bg-info text-dark">
-                                    {{ pco.modalidad?.mpr_nombre }}
-                                </span>
-                            </td>
-                            <td class="small">{{ pco.pco_fecha_limite }}</td>
-                            <td>
-                                <span
-                                    v-if="pco.pco_fecha_aprobacion"
-                                    class="badge bg-success"
-                                    >Aprobado</span
+                                    <td
+                                        colspan="7"
+                                        class="text-center text-muted py-4"
+                                    >
+                                        No se encontraron proyectos
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="pco in proyectosFiltrados(registros)"
+                                    :key="pco.pco_id"
                                 >
-                                <button
-                                    v-else
-                                    class="btn btn-sm btn-outline-success"
-                                    @click="aprobar(pco)"
-                                >
-                                    <i class="bi bi-check-lg me-1"></i>Aprobar
-                                </button>
-                            </td>
-                            <td class="text-end pe-4">
-                                <button
-                                    class="btn btn-sm btn-outline-danger"
-                                    @click="desactivar(pco)"
-                                >
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                                    <td class="ps-4">
+                                        <div class="fw-semibold text-danger">
+                                            {{ pco.equipo?.equ_codigo }}
+                                        </div>
+                                        <div
+                                            class="text-muted small text-truncate"
+                                            style="max-width: 180px"
+                                        >
+                                            {{ pco.equipo?.equ_titulo }}
+                                        </div>
+                                    </td>
+                                    <td class="small">
+                                        {{ pco.comunidad?.com_nombre }}
+                                    </td>
+                                    <td class="small">
+                                        {{ pco.tipo_proyecto?.tpr_nombre }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info text-dark">
+                                            {{ pco.modalidad?.mpr_nombre }}
+                                        </span>
+                                    </td>
+                                    <td class="small">
+                                        {{ pco.pco_fecha_limite }}
+                                    </td>
+                                    <td>
+                                        <span
+                                            v-if="pco.pco_fecha_aprobacion"
+                                            class="badge bg-success"
+                                            >Aprobado</span
+                                        >
+                                        <button
+                                            v-else
+                                            class="btn btn-sm btn-outline-success"
+                                            @click="aprobar(pco)"
+                                        >
+                                            <i class="bi bi-check-lg me-1"></i
+                                            >Aprobar
+                                        </button>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click="desactivar(pco)"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+        </TablaBuscable>
 
         <!-- Modal Nuevo Proyecto -->
         <div class="modal fade" id="modalProyecto" tabindex="-1">
@@ -391,6 +420,7 @@
 </template>
 
 <script setup>
+import TablaBuscable from "@/Components/TablaBuscable.vue";
 import { ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
@@ -478,5 +508,17 @@ const desactivar = (pco) => {
 
 const confirmarDesactivar = () => {
     router.delete(`/coordinador/proyectos/${itemSeleccionado.value.pco_id}`);
+};
+const filtroAprobacion = ref("");
+
+const proyectosFiltrados = (registros) => {
+    if (!filtroAprobacion.value) return registros;
+    return registros.filter((pco) => {
+        if (filtroAprobacion.value === "aprobado")
+            return !!pco.pco_fecha_aprobacion;
+        if (filtroAprobacion.value === "pendiente")
+            return !pco.pco_fecha_aprobacion;
+        return true;
+    });
 };
 </script>

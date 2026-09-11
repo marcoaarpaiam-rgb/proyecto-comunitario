@@ -94,6 +94,21 @@ class EquipoController extends Controller
             'equ_status'         => true,
             'equ_id_usu_created' => auth()->id(),
         ]);
+        // Validar que ningún integrante ya esté en otro equipo activo
+        foreach ($request->integrantes as $integrante) {
+            $yaEnEquipo = EquipoIntegrante::where('ein_id_usu', $integrante['usu_id'])
+                ->where('ein_status', true)
+                ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+                ->exists();
+
+            if ($yaEnEquipo) {
+                $usuario = Usuario::find($integrante['usu_id']);
+                $nombre = $usuario->usu_primer_nombre . ' ' . $usuario->usu_primer_apellido;
+                return back()->withErrors([
+                    'integrantes' => "El estudiante {$nombre} ya pertenece a otro equipo activo.",
+                ]);
+            }
+        }
 
         foreach ($request->integrantes as $integrante) {
             EquipoIntegrante::create([

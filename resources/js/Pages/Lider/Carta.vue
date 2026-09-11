@@ -8,18 +8,6 @@
             </p>
         </div>
 
-        <div
-            v-if="$page.props.flash?.success"
-            class="alert alert-success alert-dismissible fade show mb-4"
-        >
-            {{ $page.props.flash.success }}
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert"
-            ></button>
-        </div>
-
         <!-- Sin proyecto -->
         <div v-if="!proyecto" class="card border-0 shadow-sm">
             <div class="card-body text-center text-muted py-5">

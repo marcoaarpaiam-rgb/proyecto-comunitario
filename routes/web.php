@@ -23,7 +23,7 @@ use App\Http\Controllers\Coordinador\CartaController;
 use App\Http\Controllers\Coordinador\BitacoraController;
 use App\Http\Controllers\Coordinador\SocializacionCoordController;
 use App\Http\Controllers\Coordinador\SeccionDetalleController;
-
+use App\Http\Controllers\Coordinador\ConfiguracionController;
 
 // Rutas públicas
 Route::get('/', [LoginController::class, 'index'])->name('login');
@@ -35,6 +35,33 @@ Route::middleware('auth')->get('/notificaciones/lista', function () {
         ->orderBy('not_fecha_generacion', 'desc')
         ->take(10)
         ->get();
+});
+Route::middleware('auth')->group(function () {
+    Route::get('/notificaciones/lista', function () {
+        return \App\Models\Notificacion::where('not_id_usu', auth()->id())
+            ->orderBy('not_fecha_generacion', 'desc')
+            ->take(10)->get();
+    });
+
+    Route::post('/notificaciones/{id}/leer', function ($id) {
+        \App\Models\Notificacion::where('not_id', $id)
+            ->where('not_id_usu', auth()->id())
+            ->update([
+                'not_leida'        => true,
+                'not_fecha_lectura'=> now(),
+            ]);
+        return response()->json(['ok' => true]);
+    });
+
+    Route::post('/notificaciones/leer-todas', function () {
+        \App\Models\Notificacion::where('not_id_usu', auth()->id())
+            ->where('not_leida', false)
+            ->update([
+                'not_leida'        => true,
+                'not_fecha_lectura'=> now(),
+            ]);
+        return response()->json(['ok' => true]);
+    });
 });
 
 // Coordinador
@@ -119,6 +146,25 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::get('cartas/{id}/descargar',
         [CartaController::class, 'descargar'])
         ->name('cartas.descargar');
+    
+
+    Route::get('configuracion', [ConfiguracionController::class, 'index'])
+        ->name('configuracion.index');
+    Route::post('configuracion/firma',
+        [ConfiguracionController::class, 'actualizarFirma'])
+        ->name('configuracion.firma');
+    Route::post('configuracion/perfil',
+        [ConfiguracionController::class, 'actualizarPerfil'])
+        ->name('configuracion.perfil');
+    Route::post('configuracion/password',
+        [ConfiguracionController::class, 'cambiarPassword'])
+        ->name('configuracion.password');
+    Route::get('reportes/exportar-solvencia',
+        [ReporteController::class, 'exportarSolvenciaPdf'])
+        ->name('reportes.exportar-solvencia');
+    Route::get('reportes/exportar-general',
+        [ReporteController::class, 'exportarGeneralPdf'])
+        ->name('reportes.exportar-general');
 });
 
 // Grupo Profesor 
