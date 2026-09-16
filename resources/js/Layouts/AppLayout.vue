@@ -2,9 +2,16 @@
     <div
         class="d-flex vh-100 overflow-hidden"
         :class="{ 'sidebar-collapsed': collapsed }"
+        :data-bs-theme="modoOscuro ? 'dark' : 'light'"
     >
         <!-- SIDEBAR -->
-        <div class="sidebar d-flex flex-column">
+        <div
+            class="sidebar d-flex flex-column"
+            :class="{
+                collapsed: collapsed && !esMobil,
+                'mobile-open': sidebarMobileOpen && esMobil,
+            }"
+        >
             <!-- Logo -->
             <div
                 class="sidebar-brand d-flex align-items-center px-3 py-3 border-bottom border-white border-opacity-25"
@@ -136,7 +143,7 @@
                 <!-- Botón colapsar sidebar -->
                 <button
                     class="btn btn-link text-dark p-0 me-3"
-                    @click="collapsed = !collapsed"
+                    @click="toggleSidebar"
                 >
                     <i
                         class="bi fs-4"
@@ -159,6 +166,21 @@
                         </li>
                     </ol>
                 </nav>
+
+                <button
+                    class="btn btn-link text-dark p-1"
+                    @click="toggleModo"
+                    title="Modo oscuro"
+                >
+                    <i
+                        class="bi fs-5"
+                        :class="
+                            modoOscuro
+                                ? 'bi-sun-fill text-warning'
+                                : 'bi-moon-stars'
+                        "
+                    ></i>
+                </button>
 
                 <!-- Panel de notificaciones -->
                 <div class="position-relative" ref="notiRef">
@@ -271,7 +293,12 @@
                     </div>
                 </div>
             </div>
-
+            <!-- Overlay móvil -->
+            <div
+                class="sidebar-overlay"
+                :class="{ visible: sidebarMobileOpen }"
+                @click="sidebarMobileOpen = false"
+            ></div>
             <!-- CONTENIDO DE LA PÁGINA -->
             <div class="page-content flex-grow-1 overflow-auto p-4">
                 <slot />
@@ -556,9 +583,93 @@ const isActive = (href) => window.location.pathname === href;
 const logout = () => {
     router.post("/logout");
 };
+
+const modoOscuro = ref(localStorage.getItem("modo") === "dark");
+
+const toggleModo = () => {
+    modoOscuro.value = !modoOscuro.value;
+    localStorage.setItem("modo", modoOscuro.value ? "dark" : "light");
+    aplicarModo();
+};
+
+const aplicarModo = () => {
+    document.documentElement.setAttribute(
+        "data-bs-theme",
+        modoOscuro.value ? "dark" : "light",
+    );
+};
+
+onMounted(() => {
+    aplicarModo();
+});
+
+const sidebarMobileOpen = ref(false);
+const esMobil = ref(window.innerWidth <= 768);
+
+const toggleSidebar = () => {
+    if (esMobil.value) {
+        sidebarMobileOpen.value = !sidebarMobileOpen.value;
+    } else {
+        collapsed.value = !collapsed.value;
+    }
+};
+
+onMounted(() => {
+    window.addEventListener("resize", () => {
+        esMobil.value = window.innerWidth <= 768;
+    });
+});
 </script>
 
 <style>
+[data-bs-theme="dark"] .page-content {
+  background: #1a1d23 !important;
+}
+
+[data-bs-theme="dark"] .topbar {
+  background: #212529 !important;
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .topbar .btn-link {
+  color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .card {
+  background: #2b2f33;
+  border-color: #373b3e;
+}
+
+[data-bs-theme="dark"] .table-light th {
+  background: #343a40;
+  color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  background: #343a40;
+  color: #dee2e6;
+  border-color: #495057;
+}
+
+[data-bs-theme="dark"] .modal-content {
+  background: #2b2f33;
+}
+
+[data-bs-theme="dark"] .list-group-item {
+  background: #2b2f33;
+  border-color: #373b3e;
+  color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .accordion-button {
+  background: #343a40;
+  color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .bg-light {
+  background: #343a40 !important;
+}
 /* ── Variables ── */
 :root {
     --sidebar-width: 240px;
@@ -697,5 +808,93 @@ const logout = () => {
 /* ── Page content ── */
 .page-content {
     background: #f4f6f9;
+}
+/* ── MÓVIL ── */
+@media (max-width: 768px) {
+
+  /* Sidebar oculto por defecto en móvil */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 1040;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease, width 0.25s ease;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Overlay cuando el sidebar está abierto en móvil */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1039;
+  }
+
+  .sidebar-overlay.visible {
+    display: block;
+  }
+
+  /* El contenido ocupa todo el ancho */
+  .main-content {
+    width: 100% !important;
+  }
+
+  /* Labels del sidebar siempre visibles en móvil */
+  .sidebar.mobile-open .sidebar-label,
+  .sidebar.mobile-open .sidebar-brand-text {
+    display: inline !important;
+  }
+
+  .sidebar.mobile-open .sidebar-icon {
+    margin-right: 10px !important;
+  }
+
+  .sidebar.mobile-open .sidebar-item {
+    justify-content: flex-start !important;
+    padding: 10px 14px !important;
+  }
+
+  /* Topbar en móvil */
+  .topbar {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* Tablas en móvil con scroll horizontal */
+  .table-responsive-mobile {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Cards en móvil */
+  .card {
+    border-radius: 8px !important;
+  }
+
+  /* Page content padding reducido en móvil */
+  .page-content {
+    padding: 1rem !important;
+  }
+
+  /* Modales en móvil ocupan más espacio */
+  .modal-dialog {
+    margin: 0.5rem !important;
+    max-width: calc(100vw - 1rem) !important;
+  }
+
+  /* Ocultar columnas menos importantes en móvil */
+  .d-mobile-none {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar-overlay { display: none !important; }
 }
 </style>

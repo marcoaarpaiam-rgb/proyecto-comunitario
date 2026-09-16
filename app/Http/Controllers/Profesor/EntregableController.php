@@ -30,33 +30,48 @@ class EntregableController extends Controller
         ]);
     }
 
-    public function aprobar(Request $request, $id)
+    private function notificarLider(Entregable $entregable, string $mensaje): void
     {
-        $entregable = Entregable::findOrFail($id);
+        $lider = $entregable->equipo?->integrantes()
+            ->where('ein_es_lider', true)->where('ein_status', true)->first();
+
+        if ($lider) {
+            \App\Models\Notificacion::create([
+                'not_id_usu'          => $lider->ein_id_usu,
+                'not_id_tno'          => \App\Models\TipoNotificacion::first()?->tno_id,
+                'not_id_equ'          => $entregable->entr_id_equ,
+                'not_mensaje'         => $mensaje,
+                'not_leida'           => false,
+                'not_fecha_generacion'=> now(),
+            ]);
+        }
+    }
+
+    public function aprobar($id)
+    {
+        $entregable = Entregable::with('equipo.integrantes')->findOrFail($id);
         $entregable->update([
-            'entr_aprobado'          => true,
-            'entr_fecha_aprobacion'  => now(),
-            'entr_id_usu_aprobado'   => auth()->id(),
-            'entr_observacion_rechazo' => null,
+            'entr_aprobado'         => true,
+            'entr_fecha_aprobacion' => now(),
+            'entr_id_usu_aprobado'  => auth()->id(),
         ]);
-        return back()->with('success', 'Entregable aprobado. El líder puede enviarlo al repositorio.');
+        $this->notificarLider($entregable,
+            "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue APROBADO por el profesor.");
+        return back()->with('success', 'Entregable aprobado. El líder fue notificado.');
     }
 
     public function rechazar(Request $request, $id)
     {
-        $request->validate([
-            'observacion' => 'required|string',
-        ], [
-            'observacion.required' => 'Debe indicar el motivo del rechazo.',
-        ]);
-
-        $entregable = Entregable::findOrFail($id);
+        $request->validate(['observacion' => 'required|string']);
+        $entregable = Entregable::with('equipo.integrantes')->findOrFail($id);
         $entregable->update([
             'entr_aprobado'            => false,
             'entr_fecha_aprobacion'    => now(),
             'entr_id_usu_aprobado'     => auth()->id(),
             'entr_observacion_rechazo' => $request->observacion,
         ]);
+        $this->notificarLider($entregable,
+            "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue RECHAZADO. Motivo: {$request->observacion}");
         return back()->with('success', 'Entregable rechazado. El líder fue notificado.');
     }
 }

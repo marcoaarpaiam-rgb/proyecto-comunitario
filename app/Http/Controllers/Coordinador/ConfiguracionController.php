@@ -12,6 +12,10 @@ class ConfiguracionController extends Controller
     {
         return Inertia::render('Coordinador/Configuracion', [
             'coordinador' => auth()->user(),
+            'lideres' => \App\Models\Usuario::whereHas('usuarioRoles', fn($q) =>
+                $q->where('uro_status', true)
+                ->whereHas('rol', fn($r) => $r->where('rol_nombre', 'lider'))
+            )->get(['usu_id','usu_cedula','usu_primer_nombre','usu_primer_apellido']),
         ]);
     }
 
@@ -69,5 +73,13 @@ class ConfiguracionController extends Controller
 
         auth()->user()->update(['usu_password' => bcrypt($request->password_nuevo)]);
         return back()->with('success', 'Contraseña actualizada correctamente.');
+    }
+
+    public function resetPasswordLider(Request $request)
+    {
+        $request->validate(['usu_id' => 'required|exists:usuario,usu_id']);
+        $usuario = \App\Models\Usuario::findOrFail($request->usu_id);
+        $usuario->update(['usu_password' => bcrypt($usuario->usu_cedula)]);
+        return back()->with('success', "Contraseña de {$usuario->usu_primer_nombre} reseteada a su cédula: {$usuario->usu_cedula}");
     }
 }

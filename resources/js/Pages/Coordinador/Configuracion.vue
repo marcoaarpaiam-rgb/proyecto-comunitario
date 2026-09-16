@@ -275,6 +275,40 @@
                 </div>
             </div>
         </div>
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-0 pt-3">
+                <h6 class="fw-bold mb-0">
+                    <i class="bi bi-key text-danger me-2"></i>Resetear
+                    Contraseña de Líder
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Resetea la contraseña del líder a su cédula como contraseña
+                    inicial.
+                </p>
+                <div class="d-flex gap-2">
+                    <select v-model="liderId" class="form-select">
+                        <option value="">Seleccionar líder...</option>
+                        <option
+                            v-for="lid in lideres"
+                            :key="lid.usu_id"
+                            :value="lid.usu_id"
+                        >
+                            {{ lid.usu_primer_nombre }}
+                            {{ lid.usu_primer_apellido }} ({{ lid.usu_cedula }})
+                        </option>
+                    </select>
+                    <button
+                        class="btn btn-danger fw-semibold"
+                        :disabled="!liderId"
+                        @click="resetLider"
+                    >
+                        <i class="bi bi-key me-1"></i>Resetear
+                    </button>
+                </div>
+            </div>
+        </div>
     </AppLayout>
 </template>
 
@@ -349,5 +383,22 @@ const cambiarPassword = () => {
             };
         },
     });
+};
+const props = defineProps({
+    coordinador: Object,
+    lideres: { type: Array, default: () => [] },
+});
+const liderId = ref("");
+const resetLider = () => {
+    if (!confirm("¿Resetear la contraseña de este líder a su cédula?")) return;
+    router.post(
+        "/coordinador/configuracion/reset-lider",
+        { usu_id: liderId.value },
+        {
+            onSuccess: () => {
+                liderId.value = "";
+            },
+        },
+    );
 };
 </script>

@@ -16,53 +16,51 @@ class LiderController extends Controller
 {
     private function getEquipo()
     {
-        return EquipoIntegrante::where('ein_id_usu', auth()->id())
+        // 1. Buscamos primero el ID del equipo del líder activo
+        $integrante = EquipoIntegrante::where('ein_id_usu', auth()->id())
             ->where('ein_es_lider', true)
             ->where('ein_status', true)
+            ->first();
+
+        if (!$integrante) {
+            return null;
+        }
+
+        // 2. Hacemos la consulta directa sobre Equipo exactamente como en la foto
+        return Equipo::where('equ_id', $integrante->ein_id_equ)
+            ->where('equ_status', true)
             ->with([
-                'equipo.trayecto',
-                'equipo.seccion',
-                'equipo.integrantes.usuario',
-                'equipo.proyectoComunidad.comunidad',
-                'equipo.proyectoComunidad.tipoProyecto',
+                'trayecto',
+                'seccion',
+                'integrantes.usuario',
+                'proyectoComunidad.comunidad',
+                'proyectoComunidad.tipoProyecto',
             ])
-            ->first()
-            ?->equipo;
+            ->first();
     }
 
     public function dashboard()
     {
         $equipo = $this->getEquipo();
-        $stats  = ['integrantes' => 0, 'puntosCompletados' => 0,
-                   'entregablesSubidos' => 0, 'pendientes' => 0];
-        $progreso = ['puntos' => 0, 'entregables' => 0, 'asistencia' => 0];
-
-        if ($equipo) {
-            $totalPuntos = PuntoControl::where('puc_id_equ', $equipo->equ_id)->count();
-            $puntosOk    = $equipo->seguimientos()->where('seq_cumplido', true)->count();
-            $totalEntr   = Entregable::where('entr_id_equ', $equipo->equ_id)->count();
-            $entrAprobados = Entregable::where('entr_id_equ', $equipo->equ_id)
-                ->where('entr_aprobado', true)->count();
-
-            $stats = [
-                'integrantes'       => $equipo->integrantes->count(),
-                'puntosCompletados' => $puntosOk,
-                'entregablesSubidos'=> $totalEntr,
-                'pendientes'        => Entregable::where('entr_id_equ', $equipo->equ_id)
-                    ->whereNull('entr_aprobado')->count(),
-            ];
-
-            $progreso = [
-                'puntos'      => $totalPuntos ? round($puntosOk / $totalPuntos * 100) : 0,
-                'entregables' => $totalEntr ? round($entrAprobados / $totalEntr * 100) : 0,
-                'asistencia'  => 0,
-            ];
-        }
+        $carta  = ($equipo && $equipo->proyectoComunidad)
+            ? \App\Models\CartaPresentacion::where('cpr_id_pco',
+                $equipo->proyectoComunidad->pco_id)->first()
+            : null;
 
         return Inertia::render('Lider/Dashboard', [
-            'equipo'   => $equipo,
-            'stats'    => $stats,
-            'progreso' => $progreso,
+            'equipo'        => $equipo,
+            'puntosControl' => $equipo
+                ? \App\Models\PuntoControl::where('puc_id_equ', $equipo->equ_id)
+                    ->where('puc_status', true)
+                    ->with('seguimiento')
+                    ->orderBy('puc_orden')->get()
+                : [],
+            'entregables'   => $equipo
+                ? \App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
+                    ->with('tipoEntregable')
+                    ->orderBy('entr_fecha_subida','desc')->get()
+                : [],
+            'carta'         => $carta,
         ]);
     }
 

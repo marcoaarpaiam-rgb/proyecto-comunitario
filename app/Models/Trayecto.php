@@ -50,4 +50,5 @@ class Trayecto extends Model
     {
         return $this->hasMany(ResultadoProyecto::class, 'rpr_id_tra', 'tra_id');
     }
+    
 }
