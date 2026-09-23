@@ -11,6 +11,8 @@ use App\Models\Socializacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use App\Models\Equipo;
+use App\Models\Notificacion;
 
 class LiderController extends Controller
 {
@@ -52,7 +54,7 @@ class LiderController extends Controller
             'puntosControl' => $equipo
                 ? \App\Models\PuntoControl::where('puc_id_equ', $equipo->equ_id)
                     ->where('puc_status', true)
-                    ->with('seguimiento')
+                    ->with('seguimientos')
                     ->orderBy('puc_orden')->get()
                 : [],
             'entregables'   => $equipo
@@ -60,6 +62,10 @@ class LiderController extends Controller
                     ->with('tipoEntregable')
                     ->orderBy('entr_fecha_subida','desc')->get()
                 : [],
+            
+            'notificaciones' => Notificacion::where('not_id_usu', auth()->id())
+                ->orderBy('not_fecha_generacion', 'desc')
+                ->take(20)->get(),
             'carta'         => $carta,
         ]);
     }
@@ -133,5 +139,27 @@ class LiderController extends Controller
         return Inertia::render('Lider/MiProyecto', [
             'equipo' => $equipo,
         ]);
+    }
+    public function descargarCarta($id)
+    {
+        $lider  = auth()->user();
+        $equipo = \App\Models\Equipo::where('equ_id_lider', $lider->usu_id)
+                    ->where('equ_status', true)
+                    ->firstOrFail();
+
+        // Solo puede descargar la carta de su propio equipo
+        $carta = \App\Models\CartaPresentacion::where('cpr_id', $id)
+            ->whereHas('proyectoComunidad', fn($q) =>
+                $q->where('pco_id_equ', $equipo->equ_id)
+            )
+            ->where('cpr_fecha_aprobacion', '!=', null) // solo si está aprobada
+            ->firstOrFail();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.carta_presentacion', [
+            'carta'  => $carta->load(['proyectoComunidad.comunidad', 'proyectoComunidad.equipo.integrantes.usuario']),
+            'coordinador' => \App\Models\Usuario::where('usu_rol', 'coordinador')->first(),
+        ])->setPaper('letter', 'portrait');
+
+        return $pdf->download("carta-presentacion-{$equipo->equ_codigo}.pdf");
     }
 }

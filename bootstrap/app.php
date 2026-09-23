@@ -18,7 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'rol' => \App\Http\Middleware\VerificarRol::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
+    ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->respond(function ( $response) {
+            if ($response->getStatusCode() === 403 && $request->header('X-Inertia')) {
+                return Inertia::render('Errors/403')->toResponse(request())->SetStatusCode(403);
+            }
+            return $response;
+        });
     })
     ->create();

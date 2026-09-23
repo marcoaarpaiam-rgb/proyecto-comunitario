@@ -362,21 +362,28 @@ class EquipoController extends Controller
     }
 
 
-    public function reactivar($id)
+    public function reactivar(Request $request, $id)
     {
-        $equipo = Equipo::where('equ_id', $id)
-            ->where('equ_status', false)->firstOrFail();
+        $equipo = \App\Models\Equipo::where('equ_status', false)->findOrFail($id);
 
-        $equipo->update(['equ_status' => true, 'equ_id_usu_updated' => auth()->id()]);
+        // Reactivar el equipo
+        $equipo->update(['equ_status' => true]);
 
+        // Reactivar solo los integrantes que estaban activos antes de la disolución
+        // (se excluyen los removidos individualmente antes de disolver)
+        $equipo->integrantes()->where('ein_status', false)
+            ->whereDoesntHave('historialRemociones') // si tienes esa relación
+            ->update(['ein_status' => true]);
+
+        // Registrar en historial
         \App\Models\HistorialEquipo::create([
             'heq_id_equ'         => $equipo->equ_id,
-            'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre','Reactivado')->first()?->tee_id,
-            'heq_motivo'         => 'Equipo reactivado.',
-            'heq_fecha_evento'   => now()->toDateString(),
-            'heq_id_usu_created' => auth()->id(),
+            'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre', 'Reactivado')->value('tee_id'),
+            'heq_motivo'         => $request->input('motivo', 'Reactivación del equipo por el coordinador.'),
+            'heq_fecha_evento'   => now(),
+            'heq_id_usu_registro'=> auth()->id(),
         ]);
 
-        return back()->with('success', 'Equipo reactivado correctamente.');
+        return back()->with('success', "Equipo {$equipo->equ_codigo} reactivado correctamente.");
     }
 }

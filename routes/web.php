@@ -184,9 +184,6 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         [EquipoController::class, 'historial'])
         ->name('equipos.historial');
 
-    Route::post('equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
-        ->name('equipos.reactivar');
-
     
     Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
         ->name('equipos.expediente');
@@ -194,6 +191,9 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('configuracion/reset-lider',
         [ConfiguracionController::class, 'resetPasswordLider'])
         ->name('configuracion.reset-lider');
+
+    Route::post('/equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
+        ->name('coordinador.equipos.reactivar');
 });
 
 // Grupo Profesor 
@@ -353,10 +353,8 @@ Route::middleware(['auth', 'rol:lider'])
         ->name('carta.solicitar');
 
     
-
-    Route::get('carta/{id}/descargar',
-        [App\Http\Controllers\Coordinador\CartaController::class, 'descargar'])
-        ->name('carta.descargar');
+    Route::get('/carta/{id}/descargar', [LiderController::class, 'descargarCarta'])
+        ->name('lider.carta.descargar');
 });
 
 

@@ -1,211 +1,360 @@
 <template>
-    <AppLayout page-title="Puntos de Control">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="fw-bold mb-1">Puntos de Control</h4>
-                <p class="text-muted small mb-0">
-                    Gestión de puntos de control por equipo
-                </p>
+    <div
+        :data-theme="tema"
+        style="
+            min-height: 100vh;
+            background: var(--bg-body);
+            color: var(--text-main);
+            font-family: &quot;Segoe UI&quot;, system-ui, sans-serif;
+        "
+    >
+        <div
+            class="sb-overlay"
+            :class="{ show: sidebarOpen }"
+            @click="sidebarOpen = false"
+        ></div>
+        <div class="sb" :class="{ show: sidebarOpen }">
+            <div class="sb-brand">
+                <div
+                    style="
+                        width: 34px;
+                        height: 34px;
+                        background: #dc3545;
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #fff;
+                        font-weight: 800;
+                    "
+                >
+                    💻
+                </div>
+                <div>
+                    <div class="sb-title">UPTP — Proyectos</div>
+                    <div class="sb-sub">PNF Informática</div>
+                </div>
+                <button
+                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
+                    @click="sidebarOpen = false"
+                >
+                    <i class="bi bi-x"></i>
+                </button>
             </div>
-            <button
-                class="btn btn-danger fw-semibold"
-                @click="abrirModalCrear()"
-            >
-                <i class="bi bi-plus-lg me-2"></i>Nuevo Punto
-            </button>
-        </div>
-
-        <!-- Lista de puntos -->
-        <div class="row g-3">
-            <div v-if="puntosControl.length === 0" class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center text-muted py-5">
-                        No hay puntos de control registrados
+            <div class="sb-user">
+                <div class="sb-av">{{ iniciales }}</div>
+                <div>
+                    <div class="sb-name">
+                        {{ $page.props.auth.user.usu_primer_nombre }}
+                        {{ $page.props.auth.user.usu_primer_apellido }}
                     </div>
+                    <div class="sb-role">Profesor de Proyecto</div>
                 </div>
             </div>
-            <div
-                v-for="puc in puntosControl"
-                :key="puc.puc_id"
-                class="col-md-6"
-            >
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div
-                            class="d-flex justify-content-between align-items-start mb-2"
-                        >
-                            <div>
-                                <span class="badge bg-danger me-2"
-                                    >Punto {{ puc.puc_orden }}</span
-                                >
-                                <span
-                                    v-if="puc.puc_es_entregable"
-                                    class="badge bg-warning text-dark"
-                                    >Entregable</span
-                                >
-                            </div>
-                            <div class="d-flex gap-1">
-                                <button
-                                    class="btn btn-sm btn-outline-success"
-                                    @click="abrirSeguimiento(puc)"
-                                    title="Registrar seguimiento"
-                                >
-                                    <i class="bi bi-check2-circle"></i>
-                                </button>
-                                <button
-                                    class="btn btn-sm btn-outline-warning"
-                                    @click="abrirReprogramar(puc)"
-                                    title="Reprogramar"
-                                >
-                                    <i class="bi bi-calendar-plus"></i>
-                                </button>
-                                <button
-                                    class="btn btn-sm btn-outline-danger"
-                                    @click="eliminar(puc)"
-                                    title="Eliminar"
-                                >
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <h6 class="fw-bold">{{ puc.puc_nombre }}</h6>
-                        <p
-                            v-if="puc.puc_descripcion"
-                            class="text-muted small mb-2"
-                        >
-                            {{ puc.puc_descripcion }}
-                        </p>
-                        <div
-                            class="d-flex justify-content-between align-items-center mt-3"
-                        >
-                            <div>
-                                <small class="text-muted">
-                                    <i class="bi bi-people me-1"></i>
-                                    {{ puc.equipo?.equ_codigo }}
-                                </small>
-                            </div>
-                            <div class="text-end">
-                                <small
-                                    v-if="puc.puc_fecha_reprogramada"
-                                    class="text-warning d-block"
-                                >
-                                    <i class="bi bi-arrow-repeat me-1"></i>
-                                    Reprogramado:
-                                    {{ puc.puc_fecha_reprogramada }}
-                                </small>
-                                <small
-                                    :class="
-                                        estaVencido(puc)
-                                            ? 'text-danger fw-bold'
-                                            : 'text-muted'
-                                    "
-                                >
-                                    <i class="bi bi-calendar me-1"></i>
-                                    {{ puc.puc_fecha_limite }}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Crear Punto -->
-        <div class="modal fade" id="modalCrearPunto" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header" style="background: #1f3864">
-                        <h5 class="modal-title text-white fw-bold">
-                            Nuevo Punto de Control
-                        </h5>
+            <div class="sb-nav">
+                <div class="sb-sec">Principal</div>
+                <a href="/profesor" class="sb-lnk"
+                    ><i class="bi bi-speedometer2"></i> Dashboard</a
+                >
+                <a href="/profesor/equipos" class="sb-lnk"
+                    ><i class="bi bi-people"></i> Mis Equipos</a
+                >
+                <div class="sb-sec">Gestión</div>
+                <a href="/profesor/puntos-control" class="sb-lnk active"
+                    ><i class="bi bi-flag"></i> Puntos de Control</a
+                >
+                <a href="/profesor/socializaciones" class="sb-lnk"
+                    ><i class="bi bi-mic"></i> Socializaciones</a
+                >
+                <a href="/profesor/entregables" class="sb-lnk"
+                    ><i class="bi bi-file-earmark-check"></i> Entregables</a
+                >
+                <div style="padding: 0.75rem 1.4rem">
+                    <form @submit.prevent="logout">
                         <button
-                            type="button"
-                            class="btn-close btn-close-white"
-                            data-bs-dismiss="modal"
-                        ></button>
+                            type="submit"
+                            class="sb-lnk w-100 text-start border-0 p-0"
+                            style="
+                                color: #ff8591;
+                                font-weight: 700;
+                                background: none;
+                                font-size: 0.88rem;
+                            "
+                        >
+                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="main">
+            <div class="topbar">
+                <div class="d-flex align-items-center gap-3">
+                    <button
+                        class="btn btn-outline-danger btn-sm toggle-btn px-2"
+                        @click="sidebarOpen = true"
+                    >
+                        <i class="bi bi-list fs-5"></i>
+                    </button>
+                    <div class="tb-title">
+                        <i
+                            class="bi bi-flag me-2 text-danger d-none d-sm-inline"
+                        ></i
+                        >Puntos de Control
                     </div>
-                    <form @submit.prevent="guardarPunto">
-                        <div class="modal-body">
-                            <div class="row g-3">
-                                <div class="col-md-8">
-                                    <label class="form-label fw-semibold">
-                                        Equipo
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    <select
-                                        v-model="formPunto.puc_id_equ"
-                                        class="form-select"
-                                        :class="{
-                                            'is-invalid': errores.puc_id_equ,
-                                        }"
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button
+                        class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
+                        @click="abrirModal()"
+                    >
+                        <i class="bi bi-plus-lg me-1"></i>Nuevo Punto
+                    </button>
+                    <button class="tb-btn" @click="toggleTema">
+                        <i
+                            class="bi"
+                            :class="
+                                tema === 'dark' ? 'bi-sun' : 'bi-moon-stars'
+                            "
+                        ></i>
+                    </button>
+                </div>
+            </div>
+            <div class="content">
+                <div
+                    style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 1.25rem;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                    "
+                >
+                    <div>
+                        <h4
+                            style="
+                                font-weight: 800;
+                                font-size: 1.25rem;
+                                color: var(--text-main);
+                                margin: 0;
+                            "
+                        >
+                            Puntos de Control
+                        </h4>
+                        <p
+                            style="
+                                color: var(--text-muted);
+                                font-size: 0.85rem;
+                                margin-top: 2px;
+                            "
+                        >
+                            Seguimiento del avance de cada equipo
+                        </p>
+                    </div>
+                    <div class="srch">
+                        <i class="bi bi-search"></i
+                        ><input
+                            v-model="busqueda"
+                            type="text"
+                            placeholder="Buscar..."
+                        />
+                    </div>
+                </div>
+                <div class="sc">
+                    <div class="table-responsive">
+                        <table class="ct">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">Punto</th>
+                                    <th>Equipo</th>
+                                    <th>Fecha Límite</th>
+                                    <th>Días Aviso</th>
+                                    <th>Estado</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="filtrados.length === 0">
+                                    <td
+                                        colspan="6"
+                                        class="text-center py-5"
+                                        style="color: var(--text-muted)"
                                     >
-                                        <option value="">Seleccionar...</option>
-                                        <option
-                                            v-for="equ in equipos"
-                                            :key="equ.equ_id"
-                                            :value="equ.equ_id"
+                                        Sin puntos de control
+                                    </td>
+                                </tr>
+                                <tr v-for="puc in filtrados" :key="puc.puc_id">
+                                    <td class="ps-4 fw-semibold">
+                                        {{ puc.puc_nombre }}
+                                    </td>
+                                    <td>
+                                        <span class="bs bp">{{
+                                            puc.equipo?.equ_codigo
+                                        }}</span>
+                                    </td>
+                                    <td>
+                                        <span
+                                            :style="
+                                                estaVencido(
+                                                    puc.puc_fecha_limite,
+                                                )
+                                                    ? 'color:#dc3545;font-weight:700'
+                                                    : ''
+                                            "
                                         >
-                                            {{ equ.equ_codigo }} —
-                                            {{ equ.seccion?.sec_codigo }}
-                                        </option>
-                                    </select>
-                                    <div
-                                        v-if="errores.puc_id_equ"
-                                        class="invalid-feedback"
+                                            {{
+                                                puc.puc_fecha_reprogramada ||
+                                                puc.puc_fecha_limite
+                                            }}
+                                        </span>
+                                        <span
+                                            v-if="puc.puc_fecha_reprogramada"
+                                            class="ms-1"
+                                            style="
+                                                font-size: 0.72rem;
+                                                color: var(--text-muted);
+                                            "
+                                            >(reprogramado)</span
+                                        >
+                                    </td>
+                                    <td style="color: var(--text-muted)">
+                                        {{ puc.puc_dias_aviso }} días
+                                    </td>
+                                    <td>
+                                        <span
+                                            v-if="puc.seguimiento?.seq_cumplido"
+                                            class="bs ba"
+                                            >Cumplido</span
+                                        >
+                                        <span
+                                            v-else-if="
+                                                estaVencido(
+                                                    puc.puc_fecha_limite,
+                                                )
+                                            "
+                                            class="bs bd"
+                                            >Vencido</span
+                                        >
+                                        <span
+                                            v-else-if="
+                                                esCercano(puc.puc_fecha_limite)
+                                            "
+                                            class="bs bw"
+                                            >Próximo</span
+                                        >
+                                        <span v-else class="bs bp"
+                                            >Pendiente</span
+                                        >
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button
+                                            class="btn btn-sm btn-outline-success me-1"
+                                            @click="abrirSeguimiento(puc)"
+                                            title="Registrar seguimiento"
+                                        >
+                                            <i
+                                                class="bi bi-clipboard-check"
+                                            ></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-warning me-1"
+                                            @click="abrirReprogramar(puc)"
+                                            title="Reprogramar"
+                                        >
+                                            <i class="bi bi-calendar-event"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click="eliminar(puc)"
+                                            title="Eliminar"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Nuevo Punto -->
+        <div class="modal fade" id="mPunto" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="mh">
+                        <h5>Nuevo Punto de Control</h5>
+                        <button
+                            class="btn btn-sm text-white p-0 fs-5"
+                            data-bs-dismiss="modal"
+                        >
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <form @submit.prevent="guardar">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold"
+                                    >Equipo
+                                    <span class="text-danger">*</span></label
+                                >
+                                <select
+                                    v-model="form.puc_id_equ"
+                                    class="form-select"
+                                    :class="{
+                                        'is-invalid': errores.puc_id_equ,
+                                    }"
+                                >
+                                    <option value="">Seleccionar...</option>
+                                    <option
+                                        v-for="equ in equipos"
+                                        :key="equ.equ_id"
+                                        :value="equ.equ_id"
                                     >
-                                        {{ errores.puc_id_equ }}
-                                    </div>
+                                        {{ equ.equ_codigo }} —
+                                        {{ equ.equ_titulo }}
+                                    </option>
+                                </select>
+                                <div
+                                    v-if="errores.puc_id_equ"
+                                    class="invalid-feedback"
+                                >
+                                    {{ errores.puc_id_equ }}
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold"
-                                        >Orden</label
-                                    >
-                                    <input
-                                        v-model="formPunto.puc_orden"
-                                        type="number"
-                                        class="form-control"
-                                        min="1"
-                                    />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold"
+                                    >Nombre del Punto
+                                    <span class="text-danger">*</span></label
+                                >
+                                <input
+                                    v-model="form.puc_nombre"
+                                    type="text"
+                                    class="form-control"
+                                    :class="{
+                                        'is-invalid': errores.puc_nombre,
+                                    }"
+                                    placeholder="Ej: Punto de Control 1 — Diagnóstico"
+                                />
+                                <div
+                                    v-if="errores.puc_nombre"
+                                    class="invalid-feedback"
+                                >
+                                    {{ errores.puc_nombre }}
                                 </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-semibold">
-                                        Nombre
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    <input
-                                        v-model="formPunto.puc_nombre"
-                                        type="text"
-                                        class="form-control"
-                                        :class="{
-                                            'is-invalid': errores.puc_nombre,
-                                        }"
-                                        placeholder="Ej: Revisión de avance 1"
-                                    />
-                                    <div
-                                        v-if="errores.puc_nombre"
-                                        class="invalid-feedback"
-                                    >
-                                        {{ errores.puc_nombre }}
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-semibold"
-                                        >Descripción</label
-                                    >
-                                    <textarea
-                                        v-model="formPunto.puc_descripcion"
-                                        class="form-control"
-                                        rows="2"
-                                        placeholder="Aspectos a evaluar..."
-                                    ></textarea>
-                                </div>
+                            </div>
+                            <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">
-                                        Fecha Límite
-                                        <span class="text-danger">*</span>
-                                    </label>
+                                    <label class="form-label fw-semibold"
+                                        >Fecha Límite
+                                        <span class="text-danger"
+                                            >*</span
+                                        ></label
+                                    >
                                     <input
-                                        v-model="formPunto.puc_fecha_limite"
+                                        v-model="form.puc_fecha_limite"
                                         type="date"
                                         class="form-control"
                                         :class="{
@@ -222,35 +371,26 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold"
-                                        >Días de aviso</label
+                                        >Días de Aviso</label
                                     >
                                     <input
-                                        v-model="formPunto.puc_dias_aviso"
+                                        v-model="form.puc_dias_aviso"
                                         type="number"
                                         class="form-control"
                                         min="1"
-                                        max="30"
+                                        placeholder="Ej: 3"
                                     />
                                 </div>
-                                <div class="col-12">
-                                    <div class="form-check">
-                                        <input
-                                            v-model="
-                                                formPunto.puc_es_entregable
-                                            "
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            id="esEntregable"
-                                        />
-                                        <label
-                                            class="form-check-label fw-semibold"
-                                            for="esEntregable"
-                                        >
-                                            Este punto es para subida de
-                                            entregables finales
-                                        </label>
-                                    </div>
-                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label class="form-label fw-semibold"
+                                    >Descripción</label
+                                >
+                                <textarea
+                                    v-model="form.puc_descripcion"
+                                    class="form-control"
+                                    rows="2"
+                                ></textarea>
                             </div>
                         </div>
                         <div class="modal-footer border-0">
@@ -263,14 +403,14 @@
                             </button>
                             <button
                                 type="submit"
-                                class="btn btn-danger fw-semibold"
+                                class="btn btn-danger fw-bold"
                                 :disabled="loading"
                             >
                                 <span
                                     v-if="loading"
                                     class="spinner-border spinner-border-sm me-2"
-                                ></span>
-                                Guardar
+                                ></span
+                                >Guardar
                             </button>
                         </div>
                     </form>
@@ -279,53 +419,54 @@
         </div>
 
         <!-- Modal Seguimiento -->
-        <div class="modal fade" id="modalSeguimiento" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header" style="background: #198754">
-                        <h5 class="modal-title text-white fw-bold">
+        <div class="modal fade" id="mSeg" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="mh">
+                        <h5>
                             Registrar Seguimiento —
-                            {{ puntoSeleccionado?.puc_nombre }}
+                            {{ puntoActual?.puc_nombre }}
                         </h5>
                         <button
-                            type="button"
-                            class="btn-close btn-close-white"
+                            class="btn btn-sm text-white p-0 fs-5"
                             data-bs-dismiss="modal"
-                        ></button>
+                        >
+                            <i class="bi bi-x"></i>
+                        </button>
                     </div>
                     <form @submit.prevent="guardarSeguimiento">
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
-                                    >¿El equipo cumplió?</label
+                                    >¿El equipo cumplió este punto?</label
                                 >
                                 <div class="d-flex gap-3">
                                     <div class="form-check">
                                         <input
-                                            v-model="formSeq.seq_cumplido"
                                             type="radio"
-                                            :value="true"
                                             class="form-check-input"
-                                            id="cumplioSi"
-                                        />
-                                        <label
-                                            class="form-check-label"
-                                            for="cumplioSi"
-                                            >Sí</label
+                                            v-model="formSeg.seq_cumplido"
+                                            :value="true"
+                                            id="si"
+                                        /><label
+                                            class="form-check-label fw-semibold"
+                                            for="si"
+                                            style="color: #198754"
+                                            >Sí, cumplido</label
                                         >
                                     </div>
                                     <div class="form-check">
                                         <input
-                                            v-model="formSeq.seq_cumplido"
                                             type="radio"
-                                            :value="false"
                                             class="form-check-input"
-                                            id="cumplioNo"
-                                        />
-                                        <label
-                                            class="form-check-label"
-                                            for="cumplioNo"
-                                            >No</label
+                                            v-model="formSeg.seq_cumplido"
+                                            :value="false"
+                                            id="no"
+                                        /><label
+                                            class="form-check-label fw-semibold"
+                                            for="no"
+                                            style="color: #dc3545"
+                                            >No cumplido</label
                                         >
                                     </div>
                                 </div>
@@ -335,54 +476,55 @@
                                     >Observaciones</label
                                 >
                                 <textarea
-                                    v-model="formSeq.seq_observaciones"
+                                    v-model="formSeg.seq_observaciones"
                                     class="form-control"
-                                    rows="2"
+                                    rows="3"
                                 ></textarea>
                             </div>
-                            <hr />
-                            <h6 class="fw-bold mb-3">
-                                <i class="bi bi-person-check me-2"></i
-                                >Asistencia
-                            </h6>
-                            <div
-                                v-for="(ast, idx) in formSeq.asistencias"
-                                :key="idx"
-                                class="d-flex align-items-center gap-3 mb-2 p-2 rounded bg-light"
-                            >
-                                <div class="flex-grow-1 fw-semibold small">
-                                    {{ ast.nombre }}
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold"
+                                    >Asistencia de Integrantes</label
+                                >
+                                <div
+                                    v-if="
+                                        !puntoActual?.equipo?.integrantes
+                                            ?.length
+                                    "
+                                    class="text-muted small"
+                                >
+                                    Sin integrantes cargados
                                 </div>
-                                <div class="d-flex gap-3">
-                                    <div class="form-check">
+                                <div
+                                    v-for="int in puntoActual?.equipo
+                                        ?.integrantes"
+                                    :key="int.ein_id"
+                                    class="d-flex align-items-center justify-content-between py-2 border-bottom"
+                                    style="
+                                        border-color: var(--border) !important;
+                                    "
+                                >
+                                    <span style="font-size: 0.9rem"
+                                        >{{ int.usuario?.usu_primer_nombre }}
+                                        {{
+                                            int.usuario?.usu_primer_apellido
+                                        }}</span
+                                    >
+                                    <div class="form-check mb-0">
                                         <input
-                                            v-model="ast.asistio"
-                                            type="radio"
-                                            :value="true"
+                                            type="checkbox"
                                             class="form-check-input"
-                                            :id="`ast-si-${idx}`"
+                                            :id="'asist_' + int.ein_id"
+                                            v-model="
+                                                formSeg.asistencias[
+                                                    int.ein_id_usu
+                                                ]
+                                            "
                                         />
                                         <label
-                                            class="form-check-label small"
-                                            :for="`ast-si-${idx}`"
+                                            class="form-check-label small fw-bold"
+                                            :for="'asist_' + int.ein_id"
+                                            >Asistió</label
                                         >
-                                            Asistió
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input
-                                            v-model="ast.asistio"
-                                            type="radio"
-                                            :value="false"
-                                            class="form-check-input"
-                                            :id="`ast-no-${idx}`"
-                                        />
-                                        <label
-                                            class="form-check-label small"
-                                            :for="`ast-no-${idx}`"
-                                        >
-                                            No asistió
-                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -397,14 +539,14 @@
                             </button>
                             <button
                                 type="submit"
-                                class="btn btn-success fw-semibold"
-                                :disabled="loadingSeq"
+                                class="btn btn-danger fw-bold"
+                                :disabled="loadingSeg"
                             >
                                 <span
-                                    v-if="loadingSeq"
+                                    v-if="loadingSeg"
                                     class="spinner-border spinner-border-sm me-2"
-                                ></span>
-                                Guardar Seguimiento
+                                ></span
+                                >Registrar
                             </button>
                         </div>
                     </form>
@@ -413,43 +555,37 @@
         </div>
 
         <!-- Modal Reprogramar -->
-        <div class="modal fade" id="modalReprogramar" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header" style="background: #ffc107">
-                        <h5 class="modal-title fw-bold">
-                            Reprogramar Punto de Control
-                        </h5>
+        <div class="modal fade" id="mReprog" tabindex="-1">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="mh">
+                        <h5>Reprogramar Punto</h5>
                         <button
-                            type="button"
-                            class="btn-close"
+                            class="btn btn-sm text-white p-0 fs-5"
                             data-bs-dismiss="modal"
-                        ></button>
+                        >
+                            <i class="bi bi-x"></i>
+                        </button>
                     </div>
-                    <form @submit.prevent="guardarReprogramacion">
+                    <form @submit.prevent="guardarReprogramar">
                         <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">
-                                    Nueva Fecha
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <input
-                                    v-model="formReprogram.fecha"
-                                    type="date"
-                                    class="form-control"
-                                />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">
-                                    Motivo <span class="text-danger">*</span>
-                                </label>
-                                <textarea
-                                    v-model="formReprogram.motivo"
-                                    class="form-control"
-                                    rows="3"
-                                    placeholder="Explica por qué se reprograma..."
-                                ></textarea>
-                            </div>
+                            <label class="form-label fw-semibold"
+                                >Nueva Fecha
+                                <span class="text-danger">*</span></label
+                            >
+                            <input
+                                v-model="formReprog.nueva_fecha"
+                                type="date"
+                                class="form-control"
+                            />
+                            <label class="form-label fw-semibold mt-3"
+                                >Motivo</label
+                            >
+                            <textarea
+                                v-model="formReprog.motivo"
+                                class="form-control"
+                                rows="2"
+                            ></textarea>
                         </div>
                         <div class="modal-footer border-0">
                             <button
@@ -461,7 +597,7 @@
                             </button>
                             <button
                                 type="submit"
-                                class="btn btn-warning fw-semibold"
+                                class="btn btn-warning fw-bold text-dark"
                             >
                                 Reprogramar
                             </button>
@@ -470,162 +606,549 @@
                 </div>
             </div>
         </div>
-        <ModalConfirmar
-            ref="modalConfirmarRef"
-            modal-id="modalConfirmarPunto"
-            titulo="¿Eliminar Punto de Control?"
-            :mensaje="`¿Seguro que deseas eliminar el punto ${itemAEliminar?.puc_nombre}?`"
-            icono="🚩"
-            btn-texto="Sí, eliminar"
-            btn-clase="btn-danger"
-            @confirmado="confirmarEliminar"
-        />
-    </AppLayout>
+
+        <!-- Modal Confirmar Eliminar -->
+        <div class="modal fade" id="mElim" tabindex="-1">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-body text-center p-4">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.75rem">
+                            🚩
+                        </div>
+                        <h6 class="fw-bold" style="color: var(--text-main)">
+                            ¿Eliminar Punto?
+                        </h6>
+                        <p
+                            style="color: var(--text-muted); font-size: 0.9rem"
+                            class="mb-0"
+                        >
+                            ¿Seguro que deseas eliminar
+                            <strong>{{ puntoAEliminar?.puc_nombre }}</strong
+                            >?
+                        </p>
+                    </div>
+                    <div
+                        class="modal-footer border-0 justify-content-center pb-4 gap-2"
+                    >
+                        <button
+                            class="btn btn-secondary px-4"
+                            data-bs-dismiss="modal"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            class="btn btn-danger fw-bold px-4"
+                            @click="confirmarEliminar"
+                        >
+                            Sí, eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
-
 <script setup>
-import { ref } from "vue";
-import { router } from "@inertiajs/vue3";
-import AppLayout from "@/Layouts/AppLayout.vue";
+import { ref, computed } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
-import ModalConfirmar from "@/Components/ModalConfirmar.vue";
-
-const props = defineProps({
-    puntosControl: Array,
-    equipos: Array,
-    trayectos: Array,
+const props = defineProps({ puntosControl: Array, equipos: Array });
+const page = usePage();
+const sidebarOpen = ref(false);
+const tema = ref(localStorage.getItem("prof-theme") || "light");
+const toggleTema = () => {
+    tema.value = tema.value === "dark" ? "light" : "dark";
+    localStorage.setItem("prof-theme", tema.value);
+};
+const logout = () => router.post("/logout");
+const iniciales = computed(() => {
+    const u = page.props.auth.user;
+    return (
+        (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
+    );
 });
-
+const busqueda = ref("");
+const form = ref({
+    puc_id_equ: "",
+    puc_nombre: "",
+    puc_fecha_limite: "",
+    puc_dias_aviso: 3,
+    puc_descripcion: "",
+});
 const errores = ref({});
 const loading = ref(false);
-const loadingSeq = ref(false);
-const puntoSeleccionado = ref(null);
-
-const formPunto = ref({
-    puc_id_equ: "",
-    puc_id_tra: "",
-    puc_nombre: "",
-    puc_descripcion: "",
-    puc_fecha_limite: "",
-    puc_orden: 1,
-    puc_dias_aviso: 7,
-    puc_es_entregable: false,
-});
-
-const formSeq = ref({
+const formSeg = ref({
     seq_cumplido: true,
     seq_observaciones: "",
-    asistencias: [],
+    asistencias: {},
 });
-const formReprogram = ref({ fecha: "", motivo: "" });
-
-let modalCrear = null;
-let modalSeq = null;
-let modalReprogram = null;
-
-const estaVencido = (puc) => {
-    return new Date(puc.puc_fecha_limite) < new Date();
+const loadingSeg = ref(false);
+const formReprog = ref({ nueva_fecha: "", motivo: "" });
+const puntoActual = ref(null);
+const puntoAEliminar = ref(null);
+let mPunto = null;
+let mSeg = null;
+let mReprog = null;
+let mElim = null;
+const estaVencido = (f) => f && new Date(f) < new Date();
+const esCercano = (f) => {
+    if (!f) return false;
+    const d = new Date(f) - new Date();
+    return d > 0 && d < 3 * 86400000;
 };
-
-const abrirModalCrear = () => {
-    formPunto.value = {
+const filtrados = computed(() => {
+    if (!busqueda.value.trim()) return props.puntosControl;
+    const q = busqueda.value.toLowerCase();
+    return props.puntosControl.filter(
+        (p) =>
+            p.puc_nombre?.toLowerCase().includes(q) ||
+            p.equipo?.equ_codigo?.toLowerCase().includes(q),
+    );
+});
+const abrirModal = () => {
+    form.value = {
         puc_id_equ: "",
-        puc_id_tra: "",
         puc_nombre: "",
-        puc_descripcion: "",
         puc_fecha_limite: "",
-        puc_orden: 1,
-        puc_dias_aviso: 7,
-        puc_es_entregable: false,
+        puc_dias_aviso: 3,
+        puc_descripcion: "",
     };
     errores.value = {};
-    modalCrear =
-        modalCrear || new Modal(document.getElementById("modalCrearPunto"));
-    modalCrear.show();
+    mPunto = mPunto || new Modal(document.getElementById("mPunto"));
+    mPunto.show();
 };
-
-const abrirSeguimiento = (puc) => {
-    puntoSeleccionado.value = puc;
-    const equipo = props.equipos.find((e) => e.equ_id === puc.puc_id_equ);
-    formSeq.value = {
-        seq_cumplido: true,
-        seq_observaciones: "",
-        asistencias: (equipo?.integrantes || []).map((int) => ({
-            usu_id: int.usu_id || int.ein_id_usu,
-            nombre: `${int.usuario?.usu_primer_nombre} ${int.usuario?.usu_primer_apellido}`,
-            asistio: true,
-            observacion: "",
-        })),
-    };
-    modalSeq =
-        modalSeq || new Modal(document.getElementById("modalSeguimiento"));
-    modalSeq.show();
-};
-
-const abrirReprogramar = (puc) => {
-    puntoSeleccionado.value = puc;
-    formReprogram.value = { fecha: "", motivo: "" };
-    modalReprogram =
-        modalReprogram ||
-        new Modal(document.getElementById("modalReprogramar"));
-    modalReprogram.show();
-};
-
-const guardarPunto = () => {
-    const equ = props.equipos.find(
-        (e) => e.equ_id == formPunto.value.puc_id_equ,
-    );
-    if (equ) formPunto.value.puc_id_tra = equ.equ_id_tra;
+const guardar = () => {
     loading.value = true;
-    router.post("/profesor/puntos-control", formPunto.value, {
+    router.post("/profesor/puntos-control", form.value, {
         onError: (e) => {
             errores.value = e;
             loading.value = false;
         },
         onSuccess: () => {
             loading.value = false;
-            modalCrear?.hide();
+            mPunto?.hide();
         },
     });
 };
-
+const abrirSeguimiento = (puc) => {
+    puntoActual.value = puc;
+    formSeg.value = {
+        seq_cumplido: true,
+        seq_observaciones: "",
+        asistencias: {},
+    };
+    mSeg = mSeg || new Modal(document.getElementById("mSeg"));
+    mSeg.show();
+};
 const guardarSeguimiento = () => {
-    loadingSeq.value = true;
+    loadingSeg.value = true;
     router.post(
-        `/profesor/puntos-control/${puntoSeleccionado.value.puc_id}/seguimiento`,
-        formSeq.value,
+        `/profesor/puntos-control/${puntoActual.value.puc_id}/seguimiento`,
+        formSeg.value,
         {
-            onError: () => {
-                loadingSeq.value = false;
-            },
             onSuccess: () => {
-                loadingSeq.value = false;
-                modalSeq?.hide();
+                loadingSeg.value = false;
+                mSeg?.hide();
+            },
+            onError: () => {
+                loadingSeg.value = false;
             },
         },
     );
 };
-
-const guardarReprogramacion = () => {
+const abrirReprogramar = (puc) => {
+    puntoActual.value = puc;
+    formReprog.value = { nueva_fecha: "", motivo: "" };
+    mReprog = mReprog || new Modal(document.getElementById("mReprog"));
+    mReprog.show();
+};
+const guardarReprogramar = () => {
     router.post(
-        `/profesor/puntos-control/${puntoSeleccionado.value.puc_id}/reprogramar`,
-        {
-            puc_fecha_reprogramada: formReprogram.value.fecha,
-            puc_motivo_reprogramacion: formReprogram.value.motivo,
-        },
-        { onSuccess: () => modalReprogram?.hide() },
+        `/profesor/puntos-control/${puntoActual.value.puc_id}/reprogramar`,
+        formReprog.value,
+        { onSuccess: () => mReprog?.hide() },
     );
 };
-
-const modalConfirmarRef = ref(null);
-const itemAEliminar = ref(null);
-
 const eliminar = (puc) => {
-    itemAEliminar.value = puc;
-    modalConfirmarRef.value?.abrir();
+    puntoAEliminar.value = puc;
+    mElim = mElim || new Modal(document.getElementById("mElim"));
+    mElim.show();
 };
-
 const confirmarEliminar = () => {
-    router.delete(`/profesor/puntos-control/${itemAEliminar.value.puc_id}`);
+    router.delete(`/profesor/puntos-control/${puntoAEliminar.value.puc_id}`);
+    mElim?.hide();
 };
 </script>
+<style>
+:root {
+    --rojo: #dc3545;
+    --bg-body: #f0f2f5;
+    --bg-card: #fff;
+    --bg-sidebar: #1a1d23;
+    --bg-topbar: #fff;
+    --border: #dee2e6;
+    --text-main: #1a1a1a;
+    --text-muted: #6c757d;
+    --bg-th: #f8f9fa;
+    --bg-hover: #fff8f8;
+    --border-side: rgba(220, 53, 69, 0.25);
+}
+[data-theme="dark"] {
+    --bg-body: #111317;
+    --bg-card: #1e2128;
+    --bg-sidebar: #0d0e11;
+    --bg-topbar: #1e2128;
+    --border: #2d3139;
+    --text-main: #f1f3f5;
+    --text-muted: #adb5bd;
+    --bg-th: #252830;
+    --bg-hover: #252830;
+    --border-side: rgba(220, 53, 69, 0.5);
+}
+.sb {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background: var(--bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    z-index: 1040;
+    box-shadow: 3px 0 15px rgba(0, 0, 0, 0.15);
+    border-right: 2px solid var(--border-side);
+    transition: transform 0.3s;
+}
+.sb-brand {
+    padding: 1.3rem 1.4rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sb-title {
+    font-weight: 800;
+    font-size: 1rem;
+    color: #fff;
+}
+.sb-sub {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ff4d5e;
+}
+.sb-user {
+    padding: 1rem 1.4rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sb-av {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #dc3545;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+.sb-name {
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+.sb-role {
+    color: #94a3b8;
+    font-size: 0.73rem;
+    font-weight: 600;
+    margin-top: 1px;
+}
+.sb-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.4rem 0;
+    scrollbar-width: none;
+}
+.sb-nav::-webkit-scrollbar {
+    display: none;
+}
+.sb-sec {
+    padding: 0.8rem 1.4rem 0.25rem;
+    color: #64748b;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+}
+.sb-lnk {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.65rem 1.4rem;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+}
+.sb-lnk:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+.sb-lnk.active {
+    background: rgba(220, 53, 69, 0.18);
+    color: #fff;
+    border-left-color: #dc3545;
+    font-weight: 700;
+}
+.sb-lnk i {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
+.sb-badge {
+    margin-left: auto;
+    background: #dc3545;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 20px;
+}
+.main {
+    transition: margin-left 0.3s;
+}
+.topbar {
+    background: var(--bg-topbar);
+    padding: 0.85rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    border-bottom: 2px solid rgba(220, 53, 69, 0.1);
+    transition: background 0.3s;
+}
+.tb-title {
+    font-weight: 800;
+    color: var(--text-main);
+    font-size: 1.15rem;
+}
+.tb-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s;
+}
+.tb-btn:hover {
+    color: #dc3545;
+}
+.content {
+    padding: 1.4rem 1.25rem;
+}
+.sc {
+    background: var(--bg-card);
+    border-radius: 13px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition:
+        background 0.3s,
+        border-color 0.3s;
+    margin-bottom: 1.2rem;
+}
+.sh {
+    padding: 1rem 1.3rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sh h6 {
+    margin: 0;
+    font-weight: 800;
+    color: var(--text-main);
+    font-size: 0.97rem;
+}
+.ct {
+    width: 100%;
+    border-collapse: collapse;
+}
+.ct thead th {
+    padding: 0.7rem 1rem;
+    background: var(--bg-th);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border);
+}
+.ct tbody td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    font-size: 0.88rem;
+}
+.ct tbody tr:hover td {
+    background: var(--bg-hover);
+}
+.bs {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+.ba {
+    background: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
+.bd {
+    background: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+.bp {
+    background: #cff4fc;
+    color: #055160;
+    border: 1px solid #b6effb;
+}
+.bw {
+    background: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffecb5;
+}
+.bsec {
+    background: #f8f9fa;
+    color: #212529;
+    border: 1px solid #dee2e6;
+}
+[data-theme="dark"] .ba {
+    background: rgba(25, 135, 84, 0.25);
+    color: #a3cfbb;
+    border-color: rgba(25, 135, 84, 0.4);
+}
+[data-theme="dark"] .bd {
+    background: rgba(220, 53, 69, 0.25);
+    color: #f8d7da;
+    border-color: rgba(220, 53, 69, 0.4);
+}
+[data-theme="dark"] .bp {
+    background: rgba(13, 110, 253, 0.25);
+    color: #9ec5fe;
+    border-color: rgba(13, 110, 253, 0.4);
+}
+[data-theme="dark"] .bw {
+    background: rgba(255, 193, 7, 0.25);
+    color: #ffe69c;
+    border-color: rgba(255, 193, 7, 0.4);
+}
+[data-theme="dark"] .bsec {
+    background: #252830;
+    color: #f1f3f5;
+    border-color: #2d3139;
+}
+.srch {
+    position: relative;
+    max-width: 240px;
+}
+.srch input {
+    padding: 0.4rem 0.9rem 0.4rem 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-size: 0.88rem;
+    width: 100%;
+}
+.srch input:focus {
+    outline: none;
+    border-color: #dc3545;
+}
+.srch i {
+    position: absolute;
+    left: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+.mh {
+    background: #1a1d23;
+    padding: 1rem 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.mh h5 {
+    color: #fff;
+    font-weight: 800;
+    margin: 0;
+    font-size: 1rem;
+}
+.form-control,
+.form-select {
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border) !important;
+}
+.form-label {
+    color: var(--text-main);
+}
+.modal-content {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+}
+.modal-footer,
+.modal-body {
+    background: var(--bg-card);
+}
+.sb-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1035;
+    display: none;
+}
+@media (min-width: 992px) {
+    .sb {
+        transform: translateX(0) !important;
+    }
+    .main {
+        margin-left: 250px;
+    }
+    .toggle-btn {
+        display: none !important;
+    }
+}
+@media (max-width: 991.98px) {
+    .sb {
+        transform: translateX(-100%);
+    }
+    .main {
+        margin-left: 0;
+    }
+    .sb.show {
+        transform: translateX(0);
+    }
+    .sb-overlay.show {
+        display: block !important;
+    }
+    .content {
+        padding: 1rem;
+    }
+}
+</style>
