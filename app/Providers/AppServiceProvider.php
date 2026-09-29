@@ -35,5 +35,23 @@ class AppServiceProvider extends ServiceProvider
         foreach ($modelos as $modelo) {
             $modelo::observe(BitacoraObserver::class);
         }
+        $this->callAfterResolving(
+            \Illuminate\Contracts\Debug\ExceptionHandler::class,
+            function ($handler) {
+                if (!method_exists($handler, 'renderable')) {
+                    return;
+                }
+                $handler->renderable(function (
+                    \Symfony\Component\HttpKernel\Exception\HttpException $e,
+                    \Illuminate\Http\Request $request
+                ) {
+                    if ($e->getStatusCode() === 403 && $request->header('X-Inertia')) {
+                        return \Inertia\Inertia::render('Errors/403')
+                            ->toResponse($request)
+                            ->setStatusCode(403);
+                    }
+                });
+            }
+        );
     }
 }
