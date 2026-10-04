@@ -11,15 +11,16 @@ class EstudianteSeccion extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'ese_id_usu',
+        'ese_id_sec',
         'ese_fecha_asignacion',
         'ese_fecha_fin',
         'ese_status',
-        'ese_created_at',
-        'ese_updated_at',
-        'ese_id_usu',
-        'ese_id_sec',
         'ese_id_usu_created',
-        'ese_id_usu_updated',
+    ];
+
+    protected $casts = [
+        'ese_status' => 'boolean',
     ];
 
     public function usuario()

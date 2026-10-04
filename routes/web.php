@@ -280,7 +280,11 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         [App\Http\Controllers\Profesor\EntregableController::class, 'rechazar'])
         ->name('entregables.rechazar');
     
-
+    // Secciones del profesor
+    Route::get('secciones', [EquipoController::class, 'misSecciones'])
+        ->name('secciones.index');
+    Route::get('secciones/{id}/equipos', [EquipoController::class, 'seccionEquipos'])
+        ->name('secciones.equipos');
     // Equipos — el profesor crea, el coordinador también puede todo
     Route::get('equipos', [EquipoController::class, 'index'])
         ->name('equipos.index');

@@ -56,29 +56,29 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Principal</div>
-                <a href="/profesor" class="sb-link active"
-                    ><i class="bi bi-speedometer2"></i> Dashboard</a
+                <Link href="/profesor" class="sb-link active"
+                    ><i class="bi bi-speedometer2"></i> Dashboard</Link
                 >
-                <a href="/profesor/equipos" class="sb-link"
-                    ><i class="bi bi-people"></i> Mis Equipos</a
+                <Link href="/profesor/secciones" class="sb-link"
+                    ><i class="bi bi-collection"></i> Mis Secciones</Link
                 >
                 <div class="sb-sec">Gestión</div>
-                <a href="/profesor/puntos-control" class="sb-link"
+                <Link href="/profesor/puntos-control" class="sb-link"
                     ><i class="bi bi-flag"></i> Puntos de Control
                     <span v-if="stats.puntosVencer > 0" class="sb-badge">{{
                         stats.puntosVencer
-                    }}</span></a
+                    }}</span></Link
                 >
-                <a href="/profesor/socializaciones" class="sb-link"
-                    ><i class="bi bi-mic"></i> Socializaciones</a
+                <Link href="/profesor/socializaciones" class="sb-link"
+                    ><i class="bi bi-mic"></i> Socializaciones</Link
                 >
-                <a href="/profesor/entregables" class="sb-link"
+                <Link href="/profesor/entregables" class="sb-link"
                     ><i class="bi bi-file-earmark-check"></i> Entregables
                     <span
                         v-if="stats.entregablesPendientes > 0"
                         class="sb-badge"
                         >{{ stats.entregablesPendientes }}</span
-                    ></a
+                    ></Link
                 >
                 <div style="padding: 0.75rem 1.4rem; margin-top: auto">
                     <form @submit.prevent="logout">
@@ -200,12 +200,12 @@
                                     ></i
                                     >Mis Equipos
                                 </h6>
-                                <a
+                                <Link
                                     href="/profesor/equipos"
                                     class="btn btn-sm btn-danger rounded-pill px-3 fw-bold"
                                 >
                                     <i class="bi bi-plus me-1"></i>Nuevo
-                                </a>
+                                </Link>
                             </div>
                             <div
                                 v-if="equipos.length === 0"
@@ -281,10 +281,10 @@
                                     ></i
                                     >Próximos Puntos de Control
                                 </h6>
-                                <a
+                                <Link
                                     href="/profesor/puntos-control"
                                     class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold"
-                                    >Ver todos</a
+                                    >Ver todos</Link
                                 >
                             </div>
                             <div
@@ -356,10 +356,10 @@
                                     ></i
                                     >Entregables por Revisar
                                 </h6>
-                                <a
+                                <Link
                                     href="/profesor/entregables"
                                     class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold"
-                                    >Ver todos</a
+                                    >Ver todos</Link
                                 >
                             </div>
                             <div
@@ -413,7 +413,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
-
+import { Link } from "@inertiajs/vue3";
 const props = defineProps({
     stats: {
         type: Object,

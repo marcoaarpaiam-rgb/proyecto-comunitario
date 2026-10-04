@@ -54,46 +54,127 @@
                 </div>
             </div>
             <div class="sb-nav">
-                <div class="sb-section">Principal</div>
-                <a href="/coordinador" class="sb-link active"
-                    ><i class="bi bi-speedometer2"></i> Dashboard</a
+                <div class="sb-sec">Principal</div>
+                <Link href="/coordinador" class="sb-lnk">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </Link>
+                <Link href="/coordinador/secciones" class="sb-lnk">
+                    <i class="bi bi-collection"></i> Secciones
+                </Link>
+                <Link href="/coordinador/comunidades" class="sb-lnk">
+                    <i class="bi bi-building"></i> Comunidades
+                </Link>
+                <Link href="/coordinador/proyectos" class="sb-lnk">
+                    <i class="bi bi-folder"></i> Proyectos
+                </Link>
+                <Link href="/coordinador/socializaciones" class="sb-lnk">
+                    <i class="bi bi-mic"></i> Socializaciones
+                </Link>
+                <Link href="/coordinador/resultados" class="sb-lnk">
+                    <i class="bi bi-trophy"></i> Resultados
+                </Link>
+
+                <!-- Tablas Maestras — desplegable -->
+                <div
+                    class="sb-sec sb-toggle"
+                    @click="menuMaestras = !menuMaestras"
+                    style="
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding-right: 1.2rem;
+                    "
                 >
-                <a href="/coordinador/secciones" class="sb-link"
-                    ><i class="bi bi-collection"></i> Secciones</a
+                    <span>Tablas Maestras</span>
+                    <i
+                        class="bi"
+                        :class="
+                            menuMaestras ? 'bi-chevron-up' : 'bi-chevron-down'
+                        "
+                        style="font-size: 0.75rem"
+                    ></i>
+                </div>
+                <div v-show="menuMaestras">
+                    <Link href="/coordinador/tipos-proyecto" class="sb-lnk">
+                        <i class="bi bi-tag"></i> Tipos de Proyecto
+                    </Link>
+                    <Link
+                        href="/coordinador/maestras/modalidades"
+                        class="sb-lnk"
+                    >
+                        <i class="bi bi-layers"></i> Modalidades
+                    </Link>
+                    <Link
+                        href="/coordinador/maestras/tipos-jurado"
+                        class="sb-lnk"
+                    >
+                        <i class="bi bi-person-badge"></i> Tipos de Jurado
+                    </Link>
+                    <Link
+                        href="/coordinador/maestras/tipos-beneficiario"
+                        class="sb-lnk"
+                    >
+                        <i class="bi bi-people"></i> Tipos Beneficiario
+                    </Link>
+                    <Link
+                        href="/coordinador/maestras/tipos-entregable"
+                        class="sb-lnk"
+                    >
+                        <i class="bi bi-file-earmark"></i> Tipos Entregable
+                    </Link>
+                    <Link
+                        href="/coordinador/maestras/tipos-evento-equipo"
+                        class="sb-lnk"
+                    >
+                        <i class="bi bi-calendar-event"></i> Eventos Equipo
+                    </Link>
+                    <Link href="/coordinador/maestras/turnos" class="sb-lnk">
+                        <i class="bi bi-clock"></i> Turnos
+                    </Link>
+                    <Link
+                        href="/coordinador/maestras/estados-proyecto"
+                        class="sb-lnk"
+                    >
+                        <i class="bi bi-award"></i> Estados Proyecto
+                    </Link>
+                </div>
+
+                <!-- Sistema — desplegable -->
+                <div
+                    class="sb-sec sb-toggle"
+                    @click="menuSistema = !menuSistema"
+                    style="
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding-right: 1.2rem;
+                    "
                 >
-                <a href="/coordinador/comunidades" class="sb-link"
-                    ><i class="bi bi-building"></i> Comunidades</a
-                >
-                <a href="/coordinador/equipos" class="sb-link"
-                    ><i class="bi bi-people"></i> Equipos</a
-                >
-                <a href="/coordinador/proyectos" class="sb-link"
-                    ><i class="bi bi-folder"></i> Proyectos</a
-                >
-                <div class="sb-section">Académico</div>
-                <a href="/coordinador/socializaciones" class="sb-link"
-                    ><i class="bi bi-mic"></i> Socializaciones</a
-                >
-                <a href="/coordinador/resultados" class="sb-link"
-                    ><i class="bi bi-trophy"></i> Resultados</a
-                >
-                <div class="sb-section">Reportes</div>
-                <a href="/coordinador/reportes" class="sb-link"
-                    ><i class="bi bi-bar-chart"></i> Reportes</a
-                >
-                <a href="/coordinador/cartas" class="sb-link"
-                    ><i class="bi bi-file-earmark-text"></i> Cartas</a
-                >
-                <div class="sb-section">Sistema</div>
-                <a href="/coordinador/tipos-proyecto" class="sb-link"
-                    ><i class="bi bi-sliders"></i> Tablas Maestras</a
-                >
-                <a href="/coordinador/bitacora" class="sb-link"
-                    ><i class="bi bi-journal-text"></i> Bitácora</a
-                >
-                <a href="/coordinador/configuracion" class="sb-link"
-                    ><i class="bi bi-gear"></i> Configuración</a
-                >
+                    <span>Sistema</span>
+                    <i
+                        class="bi"
+                        :class="
+                            menuSistema ? 'bi-chevron-up' : 'bi-chevron-down'
+                        "
+                        style="font-size: 0.75rem"
+                    ></i>
+                </div>
+                <div v-show="menuSistema">
+                    <Link href="/coordinador/reportes" class="sb-lnk">
+                        <i class="bi bi-bar-chart"></i> Reportes
+                    </Link>
+                    <Link href="/coordinador/cartas" class="sb-lnk">
+                        <i class="bi bi-file-earmark-text"></i> Cartas
+                    </Link>
+                    <Link href="/coordinador/bitacora" class="sb-lnk">
+                        <i class="bi bi-journal-text"></i> Bitácora
+                    </Link>
+                    <Link href="/coordinador/configuracion" class="sb-lnk">
+                        <i class="bi bi-gear"></i> Configuración
+                    </Link>
+                </div>
                 <div style="padding: 1rem 1.5rem">
                     <form @submit.prevent="logout">
                         <button
@@ -425,10 +506,10 @@
                                 v-if="notificaciones.length > 0"
                                 class="p-3 text-center"
                             >
-                                <a
+                                <Link
                                     href="/coordinador/bitacora"
                                     class="btn btn-sm btn-outline-danger w-100 rounded-pill fw-bold"
-                                    >Ver bitácora</a
+                                    >Ver bitácora</Link
                                 >
                             </div>
                         </div>
@@ -442,7 +523,10 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
-
+import { Link } from "@inertiajs/vue3";
+const menuMaestras = ref(false);
+const menuAcademico = ref(false);
+const menuSistema = ref(false);
 const props = defineProps({
     stats: {
         type: Object,

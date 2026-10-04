@@ -62,6 +62,7 @@ class Usuario extends Authenticatable
     {
         return $this->hasMany(PersonaCargo::class, 'pca_id_usu', 'usu_id');
     }
+    
 
     public function seccionesProfesor()
     {

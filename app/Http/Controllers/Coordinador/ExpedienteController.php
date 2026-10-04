@@ -10,19 +10,22 @@ class ExpedienteController extends Controller
     {
         return Inertia::render('Coordinador/ExpedienteEquipo', [
             'equipo' => Equipo::with([
-                'seccion.trayecto','seccion.turno','trayecto',
-                'integrantes.usuario',
-                'historial.tipoEvento',
-                'proyectoComunidad.comunidad',
-                'proyectoComunidad.tipoProyecto',
-                'proyectoComunidad.modalidad',
-                'puntoControl.seguimiento',
-                'entregables.tipoEntregable',
-                'socializaciones.tipoSocializacion',
-                'socializaciones.jurados',
-                'cartaPresentacion',
-                'resultadoProyecto.estadoProyecto',
-            ])->findOrFail($id),
+            'seccion.trayecto',
+            'seccion.turno',
+            'trayecto',
+            'integrantes.usuario',
+            'historial.tipoEvento',
+            'proyectoComunidad.comunidad',
+            'proyectoComunidad.tipoProyecto',
+            'proyectoComunidad.modalidad',
+            'puntosControl.seguimientos',
+            'puntosControl.asistencias.usuario',
+            'entregables.tipoEntregable',
+            'socializaciones.tipoSocializacion',
+            'socializaciones.jurados',
+            'cartaPresentacion',
+            'resultadoProyecto.estadoProyecto',
+        ])->findOrFail($id),
         ]);
     }
 }

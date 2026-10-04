@@ -59,21 +59,21 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Mi Proyecto</div>
-                <a href="/lider" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</a
+                <Link href="/lider" class="sb-lnk"
+                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</Link
                 >
-                <a href="/lider/equipo" class="sb-lnk"
-                    ><i class="bi bi-people"></i> Mi Equipo</a
+                <Link href="/lider/equipo" class="sb-lnk"
+                    ><i class="bi bi-people"></i> Mi Equipo</Link
                 >
-                <a href="/lider/proyecto" class="sb-lnk"
-                    ><i class="bi bi-building"></i> Mi Comunidad</a
+                <Link href="/lider/proyecto" class="sb-lnk"
+                    ><i class="bi bi-building"></i> Mi Comunidad</Link
                 >
                 <div class="sb-sec">Acciones</div>
-                <a href="/lider/entregables" class="sb-lnk active"
-                    ><i class="bi bi-cloud-upload"></i> Entregables</a
+                <Link href="/lider/entregables" class="sb-lnk active"
+                    ><i class="bi bi-cloud-upload"></i> Entregables</Link
                 >
-                <a href="/lider/carta" class="sb-lnk"
-                    ><i class="bi bi-send"></i> Carta de Presentación</a
+                <Link href="/lider/carta" class="sb-lnk"
+                    ><i class="bi bi-send"></i> Carta de Presentación</Link
                 >
                 <div style="padding: 0.75rem 1.4rem">
                     <form @submit.prevent="logout">
@@ -394,6 +394,7 @@
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
+import { Link } from "@inertiajs/vue3";
 const props = defineProps({
     entregables: Array,
     tiposEntregable: { type: Array, default: () => [] },

@@ -11,19 +11,17 @@ class PuntoControl extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'puc_id_equ',
+        'puc_id_tra',
         'puc_nombre',
         'puc_descripcion',
         'puc_fecha_limite',
         'puc_fecha_reprogramada',
         'puc_motivo_reprogramacion',
-        'puc_dias_aviso',
         'puc_orden',
+        'puc_dias_aviso',
         'puc_es_entregable',
         'puc_status',
-        'puc_created_at',
-        'puc_updated_at',
-        'puc_id_tra',
-        'puc_id_equ',
         'puc_id_usu_created',
         'puc_id_usu_updated',
     ];

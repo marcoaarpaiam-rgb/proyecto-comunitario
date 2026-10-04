@@ -61,21 +61,21 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Mi Proyecto</div>
-                <a href="/lider" class="sb-link active"
-                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</a
+                <Link href="/lider" class="sb-link active"
+                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</Link
                 >
-                <a href="/lider/equipo" class="sb-link"
-                    ><i class="bi bi-people"></i> Mi Equipo</a
+                <Link href="/lider/equipo" class="sb-link"
+                    ><i class="bi bi-people"></i> Mi Equipo</Link
                 >
-                <a href="/lider/proyecto" class="sb-link"
-                    ><i class="bi bi-building"></i> Mi Comunidad</a
+                <Link href="/lider/proyecto" class="sb-link"
+                    ><i class="bi bi-building"></i> Mi Comunidad</Link
                 >
                 <div class="sb-sec">Acciones</div>
-                <a href="/lider/entregables" class="sb-link"
-                    ><i class="bi bi-cloud-upload"></i> Entregables</a
+                <Link href="/lider/entregables" class="sb-link"
+                    ><i class="bi bi-cloud-upload"></i> Entregables</Link
                 >
-                <a href="/lider/carta" class="sb-link"
-                    ><i class="bi bi-send"></i> Carta de Presentación</a
+                <Link href="/lider/carta" class="sb-link"
+                    ><i class="bi bi-send"></i> Carta de Presentación</Link
                 >
                 <div style="padding: 0.75rem 1.4rem; margin-top: auto">
                     <form @submit.prevent="logout">
@@ -145,14 +145,14 @@
                         </div>
                         <div class="b-sub">{{ equipo.equ_titulo }}</div>
                     </div>
-                    <a
+                    <Link
                         href="/lider/entregables"
                         class="btn btn-light btn-sm rounded-pill px-3 fw-bold"
                         style="color: #1a1a1a"
                     >
                         <i class="bi bi-cloud-arrow-up me-1 text-danger"></i
                         >Subir Entregable
-                    </a>
+                    </Link>
                 </div>
 
                 <div class="row g-3">
@@ -229,14 +229,14 @@
                                         class="bs bw"
                                         >En revisión</span
                                     >
-                                    <a
+                                    <Link
                                         v-else-if="
                                             equipo.proyecto_comunidad
                                                 .pco_fecha_aprobacion
                                         "
                                         href="/lider/carta"
                                         class="bs bd"
-                                        >Solicitar</a
+                                        >Solicitar</Link
                                     >
                                     <span
                                         v-else
@@ -376,12 +376,12 @@
                                     ></i
                                     >Mis Entregables
                                 </h6>
-                                <a
+                                <Link
                                     href="/lider/entregables"
                                     class="btn btn-sm btn-danger rounded-pill px-3 fw-bold"
                                 >
                                     <i class="bi bi-plus me-1"></i>Subir
-                                </a>
+                                </Link>
                             </div>
                             <div
                                 v-if="entregables.length === 0"
@@ -491,6 +491,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
+import { Link } from "@inertiajs/vue3";
 
 const props = defineProps({
     equipo: { type: Object, default: null },

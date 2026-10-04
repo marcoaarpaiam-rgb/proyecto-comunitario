@@ -53,24 +53,24 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Principal</div>
-                <a href="/profesor" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Dashboard</a
+                <Link href="/profesor" class="sb-lnk"
+                    ><i class="bi bi-speedometer2"></i> Dashboard</Link
                 >
-                <a href="/profesor/equipos" class="sb-lnk"
-                    ><i class="bi bi-people"></i> Mis Equipos</a
+                <Link href="/profesor/secciones" class="sb-link"
+                    ><i class="bi bi-collection"></i> Mis Secciones</Link
                 >
                 <div class="sb-sec">Gestión</div>
-                <a href="/profesor/puntos-control" class="sb-lnk"
-                    ><i class="bi bi-flag"></i> Puntos de Control</a
+                <Link href="/profesor/puntos-control" class="sb-lnk"
+                    ><i class="bi bi-flag"></i> Puntos de Control</Link
                 >
-                <a href="/profesor/socializaciones" class="sb-lnk"
-                    ><i class="bi bi-mic"></i> Socializaciones</a
+                <Link href="/profesor/socializaciones" class="sb-lnk"
+                    ><i class="bi bi-mic"></i> Socializaciones</Link
                 >
-                <a href="/profesor/entregables" class="sb-lnk active"
+                <Link href="/profesor/entregables" class="sb-lnk active"
                     ><i class="bi bi-file-earmark-check"></i> Entregables
                     <span v-if="pendientes > 0" class="sb-badge">{{
                         pendientes
-                    }}</span></a
+                    }}</span></Link
                 >
                 <div style="padding: 0.75rem 1.4rem">
                     <form @submit.prevent="logout">
@@ -387,6 +387,8 @@
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
+import { Link } from "@inertiajs/vue3";
+
 const props = defineProps({ entregables: Array });
 const page = usePage();
 const sidebarOpen = ref(false);

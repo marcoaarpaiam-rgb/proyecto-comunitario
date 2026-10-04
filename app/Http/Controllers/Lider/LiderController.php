@@ -142,22 +142,34 @@ class LiderController extends Controller
     }
     public function descargarCarta($id)
     {
-        $lider  = auth()->user();
-        $equipo = \App\Models\Equipo::where('equ_id_lider', $lider->usu_id)
-                    ->where('equ_status', true)
-                    ->firstOrFail();
+        $lider = auth()->user();
 
-        // Solo puede descargar la carta de su propio equipo
+        $integrante = \App\Models\EquipoIntegrante::where('ein_id_usu', $lider->usu_id)
+            ->where('ein_es_lider', true)
+            ->where('ein_status', true)
+            ->first();
+
+        if (!$integrante) abort(403, 'No tienes equipo asignado.');
+
+        $equipo = \App\Models\Equipo::where('equ_id', $integrante->ein_id_equ)
+            ->where('equ_status', true)
+            ->firstOrFail();
+
         $carta = \App\Models\CartaPresentacion::where('cpr_id', $id)
             ->whereHas('proyectoComunidad', fn($q) =>
                 $q->where('pco_id_equ', $equipo->equ_id)
             )
-            ->where('cpr_fecha_aprobacion', '!=', null) // solo si está aprobada
+            ->whereNotNull('cpr_fecha_aprobacion')
             ->firstOrFail();
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.carta_presentacion', [
-            'carta'  => $carta->load(['proyectoComunidad.comunidad', 'proyectoComunidad.equipo.integrantes.usuario']),
-            'coordinador' => \App\Models\Usuario::where('usu_rol', 'coordinador')->first(),
+            'carta'       => $carta->load([
+                'proyectoComunidad.comunidad',
+                'proyectoComunidad.equipo.integrantes.usuario',
+            ]),
+            'coordinador' => \App\Models\Usuario::whereHas('roles', fn($q) =>
+                $q->where('rol_nombre', 'coordinador')
+            )->first(),
         ])->setPaper('letter', 'portrait');
 
         return $pdf->download("carta-presentacion-{$equipo->equ_codigo}.pdf");

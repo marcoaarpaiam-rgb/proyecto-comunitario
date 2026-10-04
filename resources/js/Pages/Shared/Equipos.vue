@@ -62,75 +62,161 @@
             <div class="sb-nav">
                 <!-- Coordinador -->
                 <template v-if="!esProfesor">
+                    <!-- Principal -->
                     <div class="sb-sec">Principal</div>
-                    <a href="/coordinador" class="sb-lnk"
-                        ><i class="bi bi-speedometer2"></i> Dashboard</a
+                    <a href="/coordinador" class="sb-lnk">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="/coordinador/secciones" class="sb-lnk">
+                        <i class="bi bi-collection"></i> Secciones
+                    </a>
+                    <a href="/coordinador/comunidades" class="sb-lnk">
+                        <i class="bi bi-building"></i> Comunidades
+                    </a>
+                    <a href="/coordinador/equipos" class="sb-lnk active">
+                        <i class="bi bi-people"></i> Equipos
+                    </a>
+                    <a href="/coordinador/proyectos" class="sb-lnk">
+                        <i class="bi bi-folder"></i> Proyectos
+                    </a>
+
+                    <!-- Tablas Maestras — desplegable -->
+                    <div
+                        class="sb-sec sb-toggle"
+                        @click="menuMaestras = !menuMaestras"
+                        style="
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding-right: 1.2rem;
+                        "
                     >
-                    <a href="/coordinador/secciones" class="sb-lnk"
-                        ><i class="bi bi-collection"></i> Secciones</a
+                        <span>Tablas Maestras</span>
+                        <i
+                            class="bi"
+                            :class="
+                                menuMaestras
+                                    ? 'bi-chevron-up'
+                                    : 'bi-chevron-down'
+                            "
+                            style="font-size: 0.75rem"
+                        ></i>
+                    </div>
+                    <div v-show="menuMaestras">
+                        <a href="/coordinador/tipos-proyecto" class="sb-lnk">
+                            <i class="bi bi-tag"></i> Tipos de Proyecto
+                        </a>
+                        <a
+                            href="/coordinador/maestras/modalidades"
+                            class="sb-lnk"
+                        >
+                            <i class="bi bi-layers"></i> Modalidades
+                        </a>
+                        <a
+                            href="/coordinador/maestras/tipos-jurado"
+                            class="sb-lnk"
+                        >
+                            <i class="bi bi-person-badge"></i> Tipos de Jurado
+                        </a>
+                        <a
+                            href="/coordinador/maestras/tipos-beneficiario"
+                            class="sb-lnk"
+                        >
+                            <i class="bi bi-people"></i> Tipos Beneficiario
+                        </a>
+                        <a
+                            href="/coordinador/maestras/tipos-entregable"
+                            class="sb-lnk"
+                        >
+                            <i class="bi bi-file-earmark"></i> Tipos Entregable
+                        </a>
+                        <a
+                            href="/coordinador/maestras/tipos-evento-equipo"
+                            class="sb-lnk"
+                        >
+                            <i class="bi bi-calendar-event"></i> Eventos Equipo
+                        </a>
+                        <a href="/coordinador/maestras/turnos" class="sb-lnk">
+                            <i class="bi bi-clock"></i> Turnos
+                        </a>
+                        <a
+                            href="/coordinador/maestras/estados-proyecto"
+                            class="sb-lnk"
+                        >
+                            <i class="bi bi-award"></i> Estados Proyecto
+                        </a>
+                    </div>
+
+                    <!-- Académico — desplegable -->
+                    <div
+                        class="sb-sec sb-toggle"
+                        @click="menuAcademico = !menuAcademico"
+                        style="
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding-right: 1.2rem;
+                        "
                     >
-                    <a href="/coordinador/comunidades" class="sb-lnk"
-                        ><i class="bi bi-building"></i> Comunidades</a
+                        <span>Académico</span>
+                        <i
+                            class="bi"
+                            :class="
+                                menuAcademico
+                                    ? 'bi-chevron-up'
+                                    : 'bi-chevron-down'
+                            "
+                            style="font-size: 0.75rem"
+                        ></i>
+                    </div>
+                    <div v-show="menuAcademico">
+                        <a href="/coordinador/socializaciones" class="sb-lnk">
+                            <i class="bi bi-mic"></i> Socializaciones
+                        </a>
+                        <a href="/coordinador/resultados" class="sb-lnk">
+                            <i class="bi bi-trophy"></i> Resultados
+                        </a>
+                    </div>
+
+                    <!-- Sistema — desplegable -->
+                    <div
+                        class="sb-sec sb-toggle"
+                        @click="menuSistema = !menuSistema"
+                        style="
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding-right: 1.2rem;
+                        "
                     >
-                    <a href="/coordinador/equipos" class="sb-lnk active"
-                        ><i class="bi bi-people"></i> Equipos</a
-                    >
-                    <a href="/coordinador/proyectos" class="sb-lnk"
-                        ><i class="bi bi-folder"></i> Proyectos</a
-                    >
-                    <div class="sb-sec">Tablas Maestras</div>
-                    <a href="/coordinador/tipos-proyecto" class="sb-lnk"
-                        ><i class="bi bi-tag"></i> Tipos de Proyecto</a
-                    >
-                    <a href="/coordinador/maestras/modalidades" class="sb-lnk"
-                        ><i class="bi bi-layers"></i> Modalidades</a
-                    >
-                    <a href="/coordinador/maestras/tipos-jurado" class="sb-lnk"
-                        ><i class="bi bi-person-badge"></i> Tipos de Jurado</a
-                    >
-                    <a
-                        href="/coordinador/maestras/tipos-beneficiario"
-                        class="sb-lnk"
-                        ><i class="bi bi-people"></i> Tipos Beneficiario</a
-                    >
-                    <a
-                        href="/coordinador/maestras/tipos-entregable"
-                        class="sb-lnk"
-                        ><i class="bi bi-file-earmark"></i> Tipos Entregable</a
-                    >
-                    <a
-                        href="/coordinador/maestras/tipos-evento-equipo"
-                        class="sb-lnk"
-                        ><i class="bi bi-calendar-event"></i> Eventos Equipo</a
-                    >
-                    <a href="/coordinador/maestras/turnos" class="sb-lnk"
-                        ><i class="bi bi-clock"></i> Turnos</a
-                    >
-                    <a
-                        href="/coordinador/maestras/estados-proyecto"
-                        class="sb-lnk"
-                        ><i class="bi bi-award"></i> Estados Proyecto</a
-                    >
-                    <div class="sb-sec">Académico</div>
-                    <a href="/coordinador/socializaciones" class="sb-lnk"
-                        ><i class="bi bi-mic"></i> Socializaciones</a
-                    >
-                    <a href="/coordinador/resultados" class="sb-lnk"
-                        ><i class="bi bi-trophy"></i> Resultados</a
-                    >
-                    <div class="sb-sec">Sistema</div>
-                    <a href="/coordinador/reportes" class="sb-lnk"
-                        ><i class="bi bi-bar-chart"></i> Reportes</a
-                    >
-                    <a href="/coordinador/cartas" class="sb-lnk"
-                        ><i class="bi bi-file-earmark-text"></i> Cartas</a
-                    >
-                    <a href="/coordinador/bitacora" class="sb-lnk"
-                        ><i class="bi bi-journal-text"></i> Bitácora</a
-                    >
-                    <a href="/coordinador/configuracion" class="sb-lnk"
-                        ><i class="bi bi-gear"></i> Configuración</a
-                    >
+                        <span>Sistema</span>
+                        <i
+                            class="bi"
+                            :class="
+                                menuSistema
+                                    ? 'bi-chevron-up'
+                                    : 'bi-chevron-down'
+                            "
+                            style="font-size: 0.75rem"
+                        ></i>
+                    </div>
+                    <div v-show="menuSistema">
+                        <a href="/coordinador/reportes" class="sb-lnk">
+                            <i class="bi bi-bar-chart"></i> Reportes
+                        </a>
+                        <a href="/coordinador/cartas" class="sb-lnk">
+                            <i class="bi bi-file-earmark-text"></i> Cartas
+                        </a>
+                        <a href="/coordinador/bitacora" class="sb-lnk">
+                            <i class="bi bi-journal-text"></i> Bitácora
+                        </a>
+                        <a href="/coordinador/configuracion" class="sb-lnk">
+                            <i class="bi bi-gear"></i> Configuración
+                        </a>
+                    </div>
                 </template>
                 <!-- Profesor -->
                 <template v-else>
@@ -695,6 +781,15 @@
                                     ></i
                                     >El líder recibirá acceso con su cédula como
                                     usuario y contraseña.
+                                </div>
+                                <!-- Barra de búsqueda de estudiantes -->
+                                <div class="mb-2">
+                                    <input
+                                        type="text"
+                                        v-model="busquedaEstudiante"
+                                        class="form-control form-control-sm"
+                                        placeholder="Buscar por nombre o cédula..."
+                                    />
                                 </div>
                                 <div
                                     v-for="(item, idx) in formNuevo.integrantes"
@@ -1549,11 +1644,27 @@ const codigoPreview = computed(() => {
 const onSeccionChange = () => {
     formNuevo.value.equ_numero_grupo = "";
 };
+const busquedaEstudiante = ref("");
+
 const estudiantesDisponibles = (idActual) => {
     const sel = formNuevo.value.integrantes
         .map((i) => i.usu_id)
         .filter((id) => id && id !== idActual);
-    return props.estudiantes?.filter((e) => !sel.includes(e.usu_id)) || [];
+
+    return (
+        props.estudiantes?.filter((e) => {
+            if (sel.includes(e.usu_id)) return false;
+            if (busquedaEstudiante.value.trim()) {
+                const q = busquedaEstudiante.value.toLowerCase().trim();
+                return (
+                    e.usu_primer_nombre?.toLowerCase().includes(q) ||
+                    e.usu_primer_apellido?.toLowerCase().includes(q) ||
+                    e.usu_cedula?.includes(q)
+                );
+            }
+            return true;
+        }) || []
+    );
 };
 const actualizarLider = () => {
     formNuevo.value.integrantes.forEach((item, idx) => {
@@ -1755,6 +1866,9 @@ const iconEvt = (n) => {
     if (n === "Reactivado") return "bi-arrow-counterclockwise";
     return "bi-circle";
 };
+const menuMaestras = ref(false);
+const menuAcademico = ref(false);
+const menuSistema = ref(false);
 </script>
 <style>
 :root {
