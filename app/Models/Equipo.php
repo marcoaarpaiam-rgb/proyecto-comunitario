@@ -72,9 +72,28 @@ class Equipo extends Model
         return $this->hasMany(Entregable::class, 'entr_id_equ', 'equ_id');
     }
 
+    public function cartaPresentacion()
+    {
+        return $this->hasOneThrough(
+            \App\Models\CartaPresentacion::class,
+            \App\Models\ProyectoComunidad::class,
+            'pco_id_equ', // FK en proyecto_comunidad → equipo
+            'cpr_id_pco', // FK en carta_presentacion → proyecto_comunidad
+            'equ_id',     // PK en equipo
+            'pco_id'      // PK en proyecto_comunidad
+        );
+    }
+
     public function resultadoProyecto()
     {
-        return $this->hasOne(ResultadoProyecto::class, 'rpr_id_equ', 'equ_id');
+        return $this->hasOneThrough(
+            \App\Models\ResultadoProyecto::class,
+            \App\Models\ProyectoComunidad::class,
+            'pco_id_equ',
+            'rpr_id_pco',
+            'equ_id',
+            'pco_id'
+        );
     }
 
     public function notificaciones()

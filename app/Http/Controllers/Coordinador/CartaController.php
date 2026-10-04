@@ -15,10 +15,13 @@ class CartaController extends Controller
     public function index()
     {
         return Inertia::render('Coordinador/Cartas', [
-            'cartas'    => CartaPresentacion::with([
-                'proyectoComunidad.equipo.integrantes.usuario',
-                'proyectoComunidad.comunidad',
-            ])->orderBy('cpr_fecha_generacion', 'desc')->get(),
+            'cartas' => \App\Models\CartaPresentacion::where('cpr_solicitada', true)
+                ->with([
+                    'proyectoComunidad.equipo.integrantes.usuario',
+                    'proyectoComunidad.comunidad',
+                ])
+                ->orderBy('cpr_fecha_generacion', 'desc')
+                ->get(),
             'proyectos' => ProyectoComunidad::with(['equipo','comunidad'])
                 ->whereNotNull('pco_fecha_aprobacion')
                 ->where('pco_status', true)
@@ -50,11 +53,12 @@ class CartaController extends Controller
         }
 
         CartaPresentacion::create([
-            'cpr_id_pco'       => $request->cpr_id_pco,
-            'cpr_ruta_archivo' => '',
-            'cpr_solicitada'   => true,
-            'cpr_sello'        => false,
-            'cpr_id_usu_created' => auth()->id(),
+            'cpr_id_pco'           => $request->cpr_id_pco,
+            'cpr_ruta_archivo'     => '',
+            'cpr_solicitada'       => true,
+            'cpr_sello'            => false,
+            'cpr_fecha_generacion' => now(),
+            'cpr_id_usu_created'   => auth()->id(),
         ]);
 
         return back()->with('success', 'Carta solicitada correctamente. El coordinador la revisará pronto.');

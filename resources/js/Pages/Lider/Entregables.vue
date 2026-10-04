@@ -440,6 +440,10 @@ const guardar = () => {
     if (form.value.archivo) data.append("archivo", form.value.archivo);
     data.append("entr_version", form.value.entr_version);
     data.append("entr_descripcion", form.value.entr_descripcion);
+    data.append(
+        "entr_nombre_archivo",
+        form.value.archivo?.name ?? "entregable",
+    );
     router.post("/lider/entregables", data, {
         forceFormData: true,
         onError: (e) => {

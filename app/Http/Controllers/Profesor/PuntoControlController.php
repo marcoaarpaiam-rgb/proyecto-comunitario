@@ -42,7 +42,6 @@ class PuntoControlController extends Controller
     {
         $request->validate([
             'puc_id_equ'      => 'required|exists:equipo,equ_id',
-            'puc_id_tra'      => 'required|exists:trayecto,tra_id',
             'puc_nombre'      => 'required|string|max:150',
             'puc_descripcion' => 'nullable|string',
             'puc_fecha_limite'=> 'required|date',
@@ -50,15 +49,17 @@ class PuntoControlController extends Controller
             'puc_dias_aviso'  => 'required|integer|min:1|max:30',
         ], [
             'puc_id_equ.required'       => 'El equipo es obligatorio.',
-            'puc_id_tra.required'       => 'El trayecto es obligatorio.',
             'puc_nombre.required'       => 'El nombre es obligatorio.',
             'puc_fecha_limite.required' => 'La fecha límite es obligatoria.',
             'puc_orden.required'        => 'El orden es obligatorio.',
         ]);
 
+        // Obtener el trayecto del equipo automáticamente
+        $equipo = \App\Models\Equipo::findOrFail($request->puc_id_equ);
+
         PuntoControl::create([
             'puc_id_equ'          => $request->puc_id_equ,
-            'puc_id_tra'          => $request->puc_id_tra,
+            'puc_id_tra' => $equipo->equ_id_tra,
             'puc_nombre'          => $request->puc_nombre,
             'puc_descripcion'     => $request->puc_descripcion,
             'puc_fecha_limite'    => $request->puc_fecha_limite,

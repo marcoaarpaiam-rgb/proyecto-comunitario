@@ -11,6 +11,10 @@ class Entregable extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'entr_id_equ',
+        'entr_id_tet',
+        'entr_id_puc',
+        'entr_id_soc',
         'entr_nombre_archivo',
         'entr_ruta',
         'entr_version',
@@ -19,12 +23,7 @@ class Entregable extends Model
         'entr_aprobado',
         'entr_fecha_aprobacion',
         'entr_observacion_rechazo',
-        'entr_fecha_subida',
         'entr_status',
-        'entr_id_equ',
-        'entr_id_tet',
-        'entr_id_puc',
-        'entr_id_soc',
         'entr_id_usu_aprobado',
         'entr_id_usu_created',
     ];

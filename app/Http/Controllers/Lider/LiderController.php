@@ -166,7 +166,10 @@ class LiderController extends Controller
             'carta'       => $carta->load([
                 'proyectoComunidad.comunidad',
                 'proyectoComunidad.equipo.integrantes.usuario',
+                'proyectoComunidad.equipo.seccion',
+                'proyectoComunidad.equipo.trayecto',
             ]),
+            'proyecto'    => $carta->proyectoComunidad, // AGREGA ESTA LÍNEA
             'coordinador' => \App\Models\Usuario::whereHas('roles', fn($q) =>
                 $q->where('rol_nombre', 'coordinador')
             )->first(),

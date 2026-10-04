@@ -621,10 +621,27 @@ const abrirResultado = (soc) => {
     mRes.show();
 };
 const guardarResultado = () => {
+    if (!socActual.value) return;
+    loading.value = true;
     router.post(
         `/profesor/socializaciones/${socActual.value.soc_id}/resultado`,
         formRes.value,
-        { onSuccess: () => mRes?.hide() },
+        {
+            onSuccess: () => {
+                loading.value = false;
+                mRes?.hide();
+                socActual.value = null;
+                formRes.value = {
+                    soc_apto: null,
+                    soc_aprobado: null,
+                    soc_observaciones: "",
+                };
+            },
+            onError: (e) => {
+                loading.value = false;
+                errores.value = e;
+            },
+        },
     );
 };
 </script>

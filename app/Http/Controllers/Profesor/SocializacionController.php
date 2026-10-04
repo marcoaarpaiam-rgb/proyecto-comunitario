@@ -131,6 +131,6 @@ class SocializacionController extends Controller
             );
         }
 
-        return redirect(request()->header('Referer'))->with('success', 'Resultado registrado correctamente.');
+        return back()->with('success', 'Resultado registrado correctamente.');
     }
 }

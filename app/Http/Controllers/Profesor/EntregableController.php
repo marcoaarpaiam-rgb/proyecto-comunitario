@@ -8,6 +8,8 @@ use App\Models\Equipo;
 use App\Models\Notificacion;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
+
 
 class EntregableController extends Controller
 {
@@ -44,11 +46,13 @@ class EntregableController extends Controller
         $lider = $entregable->equipo?->integrantes?->first();
         if ($lider) {
             Notificacion::create([
-                'not_id_usu'            => $lider->ein_id_usu,
-                'not_mensaje'           => "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue APROBADO por el profesor.",
-                'not_tipo'              => 'entregable_aprobado',
-                'not_leida'             => false,
-                'not_fecha_generacion'  => now(),
+                'not_id_usu'           => $lider->ein_id_usu,
+                'not_id_tno' => DB::table('tipo_notificacion')
+                    ->where('tno_nombre', 'Entregable aprobado por el profesor')
+                    ->value('tno_id'),
+                'not_mensaje'          => "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue APROBADO por el profesor.",
+                'not_leida'            => false,
+                'not_id_equ'           => $entregable->entr_id_equ,
             ]);
         }
 
@@ -79,10 +83,12 @@ class EntregableController extends Controller
         if ($lider) {
             Notificacion::create([
                 'not_id_usu'           => $lider->ein_id_usu,
-                'not_mensaje'          => "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue RECHAZADO. Motivo: {$request->observacion}",
-                'not_tipo'             => 'entregable_rechazado',
+                'not_id_tno' => DB::table('tipo_notificacion')
+                    ->where('tno_nombre', 'Entregable rechazado por el profesor')
+                    ->value('tno_id'),
+                'not_mensaje' => "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue RECHAZADO. Motivo: {$request->observacion}",
                 'not_leida'            => false,
-                'not_fecha_generacion' => now(),
+                'not_id_equ'           => $entregable->entr_id_equ,
             ]);
         }
 
