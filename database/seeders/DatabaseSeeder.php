@@ -149,6 +149,13 @@ class DatabaseSeeder extends Seeder
             ['com_nombre'=>'Centro Comunitario El Paraíso','com_ubicacion'=>'Urb. El Paraíso, Trujillo','com_id_tor'=>1,'com_status'=>true,'com_id_usu_created'=>1],
         ]);
 
+        // Al final del bloque de catálogos, ANTES del bloque de usuarios:
+        DB::table('tipo_notificacion')->insert([
+            ['tno_nombre' => 'Entregable aprobado por el profesor'],
+            ['tno_nombre' => 'Entregable rechazado por el profesor'],
+            ['tno_nombre' => 'Carta de presentacion aprobada'],
+        ]);
+
         // ── PROFESORES ADICIONALES ───────────────────────────────────
         $profesores = [
             ['10000004','María','Alejandra','Rodríguez','Torres','maria.rodriguez@uptp.edu.ve'],

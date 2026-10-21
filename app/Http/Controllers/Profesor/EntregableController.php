@@ -24,6 +24,9 @@ class EntregableController extends Controller
         return Inertia::render('Profesor/Entregables', [
             'entregables' => Entregable::whereIn('entr_id_equ', $equipos)
                 ->with(['equipo', 'tipoEntregable'])
+                ->select('entr_id','entr_id_equ','entr_id_tet','entr_nombre_archivo',
+                        'entr_ruta','entr_version','entr_aprobado','entr_fecha_subida',
+                        'entr_observacion_rechazo')
                 ->orderBy('entr_fecha_subida', 'desc')
                 ->get(),
         ]);

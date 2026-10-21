@@ -484,6 +484,19 @@
                                                 ></i
                                                 >Reactivar
                                             </button>
+                                            <button
+                                                @click="
+                                                    router.post(
+                                                        `/coordinador/equipos/${equ.equ_id}/activar`,
+                                                    )
+                                                "
+                                                class="btn btn-sm btn-success"
+                                            >
+                                                <i
+                                                    class="bi bi-check-circle"
+                                                ></i>
+                                                Activar
+                                            </button>
                                         </template>
                                     </td>
                                 </tr>
@@ -667,16 +680,18 @@
                                                 >*</span
                                             ></label
                                         >
+                                        <!-- Número de grupo -->
                                         <input
-                                            v-model="formNuevo.equ_numero_grupo"
                                             type="number"
-                                            class="form-control"
-                                            :class="{
-                                                'is-invalid':
-                                                    errores.equ_numero_grupo,
-                                            }"
+                                            class="form-control form-control-sm"
+                                            v-model="formNuevo.equ_numero_grupo"
                                             min="1"
-                                            placeholder="Ej: 1"
+                                            max="99"
+                                            @keypress="
+                                                (e) =>
+                                                    !/[0-9]/.test(e.key) &&
+                                                    e.preventDefault()
+                                            "
                                         />
                                         <div
                                             v-if="errores.equ_numero_grupo"
@@ -791,6 +806,15 @@
                                         placeholder="Buscar por nombre o cédula..."
                                     />
                                 </div>
+                                <!-- Encabezado de columnas ANTES del v-for -->
+                                <div
+                                    class="row mb-1 small fw-bold"
+                                    style="color: var(--text-muted)"
+                                >
+                                    <div class="col-7">Estudiante</div>
+                                    <div class="col-3 text-center">Líder</div>
+                                    <div class="col-2"></div>
+                                </div>
                                 <div
                                     v-for="(item, idx) in formNuevo.integrantes"
                                     :key="idx"
@@ -870,33 +894,83 @@
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label fw-semibold"
-                                            >Comunidad</label
+                                        <div
+                                            class="d-flex gap-2 align-items-center mb-2"
                                         >
-                                        <select
-                                            v-model="formProyecto.pco_id_com"
-                                            class="form-select"
-                                        >
-                                            <option value="">
-                                                Seleccionar comunidad...
-                                            </option>
-                                            <option
-                                                v-for="com in comunidades"
-                                                :key="com.com_id"
-                                                :value="com.com_id"
+                                            <select
+                                                class="form-select form-select-sm"
+                                                v-model="
+                                                    formProyecto.pco_id_com
+                                                "
                                             >
-                                                {{ com.com_nombre }} —
-                                                {{ com.com_ubicacion }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold"
-                                            >Tipo de Proyecto</label
+                                                <option value="">
+                                                    Seleccionar comunidad...
+                                                </option>
+                                                <option
+                                                    v-for="c in comunidades"
+                                                    :key="c.com_id"
+                                                    :value="c.com_id"
+                                                >
+                                                    {{ c.com_nombre }}
+                                                </option>
+                                            </select>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-danger flex-shrink-0"
+                                                @click="
+                                                    mostrarNuevaComunidad =
+                                                        !mostrarNuevaComunidad
+                                                "
+                                            >
+                                                <i
+                                                    class="bi bi-plus-circle"
+                                                ></i>
+                                            </button>
+                                        </div>
+
+                                        <div
+                                            v-if="mostrarNuevaComunidad"
+                                            class="p-2 mb-2 rounded"
+                                            style="
+                                                background: var(--bg-th);
+                                                border: 1px solid var(--border);
+                                            "
                                         >
+                                            <p class="small fw-bold mb-2">
+                                                Registrar nueva comunidad
+                                            </p>
+                                            <input
+                                                type="text"
+                                                class="form-control form-control-sm mb-1"
+                                                v-model="
+                                                    nuevaComunidad.com_nombre
+                                                "
+                                                placeholder="Nombre de la comunidad"
+                                            />
+                                            <input
+                                                type="text"
+                                                class="form-control form-control-sm mb-1"
+                                                v-model="
+                                                    nuevaComunidad.com_ubicacion
+                                                "
+                                                placeholder="Ubicación"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-danger w-100"
+                                                @click="guardarNuevaComunidad"
+                                            >
+                                                <i class="bi bi-check2"></i>
+                                                Guardar comunidad
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="d-flex gap-2 align-items-center mb-2"
+                                    >
                                         <select
+                                            class="form-select form-select-sm"
                                             v-model="formProyecto.pco_id_tpr"
-                                            class="form-select"
                                         >
                                             <option value="">
                                                 Seleccionar tipo...
@@ -909,6 +983,43 @@
                                                 {{ t.tpr_nombre }}
                                             </option>
                                         </select>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-danger flex-shrink-0"
+                                            @click="
+                                                mostrarNuevoTipo =
+                                                    !mostrarNuevoTipo
+                                            "
+                                        >
+                                            <i class="bi bi-plus-circle"></i>
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        v-if="mostrarNuevoTipo"
+                                        class="p-2 mb-2 rounded"
+                                        style="
+                                            background: var(--bg-th);
+                                            border: 1px solid var(--border);
+                                        "
+                                    >
+                                        <p class="small fw-bold mb-2">
+                                            Agregar nuevo tipo de proyecto
+                                        </p>
+                                        <input
+                                            type="text"
+                                            class="form-control form-control-sm mb-1"
+                                            v-model="nuevoTipo.tpr_nombre"
+                                            placeholder="Nombre del tipo"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-danger w-100"
+                                            @click="guardarNuevoTipo"
+                                        >
+                                            <i class="bi bi-check2"></i> Guardar
+                                            tipo
+                                        </button>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold"
@@ -935,11 +1046,13 @@
                                             >Fecha Límite</label
                                         >
                                         <input
+                                            type="date"
+                                            class="form-control"
                                             v-model="
                                                 formProyecto.pco_fecha_limite
                                             "
-                                            type="date"
-                                            class="form-control"
+                                            :min="fechaMinima"
+                                            :max="fechaMaxima"
                                         />
                                     </div>
                                     <div class="col-12">
@@ -1004,12 +1117,19 @@
                                                 </select>
                                             </div>
                                             <div class="col-3">
+                                                <!-- Cantidad beneficiarios -->
                                                 <input
-                                                    v-model="ben.cantidad"
                                                     type="number"
                                                     class="form-control form-control-sm"
-                                                    placeholder="Cantidad"
+                                                    v-model="ben.cantidad"
                                                     min="1"
+                                                    @keypress="
+                                                        (e) =>
+                                                            !/[0-9]/.test(
+                                                                e.key,
+                                                            ) &&
+                                                            e.preventDefault()
+                                                    "
                                                 />
                                             </div>
                                             <div class="col-2">
@@ -1133,6 +1253,86 @@
                                         'is-invalid': erroresEditar.equ_titulo,
                                     }"
                                 />
+                                <div
+                                    v-if="equipoSeleccionado?.proyectoComunidad"
+                                >
+                                    <hr style="border-color: var(--border)" />
+                                    <p
+                                        class="fw-bold small mb-2"
+                                        style="color: var(--text-muted)"
+                                    >
+                                        Proyecto asignado
+                                    </p>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold"
+                                            >Comunidad</label
+                                        >
+                                        <select
+                                            class="form-select form-select-sm"
+                                            v-model="formEditar.pco_id_com"
+                                        >
+                                            <option value="">
+                                                Seleccionar...
+                                            </option>
+                                            <option
+                                                v-for="c in comunidades"
+                                                :key="c.com_id"
+                                                :value="c.com_id"
+                                            >
+                                                {{ c.com_nombre }}
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold"
+                                            >Tipo de Proyecto</label
+                                        >
+                                        <select
+                                            class="form-select form-select-sm"
+                                            v-model="formEditar.pco_id_tpr"
+                                        >
+                                            <option value="">
+                                                Seleccionar...
+                                            </option>
+                                            <option
+                                                v-for="t in tiposProyecto"
+                                                :key="t.tpr_id"
+                                                :value="t.tpr_id"
+                                            >
+                                                {{ t.tpr_nombre }}
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold"
+                                            >Fecha Límite</label
+                                        >
+                                        <input
+                                            type="date"
+                                            class="form-control form-control-sm"
+                                            v-model="
+                                                formEditar.pco_fecha_limite
+                                            "
+                                            :min="fechaMinima"
+                                            :max="fechaMaxima"
+                                        />
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold"
+                                            >Resumen</label
+                                        >
+                                        <textarea
+                                            class="form-control form-control-sm"
+                                            rows="2"
+                                            v-model="formEditar.pco_resumen"
+                                            maxlength="150"
+                                        ></textarea>
+                                    </div>
+                                </div>
                                 <div
                                     v-if="erroresEditar.equ_titulo"
                                     class="invalid-feedback"
@@ -1579,7 +1779,27 @@ const formNuevo = ref({
     equ_titulo: "",
     integrantes: [{ usu_id: "", es_lider: true }],
 });
-const formEditar = ref({ equ_titulo: "" });
+const formEditar = ref({
+    equ_titulo: "",
+    pco_id_com: "",
+    pco_id_tpr: "",
+    pco_id_mpr: "",
+    pco_resumen: "",
+    pco_fecha_limite: "",
+});
+const abrirEditar = (equ) => {
+    equipoSeleccionado.value = equ;
+    formEditar.value = {
+        equ_titulo: equ.equ_titulo,
+        pco_id_com: equ.proyectoComunidad?.pco_id_com ?? "",
+        pco_id_tpr: equ.proyectoComunidad?.pco_id_tpr ?? "",
+        pco_id_mpr: equ.proyectoComunidad?.pco_id_mpr ?? "",
+        pco_resumen: equ.proyectoComunidad?.pco_resumen ?? "",
+        pco_fecha_limite: equ.proyectoComunidad?.pco_fecha_limite ?? "",
+    };
+    mEditar = mEditar || new Modal(document.getElementById("mEditar"));
+    mEditar.show();
+};
 const formProyecto = ref({
     pco_id_com: "",
     pco_id_tpr: "",
@@ -1798,6 +2018,46 @@ const guardarEdicion = () => {
         },
     );
 };
+const guardar = () => {
+    errores.value = {};
+
+    // Validar paso 1
+    if (!formNuevo.value.equ_id_sec) {
+        errores.value.equ_id_sec = "Selecciona una sección.";
+        return;
+    }
+    if (!formNuevo.value.equ_numero_grupo) {
+        errores.value.equ_numero_grupo = "El número de grupo es obligatorio.";
+        return;
+    }
+    if (!formNuevo.value.equ_titulo?.trim()) {
+        errores.value.equ_titulo = "El título es obligatorio.";
+        return;
+    }
+    const sinEstudiante = formNuevo.value.integrantes.some((i) => !i.usu_id);
+    if (sinEstudiante) {
+        errores.value.integrantes =
+            "Todos los campos de integrante deben tener un estudiante seleccionado.";
+        return;
+    }
+
+    // Enviar si todo ok
+    router.post(
+        "/coordinador/equipos",
+        {
+            ...formNuevo.value,
+            proyecto: formProyecto.value,
+        },
+        {
+            onSuccess: () => {
+                mNuevo?.hide();
+            },
+            onError: (e) => {
+                errores.value = e;
+            },
+        },
+    );
+};
 const confirmarDisolver = () => {
     intentoDisolver.value = true;
     if (!motivoDisolucion.value.trim()) return;
@@ -1869,6 +2129,41 @@ const iconEvt = (n) => {
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
+const fechaMinima = computed(() => {
+    return new Date().toISOString().split("T")[0];
+});
+
+const fechaMaxima = computed(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split("T")[0];
+});
+const mostrarNuevaComunidad = ref(false);
+const nuevaComunidad = ref({ com_nombre: "", com_ubicacion: "" });
+
+const guardarNuevaComunidad = () => {
+    if (!nuevaComunidad.value.com_nombre.trim()) return;
+    router.post("/coordinador/comunidades", nuevaComunidad.value, {
+        preserveScroll: true,
+        onSuccess: () => {
+            mostrarNuevaComunidad.value = false;
+            nuevaComunidad.value = { com_nombre: "", com_ubicacion: "" };
+        },
+    });
+};
+const mostrarNuevoTipo = ref(false);
+const nuevoTipo = ref({ tpr_nombre: "" });
+
+const guardarNuevoTipo = () => {
+    if (!nuevoTipo.value.tpr_nombre.trim()) return;
+    router.post("/coordinador/tipos-proyecto", nuevoTipo.value, {
+        preserveScroll: true,
+        onSuccess: () => {
+            mostrarNuevoTipo.value = false;
+            nuevoTipo.value = { tpr_nombre: "" };
+        },
+    });
+};
 </script>
 <style>
 :root {

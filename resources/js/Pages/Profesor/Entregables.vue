@@ -247,6 +247,13 @@
                                         <template
                                             v-if="ent.entr_aprobado === null"
                                         >
+                                            <a
+                                                :href="`/storage/${entr.entr_ruta}`"
+                                                target="_blank"
+                                                class="btn btn-sm btn-outline-primary me-1"
+                                            >
+                                                <i class="bi bi-eye"></i> Ver
+                                            </a>
                                             <button
                                                 class="btn btn-sm btn-outline-success me-1"
                                                 @click="aprobar(ent)"

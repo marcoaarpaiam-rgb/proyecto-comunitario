@@ -32,12 +32,8 @@ Route::get('/', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.post');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/home', fn() => Inertia::render('Home'))->name('home');
-Route::middleware('auth')->get('/notificaciones/lista', function () {
-    return \App\Models\Notificacion::where('not_id_usu', auth()->id())
-        ->orderBy('not_fecha_generacion', 'desc')
-        ->take(10)
-        ->get();
-});
+
+
 Route::middleware('auth')->group(function () {
     Route::get('/notificaciones/lista', function () {
         return \App\Models\Notificacion::where('not_id_usu', auth()->id())
@@ -75,6 +71,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
                 'proyectos'     => ProyectoComunidad::where('pco_status', true)->count(),
                 'puntosControl' => PuntoControl::where('puc_status', true)->count(),
                 'comunidades'   => Comunidad::where('com_status', true)->count(),
+                'cartasPendientes' => \App\Models\CartaPresentacion::where('cpr_solicitada', true)
+                    ->whereNull('cpr_fecha_aprobacion')->count(),
             ],
         ]);
     })->name('dashboard');
@@ -120,6 +118,14 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('reportes.index');
     Route::get('reportes/solvencia', [ReporteController::class, 'solvencia'])
         ->name('reportes.solvencia');
+    Route::get('reportes/filtrar', [ReporteController::class, 'filtrar'])
+        ->name('reportes.filtrar');
+    Route::get('reportes/por-comunidad', [ReporteController::class, 'porComunidad'])
+        ->name('reportes.porComunidad');
+    Route::get('reportes/entregables', [ReporteController::class, 'porEntregables'])
+        ->name('reportes.entregables');
+    Route::get('reportes/puntos-control', [ReporteController::class, 'porPuntosControl'])
+        ->name('reportes.puntosControl');
 
     // Cartas
     Route::get('cartas', [CartaController::class, 'index'])
@@ -194,6 +200,9 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     Route::post('/equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
         ->name('coordinador.equipos.reactivar');
+    
+    Route::post('/equipos/{id}/activar', [EquipoController::class, 'activar'])
+        ->name('coordinador.equipos.activar');
 });
 
 // Grupo Profesor 
@@ -215,8 +224,6 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
             'stats' => [
                 'secciones'             => $secciones->count(),
                 'equipos'               => $equiposIds->count(),
-                'entregablesPendientes' => \App\Models\Entregable::whereIn('entr_id_equ', $equiposIds)
-                    ->whereNull('entr_aprobado')->count(),
             ],
             'equipos'               => $equipos,
             'notificacionesSinLeer' => 0,
@@ -314,6 +321,9 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     Route::post('equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
         ->name('equipos.reactivar');
+
+    Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
+        ->name('equipos.expediente');
 });
 // Grupo Líder 
 Route::middleware(['auth', 'rol:lider'])

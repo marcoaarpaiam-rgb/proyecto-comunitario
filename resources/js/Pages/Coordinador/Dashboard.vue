@@ -15,7 +15,7 @@
         ></div>
 
         <!-- SIDEBAR -->
-        <div class="sidebar-coord" :class="{ show: sidebarOpen }">
+        <div class="sb" :class="{ show: sidebarOpen }">
             <div class="sb-brand">
                 <div
                     style="
@@ -54,29 +54,29 @@
                 </div>
             </div>
             <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/coordinador" class="sb-lnk">
+                <div class="sb-sectiontion">Principal</div>
+                <Link href="/coordinador" class="sb-link">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </Link>
-                <Link href="/coordinador/secciones" class="sb-lnk">
+                <Link href="/coordinador/secciones" class="sb-link">
                     <i class="bi bi-collection"></i> Secciones
                 </Link>
-                <Link href="/coordinador/comunidades" class="sb-lnk">
+                <Link href="/coordinador/comunidades" class="sb-link">
                     <i class="bi bi-building"></i> Comunidades
                 </Link>
-                <Link href="/coordinador/proyectos" class="sb-lnk">
+                <Link href="/coordinador/proyectos" class="sb-link">
                     <i class="bi bi-folder"></i> Proyectos
                 </Link>
-                <Link href="/coordinador/socializaciones" class="sb-lnk">
+                <Link href="/coordinador/socializaciones" class="sb-link">
                     <i class="bi bi-mic"></i> Socializaciones
                 </Link>
-                <Link href="/coordinador/resultados" class="sb-lnk">
+                <Link href="/coordinador/resultados" class="sb-link">
                     <i class="bi bi-trophy"></i> Resultados
                 </Link>
 
                 <!-- Tablas Maestras — desplegable -->
                 <div
-                    class="sb-sec sb-toggle"
+                    class="sb-section sb-toggle"
                     @click="menuMaestras = !menuMaestras"
                     style="
                         cursor: pointer;
@@ -96,45 +96,45 @@
                     ></i>
                 </div>
                 <div v-show="menuMaestras">
-                    <Link href="/coordinador/tipos-proyecto" class="sb-lnk">
+                    <Link href="/coordinador/tipos-proyecto" class="sb-link">
                         <i class="bi bi-tag"></i> Tipos de Proyecto
                     </Link>
                     <Link
                         href="/coordinador/maestras/modalidades"
-                        class="sb-lnk"
+                        class="sb-link"
                     >
                         <i class="bi bi-layers"></i> Modalidades
                     </Link>
                     <Link
                         href="/coordinador/maestras/tipos-jurado"
-                        class="sb-lnk"
+                        class="sb-link"
                     >
                         <i class="bi bi-person-badge"></i> Tipos de Jurado
                     </Link>
                     <Link
                         href="/coordinador/maestras/tipos-beneficiario"
-                        class="sb-lnk"
+                        class="sb-link"
                     >
                         <i class="bi bi-people"></i> Tipos Beneficiario
                     </Link>
                     <Link
                         href="/coordinador/maestras/tipos-entregable"
-                        class="sb-lnk"
+                        class="sb-link"
                     >
                         <i class="bi bi-file-earmark"></i> Tipos Entregable
                     </Link>
                     <Link
                         href="/coordinador/maestras/tipos-evento-equipo"
-                        class="sb-lnk"
+                        class="sb-link"
                     >
                         <i class="bi bi-calendar-event"></i> Eventos Equipo
                     </Link>
-                    <Link href="/coordinador/maestras/turnos" class="sb-lnk">
+                    <Link href="/coordinador/maestras/turnos" class="sb-link">
                         <i class="bi bi-clock"></i> Turnos
                     </Link>
                     <Link
                         href="/coordinador/maestras/estados-proyecto"
-                        class="sb-lnk"
+                        class="sb-link"
                     >
                         <i class="bi bi-award"></i> Estados Proyecto
                     </Link>
@@ -142,7 +142,7 @@
 
                 <!-- Sistema — desplegable -->
                 <div
-                    class="sb-sec sb-toggle"
+                    class="sb-section sb-toggle"
                     @click="menuSistema = !menuSistema"
                     style="
                         cursor: pointer;
@@ -162,16 +162,16 @@
                     ></i>
                 </div>
                 <div v-show="menuSistema">
-                    <Link href="/coordinador/reportes" class="sb-lnk">
+                    <Link href="/coordinador/reportes" class="sb-link">
                         <i class="bi bi-bar-chart"></i> Reportes
                     </Link>
-                    <Link href="/coordinador/cartas" class="sb-lnk">
+                    <Link href="/coordinador/cartas" class="sb-link">
                         <i class="bi bi-file-earmark-text"></i> Cartas
                     </Link>
-                    <Link href="/coordinador/bitacora" class="sb-lnk">
+                    <Link href="/coordinador/bitacora" class="sb-link">
                         <i class="bi bi-journal-text"></i> Bitácora
                     </Link>
-                    <Link href="/coordinador/configuracion" class="sb-lnk">
+                    <Link href="/coordinador/configuracion" class="sb-link">
                         <i class="bi bi-gear"></i> Configuración
                     </Link>
                 </div>
@@ -756,7 +756,7 @@ onMounted(() => {
 .sb-nav::-webkit-scrollbar {
     display: none;
 }
-.sb-section {
+.sb-sectiontion {
     padding: 0.9rem 1.5rem 0.3rem;
     color: #64748b;
     font-size: 0.72rem;

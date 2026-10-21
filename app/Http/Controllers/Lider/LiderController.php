@@ -63,11 +63,18 @@ class LiderController extends Controller
                     ->orderBy('entr_fecha_subida','desc')->get()
                 : [],
             
-            'notificaciones' => Notificacion::where('not_id_usu', auth()->id())
+            'notificaciones' => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+                ->with('tipoNotificacion')
                 ->orderBy('not_fecha_generacion', 'desc')
-                ->take(20)->get(),
-            'carta'         => $carta,
-        ]);
+                ->take(10)
+                ->get(),
+            'socializaciones' => $equipo
+                ? \App\Models\Socializacion::where('soc_id_equ', $equipo->equ_id)
+                    ->with('tipoSocializacion')
+                    ->orderBy('soc_fecha', 'desc')
+                    ->get()
+                : [],
+                    ]);
     }
 
     public function entregables()
@@ -103,6 +110,12 @@ class LiderController extends Controller
 
         $equipo = $this->getEquipo();
         if (!$equipo) return back()->withErrors(['equipo' => 'No tienes equipo asignado.']);
+
+        if (!$equipo->proyectoComunidad?->pco_fecha_aprobacion) {
+            return back()->withErrors([
+                'equipo' => 'El profesor aún no ha aprobado la comunidad del proyecto.'
+            ]);
+        }
 
         $ruta = $request->file('archivo')->store('entregables/' . $equipo->equ_codigo, 'public');
 
@@ -161,20 +174,23 @@ class LiderController extends Controller
             )
             ->whereNotNull('cpr_fecha_aprobacion')
             ->firstOrFail();
+        try {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.carta_presentacion', [
+                'carta'       => $carta->load([
+                    'proyectoComunidad.comunidad',
+                    'proyectoComunidad.equipo.integrantes.usuario',
+                    'proyectoComunidad.equipo.seccion',
+                    'proyectoComunidad.equipo.trayecto',
+                ]),
+                'proyecto'    => $carta->proyectoComunidad, // AGREGA ESTA LÍNEA
+                'coordinador' => \App\Models\Usuario::whereHas('roles', fn($q) =>
+                    $q->where('rol_nombre', 'coordinador')
+                )->first(),
+            ])->setPaper('letter', 'portrait');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.carta_presentacion', [
-            'carta'       => $carta->load([
-                'proyectoComunidad.comunidad',
-                'proyectoComunidad.equipo.integrantes.usuario',
-                'proyectoComunidad.equipo.seccion',
-                'proyectoComunidad.equipo.trayecto',
-            ]),
-            'proyecto'    => $carta->proyectoComunidad, // AGREGA ESTA LÍNEA
-            'coordinador' => \App\Models\Usuario::whereHas('roles', fn($q) =>
-                $q->where('rol_nombre', 'coordinador')
-            )->first(),
-        ])->setPaper('letter', 'portrait');
-
-        return $pdf->download("carta-presentacion-{$equipo->equ_codigo}.pdf");
+            return $pdf->download("carta-presentacion-{$equipo->equ_codigo}.pdf");
+        } catch (\Exception $e) {
+            return back()->withErrors(['carta' => 'Error al generar el PDF: '.$e->getMessage()]);
+        }
     }
 }

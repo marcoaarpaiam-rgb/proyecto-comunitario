@@ -13,7 +13,13 @@ class ComunidadController extends Controller
     public function index()
     {
         return Inertia::render('Coordinador/Comunidades', [
-            'comunidades' => Comunidad::with('tipoOrganizacion')
+            'comunidades' => \App\Models\Comunidad::where('com_status', true)
+                ->withCount(['proyectosComunidad as total_equipos' => fn($q) =>
+                    $q->whereHas('equipo', fn($q2) => $q2->where('equ_status', true))
+                ])
+                ->with(['proyectosComunidad.equipo' => fn($q) =>
+                    $q->where('equ_status', true)->select('equ_id','equ_codigo','equ_titulo','equ_id_sec')
+                ])
                 ->orderBy('com_nombre')
                 ->get(),
             'tiposOrganizacion' => TipoOrganizacion::where('tor_status', true)->get(),

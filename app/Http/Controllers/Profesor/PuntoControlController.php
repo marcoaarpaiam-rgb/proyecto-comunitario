@@ -28,13 +28,16 @@ class PuntoControlController extends Controller
             ->get();
 
         return Inertia::render('Profesor/PuntosControl', [
-            'puntosControl' => PuntoControl::whereIn('puc_id_equ', $equipos->pluck('equ_id'))
+            'puntosControl' => PuntoControl::whereIn('puc_id_equ', $equipos)
+                ->with([
+                    'equipo',
+                    'trayecto',
+                    'seguimientos.asistencias.usuario',
+                    'seguimientos.usuarioRegistro',
+                ])
                 ->where('puc_status', true)
-                ->with(['equipo','trayecto'])
                 ->orderBy('puc_fecha_limite')
                 ->get(),
-            'equipos'   => $equipos,
-            'trayectos' => Trayecto::where('tra_status', true)->get(),
         ]);
     }
 
@@ -45,29 +48,31 @@ class PuntoControlController extends Controller
             'puc_nombre'      => 'required|string|max:150',
             'puc_descripcion' => 'nullable|string',
             'puc_fecha_limite'=> 'required|date',
-            'puc_orden'       => 'required|integer|min:1',
             'puc_dias_aviso'  => 'required|integer|min:1|max:30',
         ], [
             'puc_id_equ.required'       => 'El equipo es obligatorio.',
             'puc_nombre.required'       => 'El nombre es obligatorio.',
             'puc_fecha_limite.required' => 'La fecha límite es obligatoria.',
-            'puc_orden.required'        => 'El orden es obligatorio.',
         ]);
 
         // Obtener el trayecto del equipo automáticamente
         $equipo = \App\Models\Equipo::findOrFail($request->puc_id_equ);
 
+        $ultimoOrden = PuntoControl::where('puc_id_equ', $request->puc_id_equ)
+            ->where('puc_status', true)
+            ->max('puc_orden') ?? 0;
+
         PuntoControl::create([
-            'puc_id_equ'          => $request->puc_id_equ,
-            'puc_id_tra' => $equipo->equ_id_tra,
-            'puc_nombre'          => $request->puc_nombre,
-            'puc_descripcion'     => $request->puc_descripcion,
-            'puc_fecha_limite'    => $request->puc_fecha_limite,
-            'puc_orden'           => $request->puc_orden,
-            'puc_dias_aviso'      => $request->puc_dias_aviso ?? 7,
-            'puc_es_entregable'   => $request->puc_es_entregable ?? false,
-            'puc_status'          => true,
-            'puc_id_usu_created'  => auth()->id(),
+            'puc_id_equ'         => $request->puc_id_equ,
+            'puc_id_tra'         => $equipo->equ_id_tra,
+            'puc_nombre'         => $request->puc_nombre,
+            'puc_descripcion'    => $request->puc_descripcion,
+            'puc_fecha_limite'   => $request->puc_fecha_limite,
+            'puc_orden'          => $ultimoOrden + 1,
+            'puc_dias_aviso'     => $request->puc_dias_aviso ?? 7,
+            'puc_es_entregable'  => $request->puc_es_entregable ?? false,
+            'puc_status'         => true,
+            'puc_id_usu_created' => auth()->id(),
         ]);
 
         return back()->with('success', 'Punto de control creado correctamente.');
@@ -137,6 +142,8 @@ class PuntoControlController extends Controller
             'puc_status'         => false,
             'puc_id_usu_updated' => auth()->id(),
         ]);
+        // Cancelar seguimientos asociados
+        $pc->seguimientos()->update(['seq_status' => false]);
         return back()->with('success', 'Punto de control eliminado.');
     }
 }

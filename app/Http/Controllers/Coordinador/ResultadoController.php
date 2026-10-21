@@ -48,9 +48,13 @@ class ResultadoController extends Controller
 
         $proyecto = ProyectoComunidad::findOrFail($request->rpr_id_pco);
 
+        $yaExiste = ResultadoProyecto::where('rpr_id_pco', $request->rpr_id_pco)->exists();
+        if ($yaExiste) {
+            return back()->withErrors(['rpr_id_pco' => 'Este proyecto ya tiene un resultado registrado.']);
+        }
+        
         ResultadoProyecto::create([
             'rpr_id_pco'            => $request->rpr_id_pco,
-            'rpr_id_equ'            => $proyecto->pco_id_equ,
             'rpr_id_tra'            => $request->rpr_id_tra,
             'rpr_id_epr'            => $request->rpr_id_epr,
             'rpr_habilitado_tardio' => $request->rpr_habilitado_tardio ?? false,

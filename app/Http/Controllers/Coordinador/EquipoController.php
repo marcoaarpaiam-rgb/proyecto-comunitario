@@ -230,16 +230,33 @@ class EquipoController extends Controller
 
     public function update(Request $request, $id)
     {
-        $equipo = Equipo::findOrFail($id);
+        $equipo = Equipo::with('proyectoComunidad')->findOrFail($id);
+
         $request->validate([
-            'equ_titulo' => 'required|string|max:150',
-        ], [
-            'equ_titulo.required' => 'El título es obligatorio.',
+            'equ_titulo'       => 'required|string|max:150',
+            'pco_id_com'       => 'nullable|exists:comunidad,com_id',
+            'pco_id_tpr'       => 'nullable|exists:tipo_proyecto,tpr_id',
+            'pco_id_mpr'       => 'nullable|exists:modalidad_proyecto,mpr_id',
+            'pco_resumen'      => 'nullable|string|max:150',
+            'pco_fecha_limite' => 'nullable|date|after:today',
         ]);
+
         $equipo->update([
             'equ_titulo'         => $request->equ_titulo,
             'equ_id_usu_updated' => auth()->id(),
         ]);
+
+        if ($equipo->proyectoComunidad) {
+            $equipo->proyectoComunidad->update([
+                'pco_id_com'         => $request->pco_id_com ?? $equipo->proyectoComunidad->pco_id_com,
+                'pco_id_tpr'         => $request->pco_id_tpr ?? $equipo->proyectoComunidad->pco_id_tpr,
+                'pco_id_mpr'         => $request->pco_id_mpr ?? $equipo->proyectoComunidad->pco_id_mpr,
+                'pco_resumen'        => $request->pco_resumen ?? $equipo->proyectoComunidad->pco_resumen,
+                'pco_fecha_limite'   => $request->pco_fecha_limite ?? $equipo->proyectoComunidad->pco_fecha_limite,
+                'pco_id_usu_updated' => auth()->id(),
+            ]);
+        }
+
         return back()->with('success', 'Equipo actualizado correctamente.');
     }
 
@@ -449,5 +466,14 @@ class EquipoController extends Controller
             'puedeCrear'       => true,
             'modoProfesor'     => true,
         ]);
+    }
+    public function activar($id)
+    {
+        $equipo = Equipo::findOrFail($id);
+        $equipo->update([
+            'equ_status'         => true,
+            'equ_id_usu_updated' => auth()->id(),
+        ]);
+        return back()->with('success', 'Equipo activado correctamente.');
     }
 }

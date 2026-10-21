@@ -377,6 +377,666 @@
                     </div>
                 </div>
 
+                <!-- Pestañas de reportes -->
+                <div class="d-flex gap-2 flex-wrap mb-4">
+                    <button
+                        @click="tabActiva = 'general'"
+                        :class="
+                            tabActiva === 'general'
+                                ? 'btn-danger'
+                                : 'btn-outline-danger'
+                        "
+                        class="btn btn-sm fw-bold rounded-pill"
+                    >
+                        <i class="bi bi-bar-chart me-1"></i> General
+                    </button>
+                    <button
+                        @click="cargarReporteComunidad"
+                        :class="
+                            tabActiva === 'comunidad'
+                                ? 'btn-danger'
+                                : 'btn-outline-danger'
+                        "
+                        class="btn btn-sm fw-bold rounded-pill"
+                    >
+                        <i class="bi bi-building me-1"></i> Por Comunidad
+                    </button>
+                    <button
+                        @click="tabActiva = 'filtro'"
+                        :class="
+                            tabActiva === 'filtro'
+                                ? 'btn-danger'
+                                : 'btn-outline-danger'
+                        "
+                        class="btn btn-sm fw-bold rounded-pill"
+                    >
+                        <i class="bi bi-funnel me-1"></i> Filtro Avanzado
+                    </button>
+                    <button
+                        @click="cargarEntregables"
+                        :class="
+                            tabActiva === 'entregables'
+                                ? 'btn-danger'
+                                : 'btn-outline-danger'
+                        "
+                        class="btn btn-sm fw-bold rounded-pill"
+                    >
+                        <i class="bi bi-file-earmark me-1"></i> Entregables
+                    </button>
+                    <button
+                        @click="cargarPuntos"
+                        :class="
+                            tabActiva === 'puntos'
+                                ? 'btn-danger'
+                                : 'btn-outline-danger'
+                        "
+                        class="btn btn-sm fw-bold rounded-pill"
+                    >
+                        <i class="bi bi-check2-square me-1"></i> Puntos de
+                        Control
+                    </button>
+                </div>
+
+                <!-- ── FILTRO AVANZADO ────────────────────────────────────── -->
+                <div v-if="tabActiva === 'filtro'" class="sc mb-4">
+                    <div class="sh">
+                        <h6>
+                            <i class="bi bi-funnel me-2 text-danger"></i>Filtro
+                            Avanzado de Equipos
+                        </h6>
+                    </div>
+                    <div class="p-3">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Sección</label
+                                >
+                                <select
+                                    v-model="filtros.sec_id"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">Todas</option>
+                                    <option
+                                        v-for="s in secciones"
+                                        :key="s.sec_id"
+                                        :value="s.sec_id"
+                                    >
+                                        {{ s.sec_codigo }} —
+                                        {{ s.trayecto?.tra_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Trayecto</label
+                                >
+                                <select
+                                    v-model="filtros.tra_id"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    <option
+                                        v-for="t in trayectos"
+                                        :key="t.tra_id"
+                                        :value="t.tra_id"
+                                    >
+                                        {{ t.tra_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Comunidad</label
+                                >
+                                <select
+                                    v-model="filtros.com_id"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">Todas</option>
+                                    <option
+                                        v-for="c in comunidades"
+                                        :key="c.com_id"
+                                        :value="c.com_id"
+                                    >
+                                        {{ c.com_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Tipo de Proyecto</label
+                                >
+                                <select
+                                    v-model="filtros.tpr_id"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    <option
+                                        v-for="t in tiposProyecto"
+                                        :key="t.tpr_id"
+                                        :value="t.tpr_id"
+                                    >
+                                        {{ t.tpr_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Estado</label
+                                >
+                                <select
+                                    v-model="filtros.estado"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    <option value="Aprobado">Aprobado</option>
+                                    <option value="Aplazado">Aplazado</option>
+                                    <option value="No Presentado">
+                                        No Presentado
+                                    </option>
+                                    <option value="sin_resultado">
+                                        Sin Resultado
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Profesor</label
+                                >
+                                <select
+                                    v-model="filtros.prof_id"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">Todos</option>
+                                    <option
+                                        v-for="p in profesores"
+                                        :key="p.usu_id"
+                                        :value="p.usu_id"
+                                    >
+                                        {{ p.usu_primer_nombre }}
+                                        {{ p.usu_primer_apellido }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Fecha desde</label
+                                >
+                                <input
+                                    type="date"
+                                    v-model="filtros.fecha_desde"
+                                    class="form-control form-control-sm"
+                                />
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <label class="form-label small fw-bold"
+                                    >Fecha hasta</label
+                                >
+                                <input
+                                    type="date"
+                                    v-model="filtros.fecha_hasta"
+                                    class="form-control form-control-sm"
+                                />
+                            </div>
+                            <div class="col-md-3 col-6 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input
+                                        type="checkbox"
+                                        class="form-check-input"
+                                        id="chkVencidos"
+                                        v-model="filtros.vencidos"
+                                    />
+                                    <label
+                                        class="form-check-label small fw-bold"
+                                        for="chkVencidos"
+                                    >
+                                        Solo vencidos
+                                    </label>
+                                </div>
+                            </div>
+                            <div
+                                class="col-md-3 col-6 d-flex align-items-end gap-2"
+                            >
+                                <button
+                                    @click="aplicarFiltro"
+                                    :disabled="cargandoFiltro"
+                                    class="btn btn-sm btn-danger fw-bold flex-fill"
+                                >
+                                    <i class="bi bi-search me-1"></i>
+                                    {{
+                                        cargandoFiltro
+                                            ? "Buscando..."
+                                            : "Buscar"
+                                    }}
+                                </button>
+                                <button
+                                    @click="limpiarFiltros"
+                                    class="btn btn-sm btn-outline-secondary fw-bold"
+                                >
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Resultados del filtro -->
+                        <div v-if="resultadosFiltro.length > 0">
+                            <p
+                                class="small fw-bold mb-2"
+                                style="color: var(--text-muted)"
+                            >
+                                {{ totalFiltro }} equipo(s) encontrado(s)
+                            </p>
+                            <div class="table-responsive">
+                                <table class="ct">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Título</th>
+                                            <th>Sección</th>
+                                            <th>Trayecto</th>
+                                            <th>Comunidad</th>
+                                            <th>Tipo Proyecto</th>
+                                            <th>Fecha Límite</th>
+                                            <th class="text-center">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr
+                                            v-for="e in resultadosFiltro"
+                                            :key="e.equ_id"
+                                        >
+                                            <td class="fw-bold">
+                                                {{ e.equ_codigo }}
+                                            </td>
+                                            <td style="font-size: 0.85rem">
+                                                {{ e.equ_titulo }}
+                                            </td>
+                                            <td>{{ e.seccion }}</td>
+                                            <td style="font-size: 0.85rem">
+                                                {{ e.trayecto }}
+                                            </td>
+                                            <td style="font-size: 0.85rem">
+                                                {{ e.comunidad ?? "—" }}
+                                            </td>
+                                            <td style="font-size: 0.82rem">
+                                                {{ e.tipo_proyecto ?? "—" }}
+                                            </td>
+                                            <td style="font-size: 0.82rem">
+                                                {{ e.fecha_limite ?? "—" }}
+                                            </td>
+                                            <td class="text-center">
+                                                <span
+                                                    :class="{
+                                                        ba:
+                                                            e.resultado ===
+                                                            'Aprobado',
+                                                        bd:
+                                                            e.resultado ===
+                                                            'Aplazado',
+                                                        bw:
+                                                            e.resultado ===
+                                                            'Sin resultado',
+                                                        bsec:
+                                                            e.resultado ===
+                                                            'No Presentado',
+                                                    }"
+                                                    class="bs"
+                                                    >{{ e.resultado }}</span
+                                                >
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div
+                            v-else-if="
+                                !cargandoFiltro &&
+                                totalFiltro === 0 &&
+                                resultadosFiltro.length === 0
+                            "
+                            class="text-center py-4"
+                            style="color: var(--text-muted)"
+                        >
+                            Aplica un filtro para ver resultados
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── POR COMUNIDAD ──────────────────────────────────────── -->
+                <div v-if="tabActiva === 'comunidad'" class="sc mb-4">
+                    <div class="sh">
+                        <h6>
+                            <i class="bi bi-building me-2 text-danger"></i
+                            >Proyectos por Comunidad
+                        </h6>
+                    </div>
+                    <div
+                        v-if="cargandoComunidad"
+                        class="text-center py-4"
+                        style="color: var(--text-muted)"
+                    >
+                        Cargando...
+                    </div>
+                    <div v-else class="table-responsive">
+                        <table class="ct">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">Comunidad</th>
+                                    <th>Ubicación</th>
+                                    <th class="text-center">Equipos</th>
+                                    <th>Proyectos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="!reporteComunidades.length">
+                                    <td
+                                        colspan="4"
+                                        class="text-center py-4"
+                                        style="color: var(--text-muted)"
+                                    >
+                                        Sin datos
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="c in reporteComunidades"
+                                    :key="c.com_id"
+                                >
+                                    <td class="ps-4 fw-bold">
+                                        {{ c.com_nombre }}
+                                    </td>
+                                    <td
+                                        style="
+                                            font-size: 0.83rem;
+                                            color: var(--text-muted);
+                                        "
+                                    >
+                                        {{ c.com_ubicacion }}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="bs bp">{{
+                                            c.total_equipos
+                                        }}</span>
+                                    </td>
+                                    <td>
+                                        <div
+                                            v-for="p in c.proyectos"
+                                            :key="p.codigo"
+                                            class="small"
+                                            style="color: var(--text-muted)"
+                                        >
+                                            <span
+                                                class="fw-bold"
+                                                style="color: var(--text-main)"
+                                                >{{ p.codigo }}</span
+                                            >
+                                            — {{ p.titulo }}
+                                            <span
+                                                :class="
+                                                    p.resultado === 'Aprobado'
+                                                        ? 'ba'
+                                                        : 'bsec'
+                                                "
+                                                class="bs ms-1"
+                                            >
+                                                {{ p.resultado }}
+                                            </span>
+                                            <span
+                                                v-if="p.total_beneficiarios > 0"
+                                                class="ms-1"
+                                                style="font-size: 0.78rem"
+                                            >
+                                                ({{ p.total_beneficiarios }}
+                                                beneficiarios)
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ── ENTREGABLES ────────────────────────────────────────── -->
+                <div v-if="tabActiva === 'entregables'" class="sc mb-4">
+                    <div class="sh">
+                        <h6>
+                            <i class="bi bi-file-earmark me-2 text-danger"></i
+                            >Reporte de Entregables
+                        </h6>
+                    </div>
+                    <div class="p-3">
+                        <div class="d-flex gap-2 align-items-end mb-3">
+                            <div>
+                                <label class="form-label small fw-bold"
+                                    >Filtrar por sección</label
+                                >
+                                <select
+                                    v-model="seccionEntregables"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">
+                                        Todas las secciones
+                                    </option>
+                                    <option
+                                        v-for="s in secciones"
+                                        :key="s.sec_id"
+                                        :value="s.sec_id"
+                                    >
+                                        {{ s.sec_codigo }} —
+                                        {{ s.trayecto?.tra_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                            <button
+                                @click="cargarEntregables"
+                                class="btn btn-sm btn-danger fw-bold"
+                            >
+                                <i class="bi bi-search me-1"></i> Filtrar
+                            </button>
+                        </div>
+                        <div v-if="reporteEntregables" class="row g-3 mb-3">
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-s">
+                                        <i class="bi bi-file-earmark"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reporteEntregables.total }}
+                                        </div>
+                                        <div class="stat-label">Total</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-g">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reporteEntregables.aprobados }}
+                                        </div>
+                                        <div class="stat-label">Aprobados</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-r">
+                                        <i class="bi bi-x-circle"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reporteEntregables.rechazados }}
+                                        </div>
+                                        <div class="stat-label">Rechazados</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-y">
+                                        <i class="bi bi-hourglass"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reporteEntregables.pendientes }}
+                                        </div>
+                                        <div class="stat-label">Pendientes</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            v-if="reporteEntregables?.detalle?.length"
+                            class="table-responsive"
+                        >
+                            <table class="ct">
+                                <thead>
+                                    <tr>
+                                        <th>Equipo</th>
+                                        <th>Sección</th>
+                                        <th>Tipo</th>
+                                        <th>Archivo</th>
+                                        <th class="text-center">Estado</th>
+                                        <th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="e in reporteEntregables.detalle"
+                                        :key="e.archivo"
+                                    >
+                                        <td class="fw-bold">{{ e.equipo }}</td>
+                                        <td>{{ e.seccion }}</td>
+                                        <td style="font-size: 0.85rem">
+                                            {{ e.tipo }}
+                                        </td>
+                                        <td style="font-size: 0.82rem">
+                                            {{ e.archivo }}
+                                        </td>
+                                        <td class="text-center">
+                                            <span
+                                                :class="{
+                                                    ba: e.estado === 'Aprobado',
+                                                    bd:
+                                                        e.estado ===
+                                                        'Rechazado',
+                                                    bw:
+                                                        e.estado ===
+                                                        'Pendiente',
+                                                }"
+                                                class="bs"
+                                                >{{ e.estado }}</span
+                                            >
+                                        </td>
+                                        <td style="font-size: 0.82rem">
+                                            {{ e.fecha?.split("T")[0] }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── PUNTOS DE CONTROL ──────────────────────────────────── -->
+                <div v-if="tabActiva === 'puntos'" class="sc mb-4">
+                    <div class="sh">
+                        <h6>
+                            <i class="bi bi-check2-square me-2 text-danger"></i
+                            >Reporte de Puntos de Control
+                        </h6>
+                    </div>
+                    <div class="p-3">
+                        <div class="d-flex gap-2 align-items-end mb-3">
+                            <div>
+                                <label class="form-label small fw-bold"
+                                    >Filtrar por sección</label
+                                >
+                                <select
+                                    v-model="seccionPuntos"
+                                    class="form-select form-select-sm"
+                                >
+                                    <option value="">
+                                        Todas las secciones
+                                    </option>
+                                    <option
+                                        v-for="s in secciones"
+                                        :key="s.sec_id"
+                                        :value="s.sec_id"
+                                    >
+                                        {{ s.sec_codigo }} —
+                                        {{ s.trayecto?.tra_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                            <button
+                                @click="cargarPuntos"
+                                class="btn btn-sm btn-danger fw-bold"
+                            >
+                                <i class="bi bi-search me-1"></i> Filtrar
+                            </button>
+                        </div>
+                        <div v-if="reportePuntos" class="row g-3">
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-s">
+                                        <i class="bi bi-check2-square"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reportePuntos.total }}
+                                        </div>
+                                        <div class="stat-label">Total</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-g">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reportePuntos.cumplidos }}
+                                        </div>
+                                        <div class="stat-label">Cumplidos</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-r">
+                                        <i class="bi bi-exclamation-circle"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reportePuntos.vencidos }}
+                                        </div>
+                                        <div class="stat-label">Vencidos</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon si-y">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </div>
+                                    <div>
+                                        <div class="stat-num">
+                                            {{ reportePuntos.pendientes }}
+                                        </div>
+                                        <div class="stat-label">Pendientes</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Reporte solvencia -->
                 <div class="sc">
                     <div class="sh">
@@ -441,37 +1101,169 @@
 </template>
 <script setup>
 import { ref, computed } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
-import { Link } from "@inertiajs/vue3";
+import { router, usePage, Link } from "@inertiajs/vue3";
+
 const menuMaestras = ref(false);
-const menuAcademico = ref(false);
 const menuSistema = ref(false);
+const page = usePage();
 const props = defineProps({
     secciones: Array,
     trayectos: Array,
+    comunidades: Array,
+    tiposProyecto: Array,
+    profesores: Array,
     resumenGeneral: Object,
     reportePorSeccion: Array,
 });
-const page = usePage();
-const sidebarOpen = ref(false);
+
 const tema = ref(localStorage.getItem("coord-theme") || "light");
 const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem("coord-theme", tema.value);
 };
-const logout = () => router.post("/logout");
+
 const iniciales = computed(() => {
-    const u = page.props.auth.user;
+    const u = page.props.auth?.user;
     return (
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
+
+const logout = () => router.post("/logout");
+
+// ── Solvencia ────────────────────────────────────────────────────────
 const seccionSeleccionada = ref("");
 const generarSolvencia = () => {
-    if (seccionSeleccionada.value)
-        router.get("/coordinador/reportes/solvencia", {
-            sec_id: seccionSeleccionada.value,
+    if (!seccionSeleccionada.value) return;
+    router.get("/coordinador/reportes/solvencia", {
+        sec_id: seccionSeleccionada.value,
+    });
+};
+
+// ── Filtro combinado ─────────────────────────────────────────────────
+const filtros = ref({
+    sec_id: "",
+    tra_id: "",
+    com_id: "",
+    tpr_id: "",
+    estado: "",
+    prof_id: "",
+    fecha_desde: "",
+    fecha_hasta: "",
+    vencidos: false,
+});
+const resultadosFiltro = ref([]);
+const totalFiltro = ref(0);
+const cargandoFiltro = ref(false);
+const tabActiva = ref("general");
+
+const aplicarFiltro = async () => {
+    cargandoFiltro.value = true;
+    const params = new URLSearchParams();
+    Object.entries(filtros.value).forEach(([k, v]) => {
+        if (v !== "" && v !== false) params.append(k, v);
+    });
+    try {
+        const res = await fetch(
+            `/coordinador/reportes/filtrar?${params.toString()}`,
+            {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            },
+        );
+        const data = await res.json();
+        resultadosFiltro.value = data.equipos;
+        totalFiltro.value = data.total;
+        tabActiva.value = "filtro";
+    } catch (e) {
+        console.error(e);
+    } finally {
+        cargandoFiltro.value = false;
+    }
+};
+
+const limpiarFiltros = () => {
+    filtros.value = {
+        sec_id: "",
+        tra_id: "",
+        com_id: "",
+        tpr_id: "",
+        estado: "",
+        prof_id: "",
+        fecha_desde: "",
+        fecha_hasta: "",
+        vencidos: false,
+    };
+    resultadosFiltro.value = [];
+    totalFiltro.value = 0;
+};
+
+// ── Por comunidad ────────────────────────────────────────────────────
+const reporteComunidades = ref([]);
+const cargandoComunidad = ref(false);
+
+const cargarReporteComunidad = async () => {
+    cargandoComunidad.value = true;
+    try {
+        const res = await fetch("/coordinador/reportes/por-comunidad", {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
         });
+        const data = await res.json();
+        reporteComunidades.value = data.comunidades;
+        tabActiva.value = "comunidad";
+    } catch (e) {
+        console.error(e);
+    } finally {
+        cargandoComunidad.value = false;
+    }
+};
+
+// ── Entregables ──────────────────────────────────────────────────────
+const reporteEntregables = ref(null);
+const seccionEntregables = ref("");
+const cargandoEntregables = ref(false);
+
+const cargarEntregables = async () => {
+    cargandoEntregables.value = true;
+    try {
+        const params = seccionEntregables.value
+            ? `?sec_id=${seccionEntregables.value}`
+            : "";
+        const res = await fetch(`/coordinador/reportes/entregables${params}`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+        reporteEntregables.value = await res.json();
+        tabActiva.value = "entregables";
+    } catch (e) {
+        console.error(e);
+    } finally {
+        cargandoEntregables.value = false;
+    }
+};
+
+// ── Puntos de control ────────────────────────────────────────────────
+const reportePuntos = ref(null);
+const seccionPuntos = ref("");
+const cargandoPuntos = ref(false);
+
+const cargarPuntos = async () => {
+    cargandoPuntos.value = true;
+    try {
+        const params = seccionPuntos.value
+            ? `?sec_id=${seccionPuntos.value}`
+            : "";
+        const res = await fetch(
+            `/coordinador/reportes/puntos-control${params}`,
+            {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            },
+        );
+        reportePuntos.value = await res.json();
+        tabActiva.value = "puntos";
+    } catch (e) {
+        console.error(e);
+    } finally {
+        cargandoPuntos.value = false;
+    }
 };
 </script>
 <style>

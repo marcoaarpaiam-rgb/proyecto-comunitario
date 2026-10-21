@@ -72,6 +72,9 @@ class CartaController extends Controller
             'proyectoComunidad.equipo.trayecto',
             'proyectoComunidad.comunidad',
         ])->findOrFail($id);
+        if ($carta->cpr_fecha_aprobacion) {
+            return back()->withErrors(['carta' => 'Esta carta ya fue aprobada anteriormente.']);
+        }
         $coordinador = auth()->user();
         $proyecto    = $carta->proyectoComunidad;
 
@@ -125,7 +128,16 @@ class CartaController extends Controller
         )->first();
 
         $proyecto = $carta->proyectoComunidad;
-        $pdf = Pdf::loadView('pdf.carta_presentacion', compact('carta', 'proyecto', 'coordinador'));
+        $pdf = Pdf::loadView('pdf.carta_presentacion', [
+            'carta'       => $carta->load([
+                'proyectoComunidad.equipo.seccion',
+                'proyectoComunidad.equipo.trayecto',
+                'proyectoComunidad.comunidad',
+            ]),
+            'proyecto'    => $carta->proyectoComunidad,
+            'coordinador' => $coordinador,
+        ])->setPaper('letter', 'portrait');
+
         $nombre = 'Carta_' . $proyecto->equipo->equ_codigo . '.pdf';
 
         return $pdf->download($nombre);

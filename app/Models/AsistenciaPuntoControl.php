@@ -11,11 +11,10 @@ class AsistenciaPuntoControl extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'apc_asistio',
-        'apc_observaciones',
-        'apc_created_at',
         'apc_id_seq',
         'apc_id_usu',
+        'apc_asistio',
+        'apc_observaciones',
         'apc_id_usu_created',
     ];
 

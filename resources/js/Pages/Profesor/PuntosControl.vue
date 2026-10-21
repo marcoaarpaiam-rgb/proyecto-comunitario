@@ -373,12 +373,18 @@
                                     <label class="form-label fw-semibold"
                                         >Días de Aviso</label
                                     >
+                                    <!-- Días de aviso en PuntosControl.vue -->
                                     <input
-                                        v-model="form.puc_dias_aviso"
                                         type="number"
-                                        class="form-control"
+                                        class="form-control form-control-sm"
+                                        v-model="form.puc_dias_aviso"
                                         min="1"
-                                        placeholder="Ej: 3"
+                                        max="30"
+                                        @keypress="
+                                            (e) =>
+                                                !/[0-9]/.test(e.key) &&
+                                                e.preventDefault()
+                                        "
                                     />
                                 </div>
                             </div>
@@ -436,6 +442,54 @@
                     </div>
                     <form @submit.prevent="guardarSeguimiento">
                         <div class="modal-body">
+                            <div v-if="pc.seguimientos?.length" class="mt-2">
+                                <p
+                                    class="small fw-bold mb-1"
+                                    style="color: var(--text-muted)"
+                                >
+                                    Asistencias registradas:
+                                </p>
+                                <table class="table table-sm small mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Integrante</th>
+                                            <th class="text-center">Asistió</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr
+                                            v-for="a in pc.seguimientos[0]
+                                                ?.asistencias"
+                                            :key="a.apc_id"
+                                        >
+                                            <td>
+                                                {{
+                                                    a.usuario?.usu_primer_nombre
+                                                }}
+                                                {{
+                                                    a.usuario
+                                                        ?.usu_primer_apellido
+                                                }}
+                                            </td>
+                                            <td class="text-center">
+                                                <span
+                                                    :class="
+                                                        a.apc_asistio
+                                                            ? 'ba'
+                                                            : 'bd'
+                                                    "
+                                                >
+                                                    {{
+                                                        a.apc_asistio
+                                                            ? "Sí"
+                                                            : "No"
+                                                    }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >¿El equipo cumplió este punto?</label

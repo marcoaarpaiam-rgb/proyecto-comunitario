@@ -351,6 +351,29 @@
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </td>
+                                    <td>
+                                        <span class="badge bg-danger"
+                                            >{{
+                                                com.total_equipos
+                                            }}
+                                            equipo(s)</span
+                                        >
+                                        <div
+                                            v-if="
+                                                com.proyectosComunidad?.length
+                                            "
+                                            class="small mt-1"
+                                            style="color: var(--text-muted)"
+                                        >
+                                            <div
+                                                v-for="p in com.proyectosComunidad"
+                                                :key="p.pco_id"
+                                            >
+                                                {{ p.equipo?.equ_codigo }} —
+                                                {{ p.equipo?.equ_titulo }}
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

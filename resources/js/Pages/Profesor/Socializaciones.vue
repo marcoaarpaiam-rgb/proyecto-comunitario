@@ -627,6 +627,7 @@ const guardarResultado = () => {
         `/profesor/socializaciones/${socActual.value.soc_id}/resultado`,
         formRes.value,
         {
+            preserveScroll: true, // AGREGA ESTA LÍNEA
             onSuccess: () => {
                 loading.value = false;
                 mRes?.hide();

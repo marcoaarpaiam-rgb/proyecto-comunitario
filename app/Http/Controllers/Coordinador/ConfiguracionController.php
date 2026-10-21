@@ -79,6 +79,9 @@ class ConfiguracionController extends Controller
     {
         $request->validate(['usu_id' => 'required|exists:usuario,usu_id']);
         $usuario = \App\Models\Usuario::findOrFail($request->usu_id);
+        if (!$usuario->hasRol('lider')) {
+            return back()->withErrors(['usu_id' => 'El usuario seleccionado no es un líder.']);
+        }
         $usuario->update(['usu_password' => bcrypt($usuario->usu_cedula)]);
         return back()->with('success', "Contraseña de {$usuario->usu_primer_nombre} reseteada a su cédula: {$usuario->usu_cedula}");
     }
