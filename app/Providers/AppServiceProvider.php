@@ -18,6 +18,14 @@ class AppServiceProvider extends ServiceProvider
     
     public function boot(): void
     {
+        $tempDir = storage_path('app/temp');
+        if (is_dir($tempDir)) {
+            foreach (glob($tempDir . '/*.zip') as $file) {
+                if (filemtime($file) < time() - 3600) {
+                    unlink($file);
+                }
+            }
+        }
         $modelos = [
             \App\Models\Equipo::class,
             \App\Models\EquipoIntegrante::class,

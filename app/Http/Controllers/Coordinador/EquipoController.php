@@ -115,7 +115,8 @@ class EquipoController extends Controller
             'equ_id_sec'            => 'required|exists:seccion,sec_id',
             'equ_numero_grupo'      => 'required|integer|min:1',
             'equ_titulo'            => 'required|string|max:150',
-            'integrantes'           => 'required|array|min:1|max:6',
+            'integrantes'              => 'required|array|min:1|max:6',
+            'justificacion_integrantes'=> 'nullable|string|max:500',
             'integrantes.*.usu_id'  => 'required|exists:usuario,usu_id',
             'integrantes.*.es_lider'=> 'required|boolean',
         ], [
@@ -129,6 +130,18 @@ class EquipoController extends Controller
         $lideres = collect($request->integrantes)->where('es_lider', true)->count();
         if ($lideres !== 1) {
             return back()->withErrors(['integrantes' => 'Debe designar exactamente un líder.']);
+        }
+
+        $totalIntegrantes = count($request->integrantes);
+
+        if ($totalIntegrantes < 3) {
+            // Requiere justificación
+            if (empty($request->justificacion_integrantes)) {
+                return back()->withErrors([
+                    'justificacion_integrantes' => "El equipo tiene solo {$totalIntegrantes} integrante(s). Debe proporcionar una justificación para continuar con menos de 3."
+                ])->withInput();
+            }
+            // Registrar la excepción en el historial después de crear el equipo
         }
 
         $seccion  = Seccion::with('trayecto')->findOrFail($request->equ_id_sec);
@@ -166,6 +179,16 @@ class EquipoController extends Controller
             'equ_status'         => true,
             'equ_id_usu_created' => auth()->id(),
         ]);
+
+        if ($totalIntegrantes < 3 && !empty($request->justificacion_integrantes)) {
+            \App\Models\HistorialEquipo::create([
+                'heq_id_equ'         => $equipo->equ_id,
+                'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre', 'Creado')->value('tee_id'),
+                'heq_motivo'         => 'EXCEPCIÓN: Equipo creado con ' . $totalIntegrantes . ' integrante(s). Justificación: ' . $request->justificacion_integrantes,
+                'heq_fecha_evento'   => now()->toDateString(),
+                'heq_id_usu_created' => auth()->id(),
+            ]);
+        }
 
         foreach ($request->integrantes as $integrante) {
             EquipoIntegrante::create([
@@ -212,6 +235,26 @@ class EquipoController extends Controller
                     'pco_id_usu_created' => auth()->id(),
                 ]);
 
+                // Registrar en historial que se asignó el proyecto
+                \App\Models\HistorialEquipo::create([
+                    'heq_id_equ'         => $equipo->equ_id,
+                    'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre', 'Creado')->value('tee_id'),
+                    'heq_motivo'         => 'Proyecto asignado: "' . substr($proy['pco_resumen'] ?? '', 0, 80) . '" — Comunidad: ' . (\App\Models\Comunidad::find($proy['pco_id_com'])?->com_nombre ?? 'Sin comunidad'),
+                    'heq_fecha_evento'   => now()->toDateString(),
+                    'heq_id_usu_created' => auth()->id(),
+                ]);
+
+                // Validar que haya al menos un beneficiario con cantidad mayor a 0
+                $beneficiariosValidos = collect($proy['beneficiarios'] ?? [])
+                    ->filter(fn($b) => !empty($b['tbe_id']) && !empty($b['cantidad']) && $b['cantidad'] > 0);
+
+                if ($beneficiariosValidos->isEmpty()) {
+                    $equipo->delete();
+                    return back()->withErrors([
+                        'proyecto.beneficiarios' => 'Debe agregar al menos un tipo de beneficiario con cantidad mayor a 0.'
+                    ]);
+                }
+
                 foreach ($proy['beneficiarios'] ?? [] as $ben) {
                     if (!empty($ben['tbe_id']) && !empty($ben['cantidad'])) {
                         \App\Models\ProyectoBeneficiario::create([
@@ -255,6 +298,51 @@ class EquipoController extends Controller
                 'pco_fecha_limite'   => $request->pco_fecha_limite ?? $equipo->proyectoComunidad->pco_fecha_limite,
                 'pco_id_usu_updated' => auth()->id(),
             ]);
+
+            if ($request->pco_id_com && $request->pco_id_com != $equipo->proyectoComunidad->getOriginal('pco_id_com')) {
+
+                // Invalidar carta existente si la hay
+                $cartaExistente = \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad->pco_id)
+                    ->first();
+
+                if ($cartaExistente) {
+                    $cartaExistente->update([
+                        'cpr_solicitada'      => false,
+                        'cpr_fecha_aprobacion'=> null,
+                        'cpr_sello'           => false,
+                        'cpr_id_usu_updated'  => auth()->id(),
+                    ]);
+
+                    // Notificar al líder
+                    $lider = $equipo->integrantes()
+                        ->where('ein_es_lider', true)
+                        ->where('ein_status', true)
+                        ->first();
+
+                    if ($lider) {
+                        $tno = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%Carta%')->value('tno_id');
+                        if ($tno) {
+                            \App\Models\Notificacion::create([
+                                'not_id_usu'  => $lider->ein_id_usu,
+                                'not_id_tno'  => $tno,
+                                'not_mensaje' => 'La comunidad de tu proyecto fue modificada. Debes solicitar una nueva carta de presentación.',
+                                'not_leida'   => false,
+                                'not_id_equ'  => $equipo->equ_id,
+                            ]);
+                        }
+                    }
+                }
+
+                // Historial
+                $comunidadNueva = \App\Models\Comunidad::find($request->pco_id_com)?->com_nombre ?? 'Desconocida';
+                \App\Models\HistorialEquipo::create([
+                    'heq_id_equ'         => $equipo->equ_id,
+                    'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre', 'Creado')->value('tee_id'),
+                    'heq_motivo'         => 'Comunidad actualizada a: "' . $comunidadNueva . '" — Carta anterior invalidada.',
+                    'heq_fecha_evento'   => now()->toDateString(),
+                    'heq_id_usu_created' => auth()->id(),
+                ]);
+            }
         }
 
         return back()->with('success', 'Equipo actualizado correctamente.');
@@ -475,5 +563,177 @@ class EquipoController extends Controller
             'equ_id_usu_updated' => auth()->id(),
         ]);
         return back()->with('success', 'Equipo activado correctamente.');
+    }
+    public function generarPaqueteCierre($id)
+    {
+        $equipo = Equipo::with([
+            'seccion.trayecto',
+            'integrantes.usuario',
+            'proyectoComunidad.comunidad',
+            'proyectoComunidad.tipoProyecto',
+            'entregables' => fn($q) => $q->where('entr_aprobado', true)
+                                        ->where('entr_status', true),
+            'entregables.tipoEntregable',
+            'puntosControl.seguimientos.asistencias.usuario',
+            'socializaciones.tipoSocializacion',
+            'cartaPresentacion',
+            'resultadoProyecto.estadoProyecto',
+        ])->findOrFail($id);
+
+        // Verificar que el equipo tiene resultado registrado
+        if (!$equipo->resultadoProyecto) {
+            return back()->withErrors([
+                'equipo' => 'El equipo no tiene resultado final registrado. Registra el resultado antes de generar el paquete de cierre.'
+            ]);
+        }
+
+        $zipNombre = 'paquete_cierre_' . $equipo->equ_codigo . '_' . now()->format('Ymd_His') . '.zip';
+        $zipRuta   = storage_path('app/temp/' . $zipNombre);
+
+        // Crear directorio temp si no existe
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zipRuta, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->withErrors(['equipo' => 'No se pudo crear el archivo ZIP.']);
+        }
+
+        // ── 1. Resumen JSON ──────────────────────────────────────────────
+        $resumen = [
+            'equipo' => [
+                'codigo'    => $equipo->equ_codigo,
+                'titulo'    => $equipo->equ_titulo,
+                'seccion'   => $equipo->seccion?->sec_codigo,
+                'trayecto'  => $equipo->seccion?->trayecto?->tra_nombre,
+            ],
+            'proyecto' => [
+                'comunidad'    => $equipo->proyectoComunidad?->comunidad?->com_nombre,
+                'tipo'         => $equipo->proyectoComunidad?->tipoProyecto?->tpr_nombre,
+                'fecha_inicio' => $equipo->proyectoComunidad?->created_at?->toDateString(),
+                'fecha_limite' => $equipo->proyectoComunidad?->pco_fecha_limite,
+            ],
+            'resultado' => [
+                'estado'          => $equipo->resultadoProyecto?->estadoProyecto?->epr_nombre,
+                'fecha_registro'  => $equipo->resultadoProyecto?->rpr_fecha_registro,
+                'observaciones'   => $equipo->resultadoProyecto?->rpr_observaciones,
+            ],
+            'integrantes' => $equipo->integrantes->map(fn($i) => [
+                'nombre'   => $i->usuario?->usu_primer_nombre . ' ' . $i->usuario?->usu_primer_apellido,
+                'cedula'   => $i->usuario?->usu_cedula,
+                'es_lider' => (bool) $i->ein_es_lider,
+            ])->toArray(),
+            'entregables_aprobados' => $equipo->entregables->map(fn($e) => [
+                'nombre'  => $e->entr_nombre_archivo,
+                'tipo'    => $e->tipoEntregable?->tet_nombre,
+                'version' => $e->entr_version,
+            ])->toArray(),
+            'generado_en' => now()->toDateTimeString(),
+            'generado_por' => auth()->user()->usu_primer_nombre . ' ' . auth()->user()->usu_primer_apellido,
+        ];
+
+        $zip->addFromString('resumen.json', json_encode($resumen, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        // ── 2. Entregables aprobados ─────────────────────────────────────
+        foreach ($equipo->entregables as $entregable) {
+            $rutaArchivo = storage_path('app/public/' . $entregable->entr_ruta);
+            if (file_exists($rutaArchivo)) {
+                $tipo      = $entregable->tipoEntregable?->tet_nombre ?? 'Entregable';
+                $extension = pathinfo($entregable->entr_nombre_archivo, PATHINFO_EXTENSION);
+                $nombreZip = 'entregables/' . str_replace(['/', '\\', ' '], '_', $tipo)
+                        . '_v' . ($entregable->entr_version ?? '1')
+                        . '.' . $extension;
+                $zip->addFile($rutaArchivo, $nombreZip);
+            }
+        }
+
+        // ── 3. PDF carta de presentación ────────────────────────────────
+        if ($equipo->cartaPresentacion?->cpr_fecha_aprobacion) {
+            try {
+                $coordinador = \App\Models\Usuario::whereHas('roles', fn($q) =>
+                    $q->where('rol_nombre', 'coordinador')
+                )->first();
+
+                $pdfCarta = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.carta_presentacion', [
+                    'carta'       => $equipo->cartaPresentacion->load([
+                        'proyectoComunidad.comunidad',
+                        'proyectoComunidad.equipo.integrantes.usuario',
+                        'proyectoComunidad.equipo.seccion',
+                        'proyectoComunidad.equipo.trayecto',
+                    ]),
+                    'proyecto'    => $equipo->cartaPresentacion->proyectoComunidad,
+                    'coordinador' => $coordinador,
+                ])->setPaper('letter', 'portrait');
+
+                $zip->addFromString(
+                    'carta_presentacion_' . $equipo->equ_codigo . '.pdf',
+                    $pdfCarta->output()
+                );
+            } catch (\Exception $e) {
+                // Si falla el PDF de carta, continúa sin él
+            }
+        }
+
+        // ── 4. PDF solvencia del equipo ──────────────────────────────────
+        try {
+            $todosLosSeguimientos = $equipo->puntosControl
+                ->flatMap(fn($p) => $p->seguimientos);
+            $totalPuntos = $todosLosSeguimientos->count();
+
+            $integrantesSolvencia = $equipo->integrantes->map(function ($integrante) use ($todosLosSeguimientos, $totalPuntos) {
+                $asistencias = 0;
+                foreach ($todosLosSeguimientos as $seq) {
+                    $asistio = $seq->asistencias
+                        ->where('apc_id_usu', $integrante->ein_id_usu)->first();
+                    if ($asistio && $asistio->apc_asistio) $asistencias++;
+                }
+                $porcentaje = $totalPuntos > 0 ? round($asistencias / $totalPuntos * 100) : 0;
+                return [
+                    'nombre'      => $integrante->usuario?->usu_primer_nombre . ' ' . $integrante->usuario?->usu_primer_apellido,
+                    'cedula'      => $integrante->usuario?->usu_cedula,
+                    'es_lider'    => (bool) $integrante->ein_es_lider,
+                    'asistencias' => $asistencias,
+                    'total'       => $totalPuntos,
+                    'porcentaje'  => $porcentaje,
+                    'solvente'    => $porcentaje >= 75,
+                ];
+            })->toArray();
+
+            $reporteEquipo = [[
+                'equipo'      => $equipo->equ_codigo,
+                'titulo'      => $equipo->equ_titulo,
+                'comunidad'   => $equipo->proyectoComunidad?->comunidad?->com_nombre,
+                'resultado'   => $equipo->resultadoProyecto?->estadoProyecto?->epr_nombre,
+                'integrantes' => $integrantesSolvencia,
+            ]];
+
+            $pdfSolvencia = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.reporte_solvencia', [
+                'seccion' => $equipo->seccion,
+                'reporte' => $reporteEquipo,
+            ])->setPaper('letter', 'portrait');
+
+            $zip->addFromString(
+                'solvencia_' . $equipo->equ_codigo . '.pdf',
+                $pdfSolvencia->output()
+            );
+        } catch (\Exception $e) {
+            // Si falla el PDF de solvencia, continúa sin él
+        }
+
+        $zip->close();
+
+        // Registrar en bitácora
+        \App\Models\Bitacora::create([
+            'bit_id_usu'      => auth()->id(),
+            'bit_id_ent'      => \App\Models\Entidad::where('ent_tabla', 'equipo')->value('ent_id'),
+            'bit_accion'      => 'PAQUETE_CIERRE',
+            'bit_registro_id' => $equipo->equ_id,
+            'bit_fecha_hora'  => now(),
+        ]);
+
+        return response()->download($zipRuta, $zipNombre, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
     }
 }

@@ -6,17 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class ResponsableComunidad extends Model
 {
-    protected $table = 'responsable_comunidad';
+    protected $table      = 'responsable_comunidad';
     protected $primaryKey = 'rco_id';
-    public $timestamps = false;
+    public    $timestamps = false;
 
     protected $fillable = [
+        'rco_id_usu',
+        'rco_id_com',
+        'rco_nombre',      
+        'rco_cargo',      
+        'rco_telefono',    
+        'rco_email',       
         'rco_fecha_inicio',
         'rco_fecha_fin',
         'rco_status',
-        'rco_created_at',
-        'rco_id_usu',
-        'rco_id_com',
         'rco_id_usu_created',
     ];
 

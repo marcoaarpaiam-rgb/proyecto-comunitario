@@ -1177,6 +1177,41 @@
                                     Siguiente
                                     <i class="bi bi-arrow-right ms-1"></i>
                                 </button>
+                                <!-- Justificación si hay menos de 3 integrantes -->
+                                <div
+                                    v-if="
+                                        integrantesAgregados < 3 &&
+                                        integrantesAgregados > 0
+                                    "
+                                    class="alert py-2 small mb-2"
+                                    style="
+                                        background: rgba(255, 193, 7, 0.1);
+                                        border: 1px solid rgba(255, 193, 7, 0.4);
+                                    "
+                                >
+                                    <i
+                                        class="bi bi-exclamation-triangle me-1"
+                                        style="color: #ffc107"
+                                    ></i>
+                                    <strong>Atención:</strong> El equipo tiene
+                                    {{ integrantesAgregados }} integrante(s). El
+                                    mínimo recomendado es 3. Si deseas
+                                    continuar, escribe la justificación:
+                                    <textarea
+                                        v-model="
+                                            formNuevo.justificacion_integrantes
+                                        "
+                                        class="form-control form-control-sm mt-2"
+                                        rows="2"
+                                        placeholder="Razón por la que el equipo tiene menos de 3 integrantes..."
+                                    ></textarea>
+                                    <div
+                                        v-if="errores.justificacion_integrantes"
+                                        class="text-danger small mt-1"
+                                    >
+                                        {{ errores.justificacion_integrantes }}
+                                    </div>
+                                </div>
                                 <button
                                     v-if="paso === 2"
                                     type="submit"
@@ -1778,6 +1813,7 @@ const formNuevo = ref({
     equ_numero_grupo: "",
     equ_titulo: "",
     integrantes: [{ usu_id: "", es_lider: true }],
+    justificacion_integrantes: "",
 });
 const formEditar = ref({
     equ_titulo: "",
@@ -2040,7 +2076,14 @@ const guardar = () => {
             "Todos los campos de integrante deben tener un estudiante seleccionado.";
         return;
     }
-
+    // Validar beneficiarios
+    const bens = formProyecto.value.beneficiarios ?? [];
+    const bensValidos = bens.filter((b) => b.tbe_id && b.cantidad > 0);
+    if (bensValidos.length === 0) {
+        errores.value.beneficiarios =
+            "Debe agregar al menos un beneficiario con cantidad mayor a 0.";
+        return;
+    }
     // Enviar si todo ok
     router.post(
         "/coordinador/equipos",
@@ -2164,6 +2207,9 @@ const guardarNuevoTipo = () => {
         },
     });
 };
+const integrantesAgregados = computed(
+    () => formNuevo.value.integrantes.filter((i) => i.usu_id).length,
+);
 </script>
 <style>
 :root {

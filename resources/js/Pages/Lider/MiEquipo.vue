@@ -314,6 +314,136 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Tutor del proyecto -->
+                    <div class="sc mt-3">
+                        <div
+                            class="sh d-flex align-items-center justify-content-between"
+                        >
+                            <span
+                                ><i
+                                    class="bi bi-person-badge me-2 text-danger"
+                                ></i
+                                >Tutor del Proyecto</span
+                            >
+                            <button
+                                class="btn btn-sm btn-danger rounded-pill fw-bold"
+                                @click="mostrarFormTutor = !mostrarFormTutor"
+                            >
+                                <i class="bi bi-pencil me-1"></i>
+                                {{ tutor ? "Cambiar" : "Asignar" }}
+                            </button>
+                        </div>
+                        <div class="p-3">
+                            <!-- Tutor actual -->
+                            <div v-if="tutor && !mostrarFormTutor">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div
+                                        style="
+                                            width: 42px;
+                                            height: 42px;
+                                            background: #dc3545;
+                                            border-radius: 50%;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            color: #fff;
+                                            font-weight: 800;
+                                            font-size: 1rem;
+                                            flex-shrink: 0;
+                                        "
+                                    >
+                                        {{
+                                            tutor.usuario
+                                                ?.usu_primer_nombre?.[0]
+                                        }}{{
+                                            tutor.usuario
+                                                ?.usu_primer_apellido?.[0]
+                                        }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">
+                                            {{
+                                                tutor.usuario?.usu_primer_nombre
+                                            }}
+                                            {{
+                                                tutor.usuario
+                                                    ?.usu_primer_apellido
+                                            }}
+                                        </div>
+                                        <div
+                                            class="small"
+                                            style="color: var(--text-muted)"
+                                        >
+                                            C.I.
+                                            {{ tutor.usuario?.usu_cedula }} —
+                                            Profesor de Proyecto
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sin tutor -->
+                            <div
+                                v-else-if="!tutor && !mostrarFormTutor"
+                                class="text-center py-3"
+                                style="color: var(--text-muted)"
+                            >
+                                <i
+                                    class="bi bi-person-badge fs-3 d-block mb-1"
+                                ></i>
+                                No hay tutor asignado
+                            </div>
+
+                            <!-- Formulario -->
+                            <div v-if="mostrarFormTutor">
+                                <label class="form-label small fw-bold"
+                                    >Selecciona el tutor</label
+                                >
+                                <select
+                                    class="form-select form-select-sm mb-3"
+                                    v-model="formTutor.tut_id_usu"
+                                >
+                                    <option value="">
+                                        — Seleccionar profesor —
+                                    </option>
+                                    <option
+                                        v-for="prof in profesoresDisponibles"
+                                        :key="prof.usu_id"
+                                        :value="prof.usu_id"
+                                    >
+                                        {{ prof.usu_primer_nombre }}
+                                        {{ prof.usu_primer_apellido }} (C.I.
+                                        {{ prof.usu_cedula }})
+                                    </option>
+                                </select>
+                                <p
+                                    class="small mb-3"
+                                    style="color: var(--text-muted)"
+                                >
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Solo se muestran los profesores del PNF
+                                    Informática registrados en el sistema.
+                                    Cuando se integre el SOGAC, esta lista se
+                                    completará automáticamente.
+                                </p>
+                                <div class="d-flex gap-2">
+                                    <button
+                                        class="btn btn-sm btn-danger fw-bold"
+                                        @click="guardarTutor"
+                                    >
+                                        <i class="bi bi-check2 me-1"></i>
+                                        Guardar
+                                    </button>
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary"
+                                        @click="mostrarFormTutor = false"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -323,7 +453,11 @@
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
-const props = defineProps({ equipo: Object });
+const props = defineProps({
+    equipo: Object,
+    tutor: Object,
+    profesoresDisponibles: Array,
+});
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
@@ -338,6 +472,17 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
+const mostrarFormTutor = ref(false);
+const formTutor = ref({ tut_id_usu: props.tutor?.tut_id_usu ?? "" });
+
+const guardarTutor = () => {
+    router.post("/lider/tutor", formTutor.value, {
+        preserveScroll: true,
+        onSuccess: () => {
+            mostrarFormTutor.value = false;
+        },
+    });
+};
 </script>
 <style>
 :root {

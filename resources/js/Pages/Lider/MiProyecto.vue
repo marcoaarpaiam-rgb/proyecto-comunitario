@@ -342,6 +342,165 @@
                         </div>
                     </div>
                 </div>
+                <!-- Personal de la comunidad -->
+                <div class="sc mt-3" v-if="equipo?.proyecto_comunidad">
+                    <div
+                        class="sh d-flex align-items-center justify-content-between"
+                    >
+                        <span
+                            ><i class="bi bi-people me-2 text-danger"></i
+                            >Responsable de la Comunidad</span
+                        >
+                        <button
+                            class="btn btn-sm btn-danger rounded-pill fw-bold"
+                            @click="
+                                mostrarFormResponsable = !mostrarFormResponsable
+                            "
+                        >
+                            <i class="bi bi-plus-circle me-1"></i>
+                            {{ responsable ? "Actualizar" : "Registrar" }}
+                        </button>
+                    </div>
+                    <div class="p-3">
+                        <!-- Datos actuales -->
+                        <div
+                            v-if="responsable && !mostrarFormResponsable"
+                            class="row g-2"
+                        >
+                            <div class="col-6">
+                                <div
+                                    class="small fw-bold"
+                                    style="color: var(--text-muted)"
+                                >
+                                    Nombre
+                                </div>
+                                <div>{{ responsable.rco_nombre }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div
+                                    class="small fw-bold"
+                                    style="color: var(--text-muted)"
+                                >
+                                    Cargo
+                                </div>
+                                <div>{{ responsable.rco_cargo ?? "—" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div
+                                    class="small fw-bold"
+                                    style="color: var(--text-muted)"
+                                >
+                                    Teléfono
+                                </div>
+                                <div>{{ responsable.rco_telefono ?? "—" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div
+                                    class="small fw-bold"
+                                    style="color: var(--text-muted)"
+                                >
+                                    Email
+                                </div>
+                                <div>{{ responsable.rco_email ?? "—" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div
+                                    class="small fw-bold"
+                                    style="color: var(--text-muted)"
+                                >
+                                    Desde
+                                </div>
+                                <div>{{ responsable.rco_fecha_inicio }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Sin responsable -->
+                        <div
+                            v-else-if="!responsable && !mostrarFormResponsable"
+                            class="text-center py-3"
+                            style="color: var(--text-muted)"
+                        >
+                            <i class="bi bi-person-x fs-3 d-block mb-1"></i>
+                            No hay responsable registrado
+                        </div>
+
+                        <!-- Formulario -->
+                        <div v-if="mostrarFormResponsable">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold"
+                                        >Nombre completo *</label
+                                    >
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        v-model="formResponsable.rco_nombre"
+                                        placeholder="Nombre del vocero o responsable"
+                                    />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold"
+                                        >Cargo *</label
+                                    >
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        v-model="formResponsable.rco_cargo"
+                                        placeholder="Ej: Vocero Principal"
+                                    />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold"
+                                        >Teléfono</label
+                                    >
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        v-model="formResponsable.rco_telefono"
+                                        placeholder="0412-1234567"
+                                    />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold"
+                                        >Email</label
+                                    >
+                                    <input
+                                        type="email"
+                                        class="form-control form-control-sm"
+                                        v-model="formResponsable.rco_email"
+                                        placeholder="correo@ejemplo.com"
+                                    />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold"
+                                        >Fecha de inicio *</label
+                                    >
+                                    <input
+                                        type="date"
+                                        class="form-control form-control-sm"
+                                        v-model="
+                                            formResponsable.rco_fecha_inicio
+                                        "
+                                    />
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button
+                                    class="btn btn-sm btn-danger fw-bold"
+                                    @click="guardarResponsable"
+                                >
+                                    <i class="bi bi-check2 me-1"></i> Guardar
+                                </button>
+                                <button
+                                    class="btn btn-sm btn-outline-secondary"
+                                    @click="mostrarFormResponsable = false"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -350,7 +509,6 @@
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
-const props = defineProps({ equipo: Object });
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
@@ -365,6 +523,27 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
+const props = defineProps({
+    equipo: Object,
+    responsable: Object, // Agregado aquí junto con los demás
+});
+const mostrarFormResponsable = ref(false);
+const formResponsable = ref({
+    rco_nombre: props.responsable?.rco_nombre ?? "",
+    rco_cargo: props.responsable?.rco_cargo ?? "",
+    rco_telefono: props.responsable?.rco_telefono ?? "",
+    rco_email: props.responsable?.rco_email ?? "",
+    rco_fecha_inicio: props.responsable?.rco_fecha_inicio ?? "",
+});
+
+const guardarResponsable = () => {
+    router.post("/lider/responsable", formResponsable.value, {
+        preserveScroll: true,
+        onSuccess: () => {
+            mostrarFormResponsable.value = false;
+        },
+    });
+};
 </script>
 <style>
 :root {

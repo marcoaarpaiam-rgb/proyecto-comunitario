@@ -214,6 +214,15 @@
                         class="btn btn-sm btn-outline-secondary rounded-pill px-3"
                         ><i class="bi bi-arrow-left me-1"></i>Equipos</a
                     >
+                    <a
+                        v-if="equipo.resultado_proyecto"
+                        :href="`${rutaBase}/equipos/${equipo.equ_id}/paquete-cierre`"
+                        class="btn btn-sm btn-danger fw-bold rounded-pill px-3"
+                        title="Descargar ZIP con todos los documentos del proyecto"
+                    >
+                        <i class="bi bi-file-zip me-1"></i>
+                        <span class="d-none d-sm-inline">Paquete Cierre</span>
+                    </a>
                     <button class="tb-btn" @click="toggleTema">
                         <i
                             class="bi"
@@ -1025,6 +1034,12 @@ const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
 const props = defineProps({ equipo: Object });
+// Detectar si viene del profesor o del coordinador
+const rutaBase = computed(() => {
+    return window.location.pathname.startsWith("/profesor")
+        ? "/profesor"
+        : "/coordinador";
+});
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");

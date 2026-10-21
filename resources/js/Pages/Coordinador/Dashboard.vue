@@ -54,7 +54,7 @@
                 </div>
             </div>
             <div class="sb-nav">
-                <div class="sb-sectiontion">Principal</div>
+                <div class="sb-section">Principal</div>
                 <Link href="/coordinador" class="sb-link">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </Link>
@@ -756,7 +756,7 @@ onMounted(() => {
 .sb-nav::-webkit-scrollbar {
     display: none;
 }
-.sb-sectiontion {
+.sb-section {
     padding: 0.9rem 1.5rem 0.3rem;
     color: #64748b;
     font-size: 0.72rem;

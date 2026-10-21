@@ -62,6 +62,35 @@ class SocializacionController extends Controller
 
         // Obtener trayecto del equipo
         $equipo = Equipo::findOrFail($request->soc_id_equ);
+        
+        // Verificar flujo de socializaciones
+        $tipoSoc = \App\Models\TipoSocializacion::findOrFail($request->soc_id_tso);
+
+        if ($tipoSoc->tso_orden === 2) {
+            // Es socialización final — verificar que existe pre-soc aprobada (apta)
+            $preSocAprobada = Socializacion::where('soc_id_equ', $request->soc_id_equ)
+                ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 1))
+                ->where('soc_apto', true)
+                ->exists();
+
+            if (!$preSocAprobada) {
+                return back()->withErrors([
+                    'soc_id_tso' => 'No se puede registrar la Socialización Final sin una Pre-Socialización marcada como apta.'
+                ]);
+            }
+        }
+
+        // Verificar que no exista ya una soc del mismo tipo para este equipo
+        $yaExiste = Socializacion::where('soc_id_equ', $request->soc_id_equ)
+            ->where('soc_id_tso', $request->soc_id_tso)
+            ->where('soc_status', true)
+            ->exists();
+
+        if ($yaExiste) {
+            return back()->withErrors([
+                'soc_id_tso' => 'Ya existe una ' . $tipoSoc->tso_nombre . ' registrada para este equipo.'
+            ]);
+        }
 
         $soc = Socializacion::create([
             'soc_id_equ'           => $request->soc_id_equ,

@@ -53,6 +53,18 @@ class ResultadoController extends Controller
             return back()->withErrors(['rpr_id_pco' => 'Este proyecto ya tiene un resultado registrado.']);
         }
         
+        // Verificar que existe socialización final aprobada
+        $socFinalAprobada = \App\Models\Socializacion::where('soc_id_equ', $proyecto->pco_id_equ)
+            ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 2))
+            ->where('soc_aprobado', true)
+            ->exists();
+
+        if (!$socFinalAprobada) {
+            return back()->withErrors([
+                'rpr_id_pco' => 'No se puede registrar el resultado sin una Socialización Final aprobada para este equipo.'
+            ]);
+        }
+
         ResultadoProyecto::create([
             'rpr_id_pco'            => $request->rpr_id_pco,
             'rpr_id_tra'            => $request->rpr_id_tra,
