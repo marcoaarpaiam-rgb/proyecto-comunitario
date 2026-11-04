@@ -15,11 +15,16 @@ class BitacoraObserver
 
         $tabla = $model->getTable();
         $entidad = Entidad::where('ent_nombre', $tabla)->first();
-
+        $datosAnteriores = $anterior;
+        if ($datosAnteriores) {
+            unset($datosAnteriores['usu_password']);
+        }
+        $datos = $model->toArray();
+        unset($datos['usu_password']);
         Bitacora::create([
             'bit_accion'          => $accion . ' en ' . $tabla,
-            'bit_estado_anterior' => $anterior ? json_encode($anterior) : null,
-            'bit_estado_nuevo'    => json_encode($model->toArray()),
+            'bit_estado_anterior' => $datosAnteriores ? json_encode($datosAnteriores) : null,
+            'bit_estado_nuevo'    => json_encode($datos),
             'bit_registro_id'     => $model->getKey(),
             'bit_fecha_hora'      => now(),
             'bit_id_usu'          => Auth::id(),

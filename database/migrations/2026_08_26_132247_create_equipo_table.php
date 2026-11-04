@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('equipo', function (Blueprint $table) {
             $table->id('equ_id');
-            $table->string('equ_codigo', 20)->unique();
+            $table->string('equ_codigo', 30)->unique();
             $table->string('equ_titulo', 150);
             $table->boolean('equ_status')->default(true);
             $table->timestamp('equ_created_at')->useCurrent();

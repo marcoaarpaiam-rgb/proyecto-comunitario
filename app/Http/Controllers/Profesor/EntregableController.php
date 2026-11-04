@@ -9,10 +9,12 @@ use App\Models\Notificacion;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
-
+use App\Http\Controllers\Concerns\AutorizaPorSeccion;
 
 class EntregableController extends Controller
 {
+    use AutorizaPorSeccion;
+
     public function index()
     {
         $profesor  = auth()->user();
@@ -37,6 +39,8 @@ class EntregableController extends Controller
         $entregable = Entregable::with(['equipo.integrantes' => fn($q) =>
             $q->where('ein_es_lider', true)->where('ein_status', true)
         ])->findOrFail($id);
+
+        $this->autorizarEquipoId($entregable->entr_id_equ);
 
         $entregable->update([
             'entr_aprobado'           => true,
@@ -73,6 +77,8 @@ class EntregableController extends Controller
         $entregable = Entregable::with(['equipo.integrantes' => fn($q) =>
             $q->where('ein_es_lider', true)->where('ein_status', true)
         ])->findOrFail($id);
+
+        $this->autorizarEquipoId($entregable->entr_id_equ);
 
         $entregable->update([
             'entr_aprobado'            => false,

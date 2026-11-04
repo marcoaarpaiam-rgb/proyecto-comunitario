@@ -29,7 +29,7 @@ use App\Http\Controllers\Coordinador\ExpedienteController;
 
 // Rutas públicas
 Route::get('/', [LoginController::class, 'index'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('login.post');
+Route::post('/login', [LoginController::class, 'login'])->name('login.post')->middleware('throttle:5,1');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/home', fn() => Inertia::render('Home'))->name('home');
 
@@ -67,20 +67,46 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::get('/', function () {
         return Inertia::render('Coordinador/Dashboard', [
             'stats' => [
-                'equipos'       => Equipo::where('equ_status', true)->count(),
-                'proyectos'     => ProyectoComunidad::where('pco_status', true)->count(),
-                'puntosControl' => PuntoControl::where('puc_status', true)->count(),
-                'comunidades'   => Comunidad::where('com_status', true)->count(),
-                'cartasPendientes' => \App\Models\CartaPresentacion::where('cpr_solicitada', true)
-                    ->whereNull('cpr_fecha_aprobacion')->count(),
+                'estudiantes'      => \App\Models\EstudianteSeccion::where('ese_status', true)->count(),
+                'equipos'          => \App\Models\Equipo::where('equ_status', true)->count(),
+                'comunidades'      => \App\Models\Comunidad::where('com_status', true)->count(),
+                'porVencer'        => \App\Models\ProyectoComunidad::where('pco_status', true)
+                    ->whereBetween('pco_fecha_limite', [now()->toDateString(), now()->addDays(30)->toDateString()])->count(),
+                'aprobados'        => \App\Models\ResultadoProyecto::whereHas('estadoProyecto', fn($q) => $q->where('epr_nombre', 'Aprobado'))->count(),
+                'profesores'       => \App\Models\Usuario::where('usu_status', true)
+                    ->whereHas('usuarioRoles', fn($q) => $q->where('uro_status', true)
+                        ->whereHas('rol', fn($r) => $r->where('rol_nombre', 'profesor_proyecto')))->count(),
+                'notificaciones'   => \App\Models\Notificacion::where('not_id_usu', auth()->id())->where('not_leida', false)->count(),
+                'cartasPendientes' => \App\Models\CartaPresentacion::where('cpr_solicitada', true)->whereNull('cpr_fecha_aprobacion')->count(),
             ],
+            'secciones' => \App\Models\Seccion::with('turno')->where('sec_status', true)->orderBy('sec_codigo')->get()
+                ->map(function ($s) {
+                    $base  = \App\Models\Equipo::where('equ_id_sec', $s->sec_id)->where('equ_status', true);
+                    $total = (clone $base)->count();
+                    $cerr  = (clone $base)->whereHas('resultadoProyecto')->count();
+                    return [
+                        'sec_id'        => $s->sec_id,
+                        'sec_codigo'    => $s->sec_codigo,
+                        'turno'         => $s->turno,
+                        'total_equipos' => $total,
+                        'avance'        => $total ? round($cerr / $total * 100) : 0,
+                    ];
+                }),
         ]);
     })->name('dashboard');
 
     // Tablas maestras
-    Route::resource('tipos-proyecto', MaestraController::class)->parameters(['tipos-proyecto' => 'id']);
-    Route::resource('comunidades', ComunidadController::class)->parameters(['comunidades' => 'id']);
-    Route::resource('secciones', SeccionController::class)->parameters(['secciones' => 'id']);
+    Route::resource('tipos-proyecto', MaestraController::class)
+        ->parameters(['tipos-proyecto' => 'id'])
+        ->except(['create', 'show', 'edit']);
+
+    Route::resource('comunidades', ComunidadController::class)
+        ->parameters(['comunidades' => 'id'])
+        ->except(['create', 'show', 'edit']);
+
+    Route::resource('secciones', SeccionController::class)
+        ->parameters(['secciones' => 'id'])
+        ->except(['create', 'show', 'edit']);
 
     
 
@@ -92,17 +118,15 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     
 
-    Route::resource('equipos', EquipoController::class)
-        ->parameters(['equipos' => 'id']);
+   Route::resource('equipos', EquipoController::class)
+        ->parameters(['equipos' => 'id'])
+        ->except(['create', 'show', 'edit']);
 
     
 
     Route::resource('proyectos', ProyectoController::class)
         ->parameters(['proyectos' => 'id'])
         ->except(['edit','create','show']);
-    Route::post('proyectos/{id}/aprobar',
-        [ProyectoController::class, 'aprobar'])
-        ->name('proyectos.aprobar');
     
     // Resultados
     Route::get('resultados', [ResultadoController::class, 'index'])
@@ -150,6 +174,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::get('secciones/{id}/detalle',
         [SeccionDetalleController::class, 'show'])
         ->name('secciones.detalle');
+    
+    Route::post('secciones/{id}/profesores', [SeccionDetalleController::class, 'asignarProfesor']);
 
     Route::get('cartas/{id}/descargar',
         [CartaController::class, 'descargar'])
@@ -204,8 +230,6 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('/equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
         ->name('coordinador.equipos.reactivar');
     
-    Route::post('/equipos/{id}/activar', [EquipoController::class, 'activar'])
-        ->name('coordinador.equipos.activar');
 });
 
 // Grupo Profesor 
@@ -227,9 +251,20 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
             'stats' => [
                 'secciones'             => $secciones->count(),
                 'equipos'               => $equiposIds->count(),
+                'puntosVencer'          => \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposIds)
+                    ->where('puc_status', true)
+                    ->whereBetween('puc_fecha_limite', [now()->toDateString(), now()->addDays(7)->toDateString()])
+                    ->count(),
+                'entregablesPendientes' => \App\Models\Entregable::whereIn('entr_id_equ', $equiposIds)
+                    ->where('entr_status', true)->whereNull('entr_aprobado')->count(),
+                'notificaciones'        => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+                    ->where('not_leida', false)->count(),
             ],
+            'notificaciones' => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+                ->orderByDesc('not_fecha_generacion')->take(15)->get(),
+            'notificacionesSinLeer' => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+                ->where('not_leida', false)->count(),
             'equipos'               => $equipos,
-            'notificacionesSinLeer' => 0,
             'proximosPuntos'        => \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposIds)
                 ->where('puc_status', true)
                 ->where('puc_fecha_limite', '>=', now()->toDateString())
@@ -248,6 +283,7 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
                     'nombre' => $e->entr_nombre_archivo,
                     'equipo' => $e->equipo?->equ_codigo,
                 ]),
+            
         ]);
     })->name('dashboard');
 
@@ -261,9 +297,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('puntos-control/{id}/seguimiento',
         [App\Http\Controllers\Profesor\PuntoControlController::class, 'registrarSeguimiento'])
         ->name('puntos-control.seguimiento');
-    Route::post('puntos-control/{id}/reprogramar',
-        [App\Http\Controllers\Profesor\PuntoControlController::class, 'reprogramar'])
-        ->name('puntos-control.reprogramar');
+    Route::post('/puntos-control/{id}/reprogramar', [PuntoControlController::class, 'reprogramar'])
+        ->name('profesor.puntos-control.reprogramar');
     Route::delete('puntos-control/{id}',
         [App\Http\Controllers\Profesor\PuntoControlController::class, 'destroy'])
         ->name('puntos-control.destroy');
@@ -330,6 +365,12 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     Route::get('/equipos/{id}/paquete-cierre', [EquipoController::class, 'generarPaqueteCierre'])
         ->name('profesor.equipos.paqueteCierre');
+
+    // Dentro del grupo profesor:
+    Route::post('/comunidades', [\App\Http\Controllers\Coordinador\ComunidadController::class, 'store'])
+        ->name('profesor.comunidades.store');
+
+    Route::post('tipos-proyecto', [MaestraController::class, 'store']);
 });
 // Grupo Líder 
 Route::middleware(['auth', 'rol:lider'])

@@ -59,9 +59,32 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Mi Proyecto</div>
-                <Link href="/lider" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</Link
+                <Link
+                    href="/lider"
+                    class="sb-lnk d-flex align-items-center justify-content-between"
                 >
+                    <span
+                        ><i class="bi bi-speedometer2 me-2"></i>Dashboard</span
+                    >
+                    <span
+                        v-if="notifNoLeidas > 0"
+                        style="
+                            background: #dc3545;
+                            color: #fff;
+                            border-radius: 50%;
+                            width: 18px;
+                            height: 18px;
+                            font-size: 0.7rem;
+                            font-weight: 800;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                        "
+                    >
+                        {{ notifNoLeidas > 9 ? "9+" : notifNoLeidas }}
+                    </span>
+                </Link>
                 <Link href="/lider/equipo" class="sb-lnk"
                     ><i class="bi bi-people"></i> Mi Equipo</Link
                 >
@@ -128,6 +151,26 @@
                 </div>
             </div>
             <div class="content">
+                <div
+                    v-if="!cartaAprobada"
+                    class="alert py-2 mb-3 d-flex align-items-center gap-2"
+                    style="
+                        background: rgba(220, 53, 69, 0.08);
+                        border: 1px solid rgba(220, 53, 69, 0.2);
+                        border-radius: 10px;
+                    "
+                >
+                    <i class="bi bi-lock-fill text-danger flex-shrink-0"></i>
+                    <div class="small">
+                        <strong>Acción bloqueada:</strong> Debes tener la
+                        <Link
+                            href="/lider/carta"
+                            style="color: #dc3545; font-weight: 700"
+                            >carta de presentación</Link
+                        >
+                        aprobada antes de subir entregables.
+                    </div>
+                </div>
                 <div style="margin-bottom: 1.25rem">
                     <h4
                         style="
@@ -391,13 +434,14 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 const props = defineProps({
     entregables: Array,
     tiposEntregable: { type: Array, default: () => [] },
+    cartaAprobada: { type: Boolean, default: false },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -456,6 +500,15 @@ const guardar = () => {
         },
     });
 };
+const notifNoLeidas = ref(0);
+onMounted(() => {
+    fetch("/notificaciones/lista")
+        .then((r) => r.json())
+        .then((d) => {
+            notifNoLeidas.value = d.filter((n) => !n.not_leida).length;
+        })
+        .catch(() => {});
+});
 </script>
 <style>
 :root {

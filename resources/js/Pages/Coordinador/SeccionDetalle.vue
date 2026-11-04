@@ -227,6 +227,46 @@
             </div>
 
             <div class="content">
+                <div class="sc mb-3">
+                    <div class="sh">
+                        <i class="bi bi-person-badge me-2 text-danger"></i
+                        >Profesor de proyecto
+                    </div>
+                    <div class="p-3 d-flex flex-wrap align-items-center gap-2">
+                        <div class="me-auto">
+                            <div v-if="profesorActual" class="fw-bold">
+                                {{ profesorActual.usu_primer_nombre }}
+                                {{ profesorActual.usu_primer_apellido }}
+                            </div>
+                            <div v-else style="color: var(--text-muted)">
+                                Sin profesor asignado
+                            </div>
+                        </div>
+                        <select
+                            v-model="profesorSel"
+                            class="form-select form-select-sm"
+                            style="max-width: 260px"
+                        >
+                            <option value="">Seleccionar profesor...</option>
+                            <option
+                                v-for="p in profesores"
+                                :key="p.usu_id"
+                                :value="p.usu_id"
+                            >
+                                {{ p.usu_primer_nombre }}
+                                {{ p.usu_primer_apellido }} (C.I.
+                                {{ p.usu_cedula }})
+                            </option>
+                        </select>
+                        <button
+                            class="btn btn-sm btn-danger fw-bold"
+                            :disabled="!profesorSel"
+                            @click="asignarProfesor"
+                        >
+                            Asignar
+                        </button>
+                    </div>
+                </div>
                 <!-- Info de la sección -->
                 <div class="info-card">
                     <div class="row">
@@ -391,7 +431,25 @@ import { Link } from "@inertiajs/vue3";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
-const props = defineProps({ seccion: Object, equipos: Array });
+defineProps({
+    seccion: Object,
+    equipos: Array,
+    profesorActual: Object,
+    profesores: Array,
+});
+
+const profesorSel = ref("");
+const asignarProfesor = () =>
+    router.post(
+        `/coordinador/secciones/${props.seccion.sec_id}/profesores`,
+        { pse_id_usu: profesorSel.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                profesorSel.value = "";
+            },
+        },
+    );
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");

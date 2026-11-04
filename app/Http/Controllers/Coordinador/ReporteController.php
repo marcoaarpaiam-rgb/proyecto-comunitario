@@ -145,10 +145,8 @@ class ReporteController extends Controller
 
         // Filtro por fecha límite vencida
         if ($request->filled('vencidos')) {
-            $query->whereHas('proyectoComunidad', fn($q) =>
-                $q->where('pco_fecha_limite', '<', now()->toDateString())
-                  ->whereNull('pco_fecha_aprobacion')
-            );
+            $query->whereHas('proyectoComunidad', fn($q) => $q->where('pco_fecha_limite', '<', now()->toDateString()))
+                ->whereDoesntHave('resultadoProyecto');
         }
 
         // Filtro por rango de fecha
@@ -212,7 +210,7 @@ class ReporteController extends Controller
                     'titulo'         => $p->equipo?->equ_titulo,
                     'tipo_proyecto'  => $p->tipoProyecto?->tpr_nombre,
                     'resultado'      => $p->equipo?->resultadoProyecto?->estadoProyecto?->epr_nombre ?? 'En proceso',
-                    'total_beneficiarios' => $p->beneficiarios?->sum('bpr_cantidad') ?? 0,
+                    'total_beneficiarios' => $p->beneficiarios?->sum('pbe_cantidad') ?? 0,
                 ]),
             ]),
         ]);

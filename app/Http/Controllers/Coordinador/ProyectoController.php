@@ -67,6 +67,8 @@ class ProyectoController extends Controller
             'pco_id_pco_previo'   => $request->pco_id_pco_previo,
             'pco_resumen'         => $request->pco_resumen,
             'pco_fecha_limite'    => $request->pco_fecha_limite,
+            'pco_fecha_aprobacion' => now()->toDateString(),
+            'pco_id_usu_aprobado'  => auth()->id(),
             'pco_status'          => true,
             'pco_id_usu_created'  => auth()->id(),
         ]);
@@ -85,16 +87,6 @@ class ProyectoController extends Controller
         return back()->with('success', 'Proyecto registrado correctamente.');
     }
 
-    public function aprobar(Request $request, $id)
-    {
-        $proyecto = ProyectoComunidad::findOrFail($id);
-        $proyecto->update([
-            'pco_id_usu_aprobado'  => auth()->id(),
-            'pco_fecha_aprobacion' => now()->toDateString(),
-            'pco_id_usu_updated'   => auth()->id(),
-        ]);
-        return back()->with('success', 'Comunidad aprobada correctamente.');
-    }
 
     public function destroy($id)
     {

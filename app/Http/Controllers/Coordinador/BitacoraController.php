@@ -46,9 +46,6 @@ class BitacoraController extends Controller
             'filtros'   => $request->only([
                 'busqueda','entidad_id','usuario_id','fecha_desde','fecha_hasta'
             ]),
-            'bitacora' => Bitacora::with(['usuario','entidad'])
-                ->orderBy('bit_fecha_hora','desc')
-                ->paginate(50),
         ]);
     }
 }

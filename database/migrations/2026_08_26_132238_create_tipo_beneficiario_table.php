@@ -24,7 +24,6 @@ return new class extends Migration
             ['tbe_nombre' => 'Personal Administrativo'],
             ['tbe_nombre' => 'Comunidad en General'],
             ['tbe_nombre' => 'Instituciones'],
-            ['tbe_nombre' => 'Otro'],
         ]);
     }
 

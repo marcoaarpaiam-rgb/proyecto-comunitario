@@ -106,4 +106,9 @@ class Equipo extends Model
         return $this->hasOne(EquipoIntegrante::class, 'ein_id_equ', 'equ_id')
             ->where('ein_es_lider', true)->where('ein_status', true);
     }
+
+    public function getCodigoArchivoAttribute(): string
+    {
+        return str_replace(['/', '\\'], '-', $this->equ_codigo);
+    }
 }

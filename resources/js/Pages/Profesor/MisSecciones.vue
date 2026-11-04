@@ -255,20 +255,20 @@
                             >
                                 <div
                                     style="
+                                        font-size: 0.75rem;
+                                        color: var(--text-muted);
+                                    "
+                                >
+                                    Turno
+                                </div>
+                                <div
+                                    style="
                                         font-size: 0.85rem;
                                         font-weight: 700;
                                         color: #198754;
                                     "
                                 >
                                     {{ sec.turno }}
-                                </div>
-                                <div
-                                    style="
-                                        font-size: 0.75rem;
-                                        color: var(--text-muted);
-                                    "
-                                >
-                                    Turno
                                 </div>
                             </div>
                         </div>
@@ -288,7 +288,8 @@
                                 text-decoration: none;
                             "
                         >
-                            <i class="bi bi-people-fill me-1"></i> Ver Equipos
+                            <i class="bi bi-arrow-right-circle me-1"></i>
+                            Ingresar
                         </Link>
                     </div>
                 </div>

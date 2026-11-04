@@ -39,29 +39,36 @@ class CartaController extends Controller
 
     public function solicitar(Request $request)
     {
-        $request->validate([
-            'cpr_id_pco' => 'required|exists:proyecto_comunidad,pco_id',
-        ]);
+        $request->validate(['cpr_id_pco' => 'required|exists:proyecto_comunidad,pco_id']);
 
-        $existe = CartaPresentacion::where('cpr_id_pco', $request->cpr_id_pco)
-            ->exists();
+        $miEquipoId = \App\Models\EquipoIntegrante::where('ein_id_usu', auth()->id())
+            ->where('ein_es_lider', true)->where('ein_status', true)->value('ein_id_equ');
 
-        if ($existe) {
-            return back()->withErrors([
-                'cpr_id_pco' => 'Ya existe una carta para este proyecto.'
+        $proyecto = \App\Models\ProyectoComunidad::where('pco_id', $request->cpr_id_pco)
+            ->where('pco_id_equ', $miEquipoId)->first();
+        abort_unless($proyecto, 403);
+
+        $carta = CartaPresentacion::where('cpr_id_pco', $proyecto->pco_id)->first();
+
+        if ($carta && $carta->cpr_solicitada) {
+            return back()->withErrors(['cpr_id_pco' => $carta->cpr_fecha_aprobacion
+                ? 'Tu carta ya fue aprobada.' : 'Ya solicitaste la carta; está pendiente de aprobación.']);
+        }
+
+        if ($carta) {            // fue invalidada por cambio de comunidad: se vuelve a solicitar
+            $carta->update(['cpr_solicitada' => true, 'cpr_fecha_generacion' => now()]);
+        } else {
+            CartaPresentacion::create([
+                'cpr_id_pco'           => $proyecto->pco_id,
+                'cpr_ruta_archivo'     => '',
+                'cpr_solicitada'       => true,
+                'cpr_sello'            => false,
+                'cpr_fecha_generacion' => now(),
+                'cpr_id_usu_created'   => auth()->id(),
             ]);
         }
 
-        CartaPresentacion::create([
-            'cpr_id_pco'           => $request->cpr_id_pco,
-            'cpr_ruta_archivo'     => '',
-            'cpr_solicitada'       => true,
-            'cpr_sello'            => false,
-            'cpr_fecha_generacion' => now(),
-            'cpr_id_usu_created'   => auth()->id(),
-        ]);
-
-        return back()->with('success', 'Carta solicitada correctamente. El coordinador la revisará pronto.');
+        return back()->with('success', 'Carta solicitada. El coordinador la revisará.');
     }
 
     public function aprobar(Request $request, $id)
@@ -79,7 +86,7 @@ class CartaController extends Controller
         $proyecto    = $carta->proyectoComunidad;
 
         $pdf  = Pdf::loadView('pdf.carta_presentacion', compact('carta', 'proyecto', 'coordinador'));
-        $nombre = 'carta_' . $proyecto->equipo->equ_codigo . '_' . now()->timestamp . '.pdf';
+        $nombre = 'carta_' . $proyecto->equipo->codigo_archivo . '_' . now()->timestamp . '.pdf';
         $ruta = 'cartas/' . $nombre;
 
         if (!file_exists(storage_path('app/public/cartas'))) {
@@ -94,6 +101,21 @@ class CartaController extends Controller
             'cpr_ruta_archivo'    => $ruta,
         ]);
 
+        $pco     = $carta->proyectoComunidad;
+        $liderId = \App\Models\EquipoIntegrante::where('ein_id_equ', $pco->pco_id_equ)
+            ->where('ein_es_lider', true)->where('ein_status', true)->value('ein_id_usu');
+        $tno     = \App\Models\TipoNotificacion::where('tno_nombre', 'Carta de presentacion aprobada')->value('tno_id');
+
+        if ($liderId && $tno) {
+            \App\Models\Notificacion::create([
+                'not_id_usu'  => $liderId,
+                'not_id_tno'  => $tno,
+                'not_mensaje' => 'Tu carta de presentación fue aprobada. Ya puedes descargarla.',
+                'not_leida'   => false,
+                'not_id_equ'  => $pco->pco_id_equ,
+            ]);
+        }
+        
         return back()->with('success', 'Carta aprobada y PDF generado correctamente.');
     }
 
@@ -138,7 +160,7 @@ class CartaController extends Controller
             'coordinador' => $coordinador,
         ])->setPaper('letter', 'portrait');
 
-        $nombre = 'Carta_' . $proyecto->equipo->equ_codigo . '.pdf';
+        $nombre = 'Carta_' . $proyecto->equipo->codigo_archivo . '.pdf';
 
         return $pdf->download($nombre);
     }

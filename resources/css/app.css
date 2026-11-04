@@ -21,3 +21,12 @@
     border-top-color: #dc3545 !important;
     border-left-color: #dc3545 !important;
 }
+/* Animación suave de entrada para cards */
+.sc {
+    animation: fadeInUp .25s ease;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

@@ -12,11 +12,7 @@ class ResponsableComunidad extends Model
 
     protected $fillable = [
         'rco_id_usu',
-        'rco_id_com',
-        'rco_nombre',      
-        'rco_cargo',      
-        'rco_telefono',    
-        'rco_email',       
+        'rco_id_com',       
         'rco_fecha_inicio',
         'rco_fecha_fin',
         'rco_status',

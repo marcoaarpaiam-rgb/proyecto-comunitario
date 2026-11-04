@@ -11,33 +11,29 @@ use App\Models\AsistenciaPuntoControl;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Concerns\AutorizaPorSeccion;
 
 class PuntoControlController extends Controller
-{
+{   
+    use AutorizaPorSeccion;
     public function index()
     {
-        $profesor = auth()->user();
-
-        $secciones = $profesor->seccionesProfesor()
-            ->where('pse_status', true)
-            ->pluck('pse_id_sec');
+        $profesor  = auth()->user();
+        $secciones = $profesor->seccionesProfesor()->where('pse_status', true)->pluck('pse_id_sec');
 
         $equipos = Equipo::whereIn('equ_id_sec', $secciones)
             ->where('equ_status', true)
-            ->with(['trayecto','seccion','integrantes.usuario'])
+            ->with(['trayecto', 'seccion', 'integrantes.usuario'])
             ->get();
 
         return Inertia::render('Profesor/PuntosControl', [
-            'puntosControl' => PuntoControl::whereIn('puc_id_equ', $equipos)
-                ->with([
-                    'equipo',
-                    'trayecto',
-                    'seguimientos.asistencias.usuario',
-                    'seguimientos.usuarioRegistro',
-                ])
+            'puntosControl' => PuntoControl::whereIn('puc_id_equ', $equipos->pluck('equ_id'))
                 ->where('puc_status', true)
+                ->with(['equipo', 'trayecto', 'seguimientos.asistencias.usuario'])
                 ->orderBy('puc_fecha_limite')
                 ->get(),
+            'equipos'   => $equipos,
+            'trayectos' => Trayecto::where('tra_status', true)->get(),
         ]);
     }
 
@@ -54,6 +50,8 @@ class PuntoControlController extends Controller
             'puc_nombre.required'       => 'El nombre es obligatorio.',
             'puc_fecha_limite.required' => 'La fecha límite es obligatoria.',
         ]);
+
+        $this->autorizarEquipoId($request->puc_id_equ);
 
         // Obtener el trayecto del equipo automáticamente
         $equipo = \App\Models\Equipo::findOrFail($request->puc_id_equ);
@@ -90,6 +88,7 @@ class PuntoControlController extends Controller
 
         $punto = PuntoControl::findOrFail($id);
 
+        $this->autorizarEquipoId($punto->puc_id_equ);
         $seq = SeguimientoEquipo::updateOrCreate(
             ['seq_id_equ' => $punto->puc_id_equ, 'seq_id_puc' => $punto->puc_id],
             [
@@ -118,32 +117,41 @@ class PuntoControlController extends Controller
         return back()->with('success', 'Seguimiento registrado correctamente.');
     }
 
-    public function reprogramar(Request $request, $id)
+    public function reprogramar(\Illuminate\Http\Request $request, $id)
     {
         $request->validate([
-            'puc_fecha_reprogramada'    => 'required|date|after:today',
-            'puc_motivo_reprogramacion' => 'required|string',
+            'nueva_fecha' => 'required|date|after:today',
+            'motivo'      => 'required|string|max:300',
+        ], [
+            'nueva_fecha.required' => 'La nueva fecha es obligatoria.',
+            'nueva_fecha.after'    => 'La nueva fecha debe ser posterior a hoy.',
+            'motivo.required'      => 'El motivo de la reprogramación es obligatorio.',
         ]);
 
         $punto = PuntoControl::findOrFail($id);
+
+        $this->autorizarEquipoId($punto->puc_id_equ);
+
         $punto->update([
-            'puc_fecha_reprogramada'    => $request->puc_fecha_reprogramada,
-            'puc_motivo_reprogramacion' => $request->puc_motivo_reprogramacion,
-            'puc_id_usu_updated'        => auth()->id(),
+            'puc_fecha_reprogramada'      => $request->nueva_fecha,
+            'puc_motivo_reprogramacion'   => $request->motivo,
+            'puc_id_usu_updated'          => auth()->id(),
         ]);
 
-        return back()->with('success', 'Punto de control reprogramado.');
+        return back()->with('success', 'Punto de control reprogramado correctamente.');
     }
 
     public function destroy($id)
     {
         $punto = PuntoControl::findOrFail($id);
+        $this->autorizarEquipoId($punto->puc_id_equ);
         $punto->update([
             'puc_status'         => false,
             'puc_id_usu_updated' => auth()->id(),
         ]);
         // Cancelar seguimientos asociados
-        $pc->seguimientos()->update(['seq_status' => false]);
+        $punto->seguimientos()->update(['seq_status' => false]);
         return back()->with('success', 'Punto de control eliminado.');
     }
+    
 }

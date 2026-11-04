@@ -15,7 +15,7 @@
         ></div>
 
         <!-- SIDEBAR -->
-        <div class="sb" :class="{ show: sidebarOpen }">
+        <div class="sidebar-coord" :class="{ show: sidebarOpen }">
             <div class="sb-brand">
                 <div
                     style="

@@ -56,7 +56,7 @@
                 <Link href="/profesor" class="sb-lnk"
                     ><i class="bi bi-speedometer2"></i> Dashboard</Link
                 >
-                <Link href="/profesor/secciones" class="sb-link"
+                <Link href="/profesor/secciones" class="sb-lnk"
                     ><i class="bi bi-collection"></i> Mis Secciones</Link
                 >
                 <div class="sb-sec">Gestión</div>

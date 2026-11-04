@@ -17,21 +17,29 @@ class GenerarNotificaciones extends Command
     {
         $hoy = now()->toDateString();
 
-        $tnoProximo  = TipoNotificacion::where('tno_nombre', 'like', '%próximo%')->first();
-        $tnoVencido  = TipoNotificacion::where('tno_nombre', 'like', '%vencido%')->first();
-        $tnoCumplido = TipoNotificacion::where('tno_nombre', 'like', '%fuera de plazo%')->first();
+        $tnoProximo  = TipoNotificacion::where('tno_nombre', 'like', '%próximo%')->orderBy('tno_id')->first();
+        $tnoVencido  = TipoNotificacion::where('tno_nombre', 'like', '%vencido%')->orderBy('tno_id')->first();
+        $tnoCumplido = TipoNotificacion::where('tno_nombre', 'like', '%fuera de plazo%')->orderBy('tno_id')->first();
 
+        if (!$tnoProximo || !$tnoVencido) {
+            $this->error('Faltan tipos de notificación. Ejecuta el seeder.');
+            return;
+        }
         $puntos = PuntoControl::where('puc_status', true)
             ->with(['equipo.seccion'])
             ->get();
 
         foreach ($puntos as $punto) {
-            $diasRestantes = now()->diffInDays($punto->puc_fecha_limite, false);
+            $fechaEfectiva = $punto->puc_fecha_reprogramada ?? $punto->puc_fecha_limite;
+            $diasRestantes = (int) now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($fechaEfectiva)->startOfDay(), false);
             $profesores = ProfesorSeccion::where('pse_id_sec', $punto->equipo?->equ_id_sec)
                 ->where('pse_status', true)
                 ->pluck('pse_id_usu');
+            $liderId = \App\Models\EquipoIntegrante::where('ein_id_equ', $punto->puc_id_equ)
+                ->where('ein_es_lider', true)->where('ein_status', true)->value('ein_id_usu');
+            $destinatarios = $profesores->push($liderId)->filter()->unique();
 
-            foreach ($profesores as $profesorId) {
+            foreach ($destinatarios as $profesorId) {
                 // Próximo a vencer
                 if ($diasRestantes > 0 && $diasRestantes <= $punto->puc_dias_aviso) {
                     $this->crearSiNoExiste($profesorId, $tnoProximo?->tno_id,

@@ -12,9 +12,56 @@ use App\Models\UsuarioRol;
 use App\Models\EstudianteSeccion;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Concerns\AutorizaPorSeccion;
+use App\Models\Rol;
+use App\Models\HistorialEquipo;
+use App\Models\TipoEventoEquipo;
+use App\Models\ProyectoComunidad;
+use App\Models\ProyectoBeneficiario;
+use App\Models\Comunidad;
+use App\Models\CartaPresentacion;
+use App\Models\Notificacion;
+use App\Models\TipoNotificacion;
 
 class EquipoController extends Controller
 {
+    use AutorizaPorSeccion;
+    private function eventoId(string $nombre): int
+    {
+        return TipoEventoEquipo::firstOrCreate(
+            ['tee_nombre' => $nombre],
+            ['tee_status' => true]
+        )->tee_id;
+    }
+
+    private function otorgarAccesoLider(Usuario $usuario): void
+    {
+        if (!$usuario->usu_tiene_acceso) {
+            $usuario->update([
+                'usu_tiene_acceso' => true,
+                'usu_username'     => $usuario->usu_cedula,
+                'usu_password'     => bcrypt($usuario->usu_cedula),
+            ]);
+        }
+        $rol = Rol::where('rol_nombre', 'lider')->first();
+        if ($rol) {
+            UsuarioRol::updateOrCreate(
+                ['uro_id_usu' => $usuario->usu_id, 'uro_id_rol' => $rol->rol_id],
+                ['uro_fecha_inicio' => now()->toDateString(), 'uro_status' => true, 'uro_id_usu_created' => auth()->id()]
+            );
+        }
+    }
+
+    private function revocarAccesoLider($usuarioId): void
+    {
+        Usuario::where('usu_id', $usuarioId)->update(['usu_tiene_acceso' => false]);
+        UsuarioRol::where('uro_id_usu', $usuarioId)
+            ->where('uro_status', true)
+            ->whereHas('rol', fn($q) => $q->where('rol_nombre', 'lider'))
+            ->update(['uro_status' => false, 'uro_fecha_fin' => now()->toDateString()]);
+    }
+
     public function index()
     {
         $user       = auth()->user();
@@ -102,6 +149,7 @@ class EquipoController extends Controller
             'modalidades'      => \App\Models\ModalidadProyecto::where('mpr_status', true)->get(),
             'tipoBeneficiario' => \App\Models\TipoBeneficiario::where('tbe_status', true)->get(),
             'puedeCrear'       => true,
+            'sede' => config('siscon.sede', 'ACA'),
         ]);
     }
 
@@ -111,162 +159,192 @@ class EquipoController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+
         $request->validate([
-            'equ_id_sec'            => 'required|exists:seccion,sec_id',
-            'equ_numero_grupo'      => 'required|integer|min:1',
-            'equ_titulo'            => 'required|string|max:150',
-            'integrantes'              => 'required|array|min:1|max:6',
-            'justificacion_integrantes'=> 'nullable|string|max:500',
-            'integrantes.*.usu_id'  => 'required|exists:usuario,usu_id',
-            'integrantes.*.es_lider'=> 'required|boolean',
+            'equ_id_sec'                        => 'required|exists:seccion,sec_id',
+            'equ_numero_grupo'                  => 'required|integer|min:1|max:99',
+            'equ_total_seccion' => 'required|integer|min:1|max:99|gte:equ_numero_grupo',
+            'equ_semestre'      => 'required|integer|min:1|max:9',
+            'equ_titulo'                        => 'required|string|max:150',
+            'integrantes'                       => 'required|array|min:1|max:6',
+            'integrantes.*.usu_id'              => 'required|distinct|exists:usuario,usu_id',
+            'integrantes.*.es_lider'            => 'required|boolean',
+            'justificacion_integrantes'         => 'nullable|string|max:500',
+            'proyecto.pco_id_com'               => 'nullable|exists:comunidad,com_id',
+            'proyecto.pco_id_tpr'               => 'nullable|exists:tipo_proyecto,tpr_id',
+            'proyecto.pco_id_mpr'               => 'nullable|exists:modalidad_proyecto,mpr_id',
+            'proyecto.pco_resumen'              => 'nullable|string|max:150',
+            'proyecto.pco_fecha_limite'         => 'nullable|date|after_or_equal:today|before_or_equal:' . now()->addYear()->toDateString(),
+            'proyecto.beneficiarios'            => 'nullable|array',
+            'proyecto.beneficiarios.*.tbe_id'   => 'nullable|exists:tipo_beneficiario,tbe_id',
+            'proyecto.beneficiarios.*.cantidad' => 'nullable|integer|min:1|max:1000000',
         ], [
-            'equ_id_sec.required'      => 'La sección es obligatoria.',
-            'equ_numero_grupo.required'=> 'El número de grupo es obligatorio.',
-            'equ_titulo.required'      => 'El título es obligatorio.',
-            'integrantes.required'     => 'Debe agregar al menos un integrante.',
-            'integrantes.max'          => 'El equipo no puede tener más de 6 integrantes.',
+            'equ_id_sec.required'                       => 'La sección es obligatoria.',
+            'equ_numero_grupo.required'                 => 'El número de grupo es obligatorio.',
+            'equ_total_seccion.required' => 'Indica cuántos equipos tiene la sección.',
+            'equ_total_seccion.gte'      => 'El total de equipos no puede ser menor que el N° de este equipo.',
+            'equ_semestre.required'      => 'El semestre es obligatorio.',
+            'equ_titulo.required'                       => 'El título es obligatorio.',
+            'integrantes.required'                      => 'Debe agregar al menos un integrante.',
+            'integrantes.max'                           => 'El equipo no puede tener más de 6 integrantes.',
+            'integrantes.*.usu_id.distinct'             => 'Un estudiante no puede repetirse en el equipo.',
+            'proyecto.pco_fecha_limite.after_or_equal'  => 'La fecha límite no puede ser anterior a hoy.',
+            'proyecto.pco_fecha_limite.before_or_equal' => 'La fecha límite no puede superar un año desde hoy.',
+            'proyecto.beneficiarios.*.cantidad.min'     => 'La cantidad de beneficiarios debe ser mayor a 0.',
         ]);
 
-        $lideres = collect($request->integrantes)->where('es_lider', true)->count();
-        if ($lideres !== 1) {
+        $seccion = Seccion::with('trayecto.pnf')->findOrFail($request->equ_id_sec);
+
+        if ($user->esProfesor()) {
+            abort_unless(
+                $user->seccionesProfesor()->where('pse_status', true)
+                    ->where('pse_id_sec', $seccion->sec_id)->exists(),
+                403
+            );
+        }
+
+        $integrantes = collect($request->integrantes);
+
+        if ($integrantes->where('es_lider', true)->count() !== 1) {
             return back()->withErrors(['integrantes' => 'Debe designar exactamente un líder.']);
         }
 
-        $totalIntegrantes = count($request->integrantes);
-
-        if ($totalIntegrantes < 3) {
-            // Requiere justificación
-            if (empty($request->justificacion_integrantes)) {
-                return back()->withErrors([
-                    'justificacion_integrantes' => "El equipo tiene solo {$totalIntegrantes} integrante(s). Debe proporcionar una justificación para continuar con menos de 3."
-                ])->withInput();
-            }
-            // Registrar la excepción en el historial después de crear el equipo
+        // Todos deben pertenecer a la sección elegida
+        $enSeccion = EstudianteSeccion::where('ese_id_sec', $seccion->sec_id)
+            ->where('ese_status', true)
+            ->whereIn('ese_id_usu', $integrantes->pluck('usu_id'))
+            ->count();
+        if ($enSeccion !== $integrantes->count()) {
+            return back()->withErrors(['integrantes' => 'Todos los integrantes deben pertenecer a la sección seleccionada.']);
         }
 
-        $seccion  = Seccion::with('trayecto')->findOrFail($request->equ_id_sec);
-        $trayecto = $seccion->trayecto;
-
-        $pnfSiglas = strtoupper($trayecto->pnf?->pnf_siglas ?? 'PNFI');
-        $codigo    = "{$pnfSiglas}-{$seccion->sec_codigo}-G{$request->equ_numero_grupo}-T{$trayecto->tra_numero}";
-
-        if (Equipo::where('equ_codigo', $codigo)->exists()) {
+        // Mínimo 3, o excepción justificada
+        $total = $integrantes->count();
+        if ($total < 3 && !filled($request->justificacion_integrantes)) {
             return back()->withErrors([
-                'equ_numero_grupo' => "Ya existe un equipo con el código {$codigo} en esta sección.",
+                'justificacion_integrantes' => "El equipo tiene solo {$total} integrante(s). Escribe una justificación para continuar con menos de 3.",
             ]);
         }
 
-        foreach ($request->integrantes as $integrante) {
-            $yaEnEquipo = EquipoIntegrante::where('ein_id_usu', $integrante['usu_id'])
-                ->where('ein_status', true)
-                ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
-                ->exists();
+        // Código oficial del PST: PNFI-ACA11-131-1/7
+        $trayecto = $seccion->trayecto;
+        $numero   = (int) $request->equ_numero_grupo;
+        $total    = (int) $request->equ_total_seccion;
+        $semestre = (int) $request->equ_semestre;
+        $pnf      = strtoupper($trayecto->pnf?->pnf_siglas ?? 'PNFI');
+        $codigo   = "{$pnf}-" . config('siscon.sede', 'ACA')
+                . "{$trayecto->tra_numero}{$semestre}-{$seccion->sec_codigo}-{$numero}/{$total}";
 
-            if ($yaEnEquipo) {
-                $usuario = Usuario::find($integrante['usu_id']);
-                $nombre  = $usuario->usu_primer_nombre . ' ' . $usuario->usu_primer_apellido;
-                return back()->withErrors([
-                    'integrantes' => "El estudiante {$nombre} ya pertenece a otro equipo activo.",
-                ]);
-            }
+        $existentes = Equipo::where('equ_id_sec', $seccion->sec_id)->get(['equ_codigo', 'equ_status'])
+            ->map(function ($e) {
+                if (!preg_match('#^[A-Z]+-[A-Z]+(\d)(\d)-[^-]+-(\d+)/(\d+)$#', $e->equ_codigo, $m)) {
+                    return null;
+                }
+                return ['activo' => (bool) $e->equ_status, 'semestre' => (int) $m[2], 'n' => (int) $m[3], 'total' => (int) $m[4]];
+            })->filter();
+
+        if ($existentes->contains('n', $numero)) {
+            return back()->withErrors(['equ_numero_grupo' => "Ya existe el equipo N° {$numero} en esta sección (puede estar disuelto)."]);
         }
 
-        $equipo = Equipo::create([
-            'equ_codigo'         => $codigo,
-            'equ_titulo'         => $request->equ_titulo,
-            'equ_id_sec'         => $request->equ_id_sec,
-            'equ_id_tra'         => $trayecto->tra_id,
-            'equ_status'         => true,
-            'equ_id_usu_created' => auth()->id(),
-        ]);
+        $ref = $existentes->where('activo', true)->last();
+        if ($ref && ($ref['total'] !== $total || $ref['semestre'] !== $semestre)) {
+            return back()->withErrors([
+                'equ_total_seccion' => "Los demás equipos de la sección usan semestre {$ref['semestre']} y total {$ref['total']}. Usa los mismos valores.",
+            ]);
+        }
 
-        if ($totalIntegrantes < 3 && !empty($request->justificacion_integrantes)) {
-            \App\Models\HistorialEquipo::create([
+        if (Equipo::where('equ_codigo', $codigo)->exists()) {
+            return back()->withErrors(['equ_numero_grupo' => "Ya existe un equipo con el código {$codigo}."]);
+        }
+
+        $ocupado = EquipoIntegrante::whereIn('ein_id_usu', $integrantes->pluck('usu_id'))
+            ->where('ein_status', true)
+            ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+            ->with('usuario')->first();
+        if ($ocupado) {
+            $n = $ocupado->usuario->usu_primer_nombre . ' ' . $ocupado->usuario->usu_primer_apellido;
+            return back()->withErrors(['integrantes' => "El estudiante {$n} ya pertenece a otro equipo activo."]);
+        }
+
+        // Proyecto opcional: se valida ANTES de crear nada
+        $proy          = $request->input('proyecto', []);
+        $crearProyecto = !empty($proy['pco_id_com']) && !empty($proy['pco_id_tpr']);
+        $beneficiarios = collect($proy['beneficiarios'] ?? [])
+            ->filter(fn($b) => !empty($b['tbe_id']) && (int) ($b['cantidad'] ?? 0) > 0)->values();
+
+        if ($crearProyecto && $beneficiarios->isEmpty()) {
+            return back()->withErrors(['proyecto.beneficiarios' => 'Debe agregar al menos un tipo de beneficiario con cantidad mayor a 0.']);
+        }
+
+        DB::transaction(function () use ($request, $seccion, $trayecto, $codigo, $integrantes, $total, $crearProyecto, $proy, $beneficiarios) {
+            $equipo = Equipo::create([
+                'equ_codigo'         => $codigo,
+                'equ_titulo'         => $request->equ_titulo,
+                'equ_id_sec'         => $seccion->sec_id,
+                'equ_id_tra'         => $trayecto->tra_id,
+                'equ_status'         => true,
+                'equ_id_usu_created' => auth()->id(),
+            ]);
+
+            HistorialEquipo::create([
                 'heq_id_equ'         => $equipo->equ_id,
-                'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre', 'Creado')->value('tee_id'),
-                'heq_motivo'         => 'EXCEPCIÓN: Equipo creado con ' . $totalIntegrantes . ' integrante(s). Justificación: ' . $request->justificacion_integrantes,
+                'heq_id_tee'         => $this->eventoId('Creado'),
+                'heq_motivo'         => $total < 3
+                    ? "EXCEPCIÓN: equipo creado con {$total} integrante(s). Justificación: {$request->justificacion_integrantes}"
+                    : 'Equipo creado.',
                 'heq_fecha_evento'   => now()->toDateString(),
                 'heq_id_usu_created' => auth()->id(),
             ]);
-        }
 
-        foreach ($request->integrantes as $integrante) {
-            EquipoIntegrante::create([
-                'ein_id_equ'         => $equipo->equ_id,
-                'ein_id_usu'         => $integrante['usu_id'],
-                'ein_es_lider'       => $integrante['es_lider'],
-                'ein_fecha_ingreso'  => now()->toDateString(),
-                'ein_status'         => true,
-                'ein_id_usu_created' => auth()->id(),
-            ]);
-
-            // Busca el integrante designado como líder
-            if ($integrante['es_lider']) {
-                $usuario = \App\Models\Usuario::find($integrante['usu_id']);
-                if ($usuario && !$usuario->usu_tiene_acceso) {
-                    $usuario->update([
-                        'usu_tiene_acceso' => true,
-                        'usu_username'     => $usuario->usu_cedula,
-                        'usu_password'     => bcrypt($usuario->usu_cedula),
-                    ]);
-                    // Asignar rol lider en usuario_rol
-                    $rolLider = \App\Models\Rol::where('rol_nombre', 'lider')->first();
-                    if ($rolLider) {
-                        \App\Models\UsuarioRol::updateOrCreate(
-                            ['uro_id_usu' => $usuario->usu_id, 'uro_id_rol' => $rolLider->rol_id],
-                            ['uro_fecha_inicio' => now()->toDateString(), 'uro_status' => true, 'uro_id_usu_created' => auth()->id()]
-                        );
-                    }
+            foreach ($integrantes as $i) {
+                EquipoIntegrante::create([
+                    'ein_id_equ'         => $equipo->equ_id,
+                    'ein_id_usu'         => $i['usu_id'],
+                    'ein_es_lider'       => $i['es_lider'],
+                    'ein_fecha_ingreso'  => now()->toDateString(),
+                    'ein_status'         => true,
+                    'ein_id_usu_created' => auth()->id(),
+                ]);
+                if ($i['es_lider']) {
+                    $this->otorgarAccesoLider(Usuario::findOrFail($i['usu_id']));
                 }
             }
-        }
 
-        if ($request->has('proyecto') && $request->proyecto) {
-            $proy = $request->proyecto;
-            if (!empty($proy['pco_id_com']) && !empty($proy['pco_id_tpr'])) {
-                $proyecto = \App\Models\ProyectoComunidad::create([
-                    'pco_id_equ'         => $equipo->equ_id,
-                    'pco_id_com'         => $proy['pco_id_com'],
-                    'pco_id_tpr'         => $proy['pco_id_tpr'],
-                    'pco_id_mpr'         => $proy['pco_id_mpr'] ?? null,
-                    'pco_resumen'        => $proy['pco_resumen'] ?? '',
-                    'pco_fecha_limite'   => $proy['pco_fecha_limite'] ?? null,
-                    'pco_status'         => true,
-                    'pco_id_usu_created' => auth()->id(),
+            if ($crearProyecto) {
+                $proyecto = ProyectoComunidad::create([
+                    'pco_id_equ'          => $equipo->equ_id,
+                    'pco_id_com'          => $proy['pco_id_com'],
+                    'pco_id_tpr'          => $proy['pco_id_tpr'],
+                    'pco_id_mpr'          => $proy['pco_id_mpr'] ?? null,
+                    'pco_resumen'         => $proy['pco_resumen'] ?? '',
+                    'pco_fecha_limite'    => $proy['pco_fecha_limite'] ?? null,
+                    'pco_fecha_aprobacion'=> now()->toDateString(),   // aprobado al crear
+                    'pco_id_usu_aprobado' => auth()->id(),
+                    'pco_status'          => true,
+                    'pco_id_usu_created'  => auth()->id(),
                 ]);
 
-                // Registrar en historial que se asignó el proyecto
-                \App\Models\HistorialEquipo::create([
+                foreach ($beneficiarios as $b) {
+                    ProyectoBeneficiario::create([
+                        'pbe_id_pco'         => $proyecto->pco_id,
+                        'pbe_id_tbe'         => $b['tbe_id'],
+                        'pbe_cantidad'       => $b['cantidad'],
+                        'pbe_id_usu_created' => auth()->id(),
+                    ]);
+                }
+
+                HistorialEquipo::create([
                     'heq_id_equ'         => $equipo->equ_id,
-                    'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre', 'Creado')->value('tee_id'),
-                    'heq_motivo'         => 'Proyecto asignado: "' . substr($proy['pco_resumen'] ?? '', 0, 80) . '" — Comunidad: ' . (\App\Models\Comunidad::find($proy['pco_id_com'])?->com_nombre ?? 'Sin comunidad'),
+                    'heq_id_tee'         => $this->eventoId('Proyecto asignado'),
+                    'heq_motivo'         => 'Proyecto asignado en la comunidad "'
+                                            . (Comunidad::find($proy['pco_id_com'])?->com_nombre ?? '—') . '".',
                     'heq_fecha_evento'   => now()->toDateString(),
                     'heq_id_usu_created' => auth()->id(),
                 ]);
-
-                // Validar que haya al menos un beneficiario con cantidad mayor a 0
-                $beneficiariosValidos = collect($proy['beneficiarios'] ?? [])
-                    ->filter(fn($b) => !empty($b['tbe_id']) && !empty($b['cantidad']) && $b['cantidad'] > 0);
-
-                if ($beneficiariosValidos->isEmpty()) {
-                    $equipo->delete();
-                    return back()->withErrors([
-                        'proyecto.beneficiarios' => 'Debe agregar al menos un tipo de beneficiario con cantidad mayor a 0.'
-                    ]);
-                }
-
-                foreach ($proy['beneficiarios'] ?? [] as $ben) {
-                    if (!empty($ben['tbe_id']) && !empty($ben['cantidad'])) {
-                        \App\Models\ProyectoBeneficiario::create([
-                            'pbe_id_pco'         => $proyecto->pco_id,
-                            'pbe_id_tbe'         => $ben['tbe_id'],
-                            'pbe_cantidad'        => $ben['cantidad'],
-                            'pbe_id_usu_created' => auth()->id(),
-                        ]);
-                    }
-                }
             }
-        }
+        });
 
         return back()->with('success', "Equipo {$codigo} creado correctamente. El líder puede ingresar con su cédula.");
     }
@@ -274,6 +352,15 @@ class EquipoController extends Controller
     public function update(Request $request, $id)
     {
         $equipo = Equipo::with('proyectoComunidad')->findOrFail($id);
+        $this->autorizarEquipoId($equipo->equ_id);
+
+        $proyecto    = $equipo->proyectoComunidad;
+        $fechaActual = $proyecto ? substr((string) $proyecto->pco_fecha_limite, 0, 10) : null;
+
+        $reglaFecha = ['nullable', 'date'];
+        if ($request->filled('pco_fecha_limite') && $request->pco_fecha_limite !== $fechaActual) {
+            $reglaFecha = ['date', 'after_or_equal:today', 'before_or_equal:' . now()->addYear()->toDateString()];
+        }
 
         $request->validate([
             'equ_titulo'       => 'required|string|max:150',
@@ -281,104 +368,75 @@ class EquipoController extends Controller
             'pco_id_tpr'       => 'nullable|exists:tipo_proyecto,tpr_id',
             'pco_id_mpr'       => 'nullable|exists:modalidad_proyecto,mpr_id',
             'pco_resumen'      => 'nullable|string|max:150',
-            'pco_fecha_limite' => 'nullable|date|after:today',
-        ]);
+            'pco_fecha_limite' => $reglaFecha,
+        ], ['equ_titulo.required' => 'El título es obligatorio.']);
 
-        $equipo->update([
-            'equ_titulo'         => $request->equ_titulo,
-            'equ_id_usu_updated' => auth()->id(),
-        ]);
+        DB::transaction(function () use ($request, $equipo, $proyecto) {
+            $equipo->update(['equ_titulo' => $request->equ_titulo, 'equ_id_usu_updated' => auth()->id()]);
 
-        if ($equipo->proyectoComunidad) {
-            $equipo->proyectoComunidad->update([
-                'pco_id_com'         => $request->pco_id_com ?? $equipo->proyectoComunidad->pco_id_com,
-                'pco_id_tpr'         => $request->pco_id_tpr ?? $equipo->proyectoComunidad->pco_id_tpr,
-                'pco_id_mpr'         => $request->pco_id_mpr ?? $equipo->proyectoComunidad->pco_id_mpr,
-                'pco_resumen'        => $request->pco_resumen ?? $equipo->proyectoComunidad->pco_resumen,
-                'pco_fecha_limite'   => $request->pco_fecha_limite ?? $equipo->proyectoComunidad->pco_fecha_limite,
+            if (!$proyecto) {
+                return;
+            }
+
+            $comunidadAnterior = (int) $proyecto->pco_id_com;
+
+            $proyecto->update([
+                'pco_id_com'         => $request->pco_id_com ?: $proyecto->pco_id_com,
+                'pco_id_tpr'         => $request->pco_id_tpr ?: $proyecto->pco_id_tpr,
+                'pco_id_mpr'         => $request->pco_id_mpr ?: $proyecto->pco_id_mpr,
+                'pco_resumen'        => $request->pco_resumen ?? $proyecto->pco_resumen,
+                'pco_fecha_limite'   => $request->pco_fecha_limite ?: $proyecto->pco_fecha_limite,
                 'pco_id_usu_updated' => auth()->id(),
             ]);
 
-            if ($request->pco_id_com && $request->pco_id_com != $equipo->proyectoComunidad->getOriginal('pco_id_com')) {
+            if ($request->filled('pco_id_com') && (int) $request->pco_id_com !== $comunidadAnterior) {
+                $carta = CartaPresentacion::where('cpr_id_pco', $proyecto->pco_id)->first();
 
-                // Invalidar carta existente si la hay
-                $cartaExistente = \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad->pco_id)
-                    ->first();
+                if ($carta) {
+                    $carta->update(['cpr_solicitada' => false, 'cpr_fecha_aprobacion' => null, 'cpr_sello' => false]);
 
-                if ($cartaExistente) {
-                    $cartaExistente->update([
-                        'cpr_solicitada'      => false,
-                        'cpr_fecha_aprobacion'=> null,
-                        'cpr_sello'           => false,
-                        'cpr_id_usu_updated'  => auth()->id(),
-                    ]);
+                    $liderId = EquipoIntegrante::where('ein_id_equ', $equipo->equ_id)
+                        ->where('ein_es_lider', true)->where('ein_status', true)->value('ein_id_usu');
+                    $tno = TipoNotificacion::where('tno_nombre', 'Carta invalidada por cambio de comunidad')->value('tno_id');
 
-                    // Notificar al líder
-                    $lider = $equipo->integrantes()
-                        ->where('ein_es_lider', true)
-                        ->where('ein_status', true)
-                        ->first();
-
-                    if ($lider) {
-                        $tno = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%Carta%')->value('tno_id');
-                        if ($tno) {
-                            \App\Models\Notificacion::create([
-                                'not_id_usu'  => $lider->ein_id_usu,
-                                'not_id_tno'  => $tno,
-                                'not_mensaje' => 'La comunidad de tu proyecto fue modificada. Debes solicitar una nueva carta de presentación.',
-                                'not_leida'   => false,
-                                'not_id_equ'  => $equipo->equ_id,
-                            ]);
-                        }
+                    if ($liderId && $tno) {
+                        Notificacion::create([
+                            'not_id_usu'  => $liderId,
+                            'not_id_tno'  => $tno,
+                            'not_mensaje' => 'La comunidad de tu proyecto cambió. Debes solicitar una nueva carta de presentación.',
+                            'not_leida'   => false,
+                            'not_id_equ'  => $equipo->equ_id,
+                        ]);
                     }
                 }
 
-                // Historial
-                $comunidadNueva = \App\Models\Comunidad::find($request->pco_id_com)?->com_nombre ?? 'Desconocida';
-                \App\Models\HistorialEquipo::create([
+                HistorialEquipo::create([
                     'heq_id_equ'         => $equipo->equ_id,
-                    'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre', 'Creado')->value('tee_id'),
-                    'heq_motivo'         => 'Comunidad actualizada a: "' . $comunidadNueva . '" — Carta anterior invalidada.',
+                    'heq_id_tee'         => $this->eventoId('Proyecto modificado'),
+                    'heq_motivo'         => 'Comunidad cambiada a "' . (Comunidad::find($request->pco_id_com)?->com_nombre ?? '—') . '".'
+                                            . ($carta ? ' Carta anterior invalidada.' : ''),
                     'heq_fecha_evento'   => now()->toDateString(),
                     'heq_id_usu_created' => auth()->id(),
                 ]);
             }
-        }
+        });
 
         return back()->with('success', 'Equipo actualizado correctamente.');
     }
 
     public function destroy($id)
     {
+        $this->autorizarEquipoId($id);
         $equipo = Equipo::findOrFail($id);
         $equipo->update(['equ_status' => false, 'equ_id_usu_updated' => auth()->id()]);
         return back()->with('success', 'Equipo desactivado.');
     }
 
-    public function disolver(Request $request, $id)
-    {
-        $request->validate(['motivo' => 'required|string'], [
-            'motivo.required' => 'El motivo de la disolución es obligatorio.',
-        ]);
-        $equipo = Equipo::findOrFail($id);
-        \App\Models\HistorialEquipo::create([
-            'heq_id_equ'         => $equipo->equ_id,
-            'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre','Disuelto')->first()?->tee_id,
-            'heq_motivo'         => $request->motivo,
-            'heq_fecha_evento'   => now()->toDateString(),
-            'heq_id_usu_created' => auth()->id(),
-        ]);
-        $equipo->integrantes()->where('ein_status', true)->update([
-            'ein_status'         => false,
-            'ein_fecha_salida'   => now()->toDateString(),
-            'ein_id_usu_updated' => auth()->id(),
-        ]);
-        $equipo->update(['equ_status' => false, 'equ_id_usu_updated' => auth()->id()]);
-        return back()->with('success', 'Equipo disuelto correctamente.');
-    }
+    
 
     public function removerIntegrante(Request $request, $equipoId, $integranteId)
     {
+        $this->autorizarEquipoId($equipoId);
         $integrante = EquipoIntegrante::where('ein_id', $integranteId)
             ->where('ein_id_equ', $equipoId)
             ->where('ein_status', true)
@@ -401,53 +459,11 @@ class EquipoController extends Controller
         return back()->with('success', 'Integrante removido correctamente.');
     }
 
-    public function cambiarLider(Request $request, $equipoId)
-    {
-        $request->validate(['nuevo_lider_id' => 'required|exists:equipo_integrante,ein_id'], [
-            'nuevo_lider_id.required' => 'Debes seleccionar el nuevo líder.',
-        ]);
-        $equipo      = Equipo::findOrFail($equipoId);
-        $liderActual = EquipoIntegrante::where('ein_id_equ', $equipoId)
-            ->where('ein_es_lider', true)->where('ein_status', true)->first();
-        if ($liderActual) {
-            $liderActual->update(['ein_es_lider' => false, 'ein_id_usu_updated' => auth()->id()]);
-            $usuarioAnterior = Usuario::find($liderActual->ein_id_usu);
-            $usuarioAnterior?->update(['usu_tiene_acceso' => false]);
-            UsuarioRol::where('uro_id_usu', $liderActual->ein_id_usu)
-                ->where('uro_status', true)
-                ->whereHas('rol', fn($q) => $q->where('rol_nombre', 'lider'))
-                ->update(['uro_status' => false]);
-        }
-        $nuevoIntegrante = EquipoIntegrante::findOrFail($request->nuevo_lider_id);
-        $nuevoIntegrante->update(['ein_es_lider' => true, 'ein_id_usu_updated' => auth()->id()]);
-        $nuevoLider = Usuario::find($nuevoIntegrante->ein_id_usu);
-        if ($nuevoLider && !$nuevoLider->usu_tiene_acceso) {
-            $rolLider = \App\Models\Rol::where('rol_nombre', 'lider')->first();
-            $nuevoLider->update([
-                'usu_tiene_acceso' => true,
-                'usu_username'     => $nuevoLider->usu_cedula,
-                'usu_password'     => bcrypt($nuevoLider->usu_cedula),
-            ]);
-            UsuarioRol::create([
-                'uro_id_usu'         => $nuevoLider->usu_id,
-                'uro_id_rol'         => $rolLider->rol_id,
-                'uro_fecha_inicio'   => now()->toDateString(),
-                'uro_status'         => true,
-                'uro_id_usu_created' => auth()->id(),
-            ]);
-        }
-        \App\Models\HistorialEquipo::create([
-            'heq_id_equ'         => $equipoId,
-            'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre','Líder Cambiado')->first()?->tee_id,
-            'heq_motivo'         => 'Nuevo líder: '.$nuevoLider?->usu_primer_nombre.' '.$nuevoLider?->usu_primer_apellido,
-            'heq_fecha_evento'   => now()->toDateString(),
-            'heq_id_usu_created' => auth()->id(),
-        ]);
-        return back()->with('success', 'Líder cambiado correctamente. El nuevo líder puede ingresar con su cédula.');
-    }
+    
 
     public function historial($equipoId)
     {
+        $this->autorizarEquipoId($equipoId);
         $equipo = Equipo::with([
             'historial.tipoEvento',
             'historial' => fn($q) => $q->orderBy('heq_fecha_evento', 'desc'),
@@ -455,22 +471,7 @@ class EquipoController extends Controller
         return response()->json($equipo->historial);
     }
 
-    public function reactivar(Request $request, $id)
-    {
-        $equipo = Equipo::where('equ_status', false)->findOrFail($id);
-        $equipo->update(['equ_status' => true]);
-        $equipo->integrantes()->where('ein_status', false)
-            ->whereDoesntHave('historialRemociones')
-            ->update(['ein_status' => true]);
-        \App\Models\HistorialEquipo::create([
-            'heq_id_equ'          => $equipo->equ_id,
-            'heq_id_tee'          => \App\Models\TipoEventoEquipo::where('tee_nombre','Reactivado')->value('tee_id'),
-            'heq_motivo'          => $request->input('motivo', 'Reactivación del equipo por el coordinador.'),
-            'heq_fecha_evento'    => now(),
-            'heq_id_usu_registro' => auth()->id(),
-        ]);
-        return back()->with('success', "Equipo {$equipo->equ_codigo} reactivado correctamente.");
-    }
+    
     
     // Vista de secciones del profesor
     public function misSecciones()
@@ -553,19 +554,13 @@ class EquipoController extends Controller
             'tipoBeneficiario' => \App\Models\TipoBeneficiario::where('tbe_status', true)->get(),
             'puedeCrear'       => true,
             'modoProfesor'     => true,
+            'sede' => config('siscon.sede', 'ACA'),
         ]);
     }
-    public function activar($id)
-    {
-        $equipo = Equipo::findOrFail($id);
-        $equipo->update([
-            'equ_status'         => true,
-            'equ_id_usu_updated' => auth()->id(),
-        ]);
-        return back()->with('success', 'Equipo activado correctamente.');
-    }
+    
     public function generarPaqueteCierre($id)
     {
+        $this->autorizarEquipoId($id);
         $equipo = Equipo::with([
             'seccion.trayecto',
             'integrantes.usuario',
@@ -587,7 +582,7 @@ class EquipoController extends Controller
             ]);
         }
 
-        $zipNombre = 'paquete_cierre_' . $equipo->equ_codigo . '_' . now()->format('Ymd_His') . '.zip';
+        $zipNombre = 'paquete_cierre_' . $equipo->codigo_archivo . '_' . now()->format('Ymd_His') . '.zip';
         $zipRuta   = storage_path('app/temp/' . $zipNombre);
 
         // Crear directorio temp si no existe
@@ -667,11 +662,11 @@ class EquipoController extends Controller
                 ])->setPaper('letter', 'portrait');
 
                 $zip->addFromString(
-                    'carta_presentacion_' . $equipo->equ_codigo . '.pdf',
+                    'carta_presentacion_' . $equipo->codigo_archivo . '.pdf',
                     $pdfCarta->output()
                 );
             } catch (\Exception $e) {
-                // Si falla el PDF de carta, continúa sin él
+                \Log::warning('Error en carta de presentación: ' . $e->getMessage());
             }
         }
 
@@ -714,11 +709,11 @@ class EquipoController extends Controller
             ])->setPaper('letter', 'portrait');
 
             $zip->addFromString(
-                'solvencia_' . $equipo->equ_codigo . '.pdf',
+                'solvencia_' . $equipo->codigo_archivo . '.pdf',
                 $pdfSolvencia->output()
             );
         } catch (\Exception $e) {
-            // Si falla el PDF de solvencia, continúa sin él
+            \Log::warning('Error en solvencia del equipo: ' . $e->getMessage());
         }
 
         $zip->close();
@@ -726,7 +721,7 @@ class EquipoController extends Controller
         // Registrar en bitácora
         \App\Models\Bitacora::create([
             'bit_id_usu'      => auth()->id(),
-            'bit_id_ent'      => \App\Models\Entidad::where('ent_tabla', 'equipo')->value('ent_id'),
+            'bit_id_entidad'  => \App\Models\Entidad::where('ent_nombre', 'equipo')->value('ent_id'),
             'bit_accion'      => 'PAQUETE_CIERRE',
             'bit_registro_id' => $equipo->equ_id,
             'bit_fecha_hora'  => now(),
@@ -735,5 +730,125 @@ class EquipoController extends Controller
         return response()->download($zipRuta, $zipNombre, [
             'Content-Type' => 'application/zip',
         ])->deleteFileAfterSend(true);
+    }
+    public function disolver(Request $request, $id)
+    {
+        $request->validate(['motivo' => 'required|string|max:500'], ['motivo.required' => 'El motivo de la disolución es obligatorio.']);
+        $equipo = Equipo::findOrFail($id);
+        $this->autorizarEquipoId($equipo->equ_id);
+
+        DB::transaction(function () use ($equipo, $request) {
+            $liderId = $equipo->integrantes()->where('ein_status', true)->where('ein_es_lider', true)->value('ein_id_usu');
+
+            HistorialEquipo::create([
+                'heq_id_equ'         => $equipo->equ_id,
+                'heq_id_tee'         => $this->eventoId('Disuelto'),
+                'heq_motivo'         => $request->motivo,
+                'heq_fecha_evento'   => now()->toDateString(),
+                'heq_id_usu_created' => auth()->id(),
+            ]);
+
+            $equipo->integrantes()->where('ein_status', true)->update([
+                'ein_status' => false, 'ein_fecha_salida' => now()->toDateString(), 'ein_id_usu_updated' => auth()->id(),
+            ]);
+            $equipo->update(['equ_status' => false, 'equ_id_usu_updated' => auth()->id()]);
+
+            if ($liderId) {
+                $this->revocarAccesoLider($liderId);
+            }
+        });
+
+        return back()->with('success', 'Equipo disuelto correctamente.');
+    }
+
+    public function cambiarLider(Request $request, $equipoId)
+    {
+        $request->validate(['nuevo_lider_id' => 'required|integer'], ['nuevo_lider_id.required' => 'Debes seleccionar el nuevo líder.']);
+        $equipo = Equipo::findOrFail($equipoId);
+        $this->autorizarEquipoId($equipo->equ_id);
+
+        $nuevo = EquipoIntegrante::where('ein_id', $request->nuevo_lider_id)
+            ->where('ein_id_equ', $equipo->equ_id)->where('ein_status', true)->first();
+
+        if (!$nuevo) {
+            return back()->withErrors(['nuevo_lider_id' => 'El integrante seleccionado no pertenece a este equipo.']);
+        }
+        if ($nuevo->ein_es_lider) {
+            return back()->withErrors(['nuevo_lider_id' => 'Ese integrante ya es el líder.']);
+        }
+
+        DB::transaction(function () use ($equipo, $nuevo) {
+            $actual = EquipoIntegrante::where('ein_id_equ', $equipo->equ_id)
+                ->where('ein_es_lider', true)->where('ein_status', true)->first();
+
+            if ($actual) {
+                $actual->update(['ein_es_lider' => false, 'ein_id_usu_updated' => auth()->id()]);
+                $this->revocarAccesoLider($actual->ein_id_usu);
+            }
+
+            $nuevo->update(['ein_es_lider' => true, 'ein_id_usu_updated' => auth()->id()]);
+            $usuario = Usuario::findOrFail($nuevo->ein_id_usu);
+            $this->otorgarAccesoLider($usuario);
+
+            HistorialEquipo::create([
+                'heq_id_equ'         => $equipo->equ_id,
+                'heq_id_tee'         => $this->eventoId('Líder Cambiado'),
+                'heq_motivo'         => 'Nuevo líder: ' . $usuario->usu_primer_nombre . ' ' . $usuario->usu_primer_apellido,
+                'heq_fecha_evento'   => now()->toDateString(),
+                'heq_id_usu_created' => auth()->id(),
+            ]);
+        });
+
+        return back()->with('success', 'Líder cambiado. El nuevo líder entra con su cédula.');
+    }
+
+    public function reactivar(Request $request, $id)
+    {
+        $equipo = Equipo::where('equ_status', false)->findOrFail($id);
+        $this->autorizarEquipoId($equipo->equ_id);
+
+        $fechaDisolucion = HistorialEquipo::where('heq_id_equ', $equipo->equ_id)
+            ->whereHas('tipoEvento', fn($q) => $q->where('tee_nombre', 'Disuelto'))
+            ->latest('heq_id')->value('heq_fecha_evento');
+
+        $porRestaurar = EquipoIntegrante::where('ein_id_equ', $equipo->equ_id)
+            ->where('ein_status', false)
+            ->when($fechaDisolucion, fn($q) => $q->whereDate('ein_fecha_salida', $fechaDisolucion))
+            ->get();
+
+        if ($porRestaurar->isEmpty()) {
+            return back()->withErrors(['equipo' => 'No hay integrantes para restaurar en este equipo.']);
+        }
+
+        $ocupado = EquipoIntegrante::whereIn('ein_id_usu', $porRestaurar->pluck('ein_id_usu'))
+            ->where('ein_status', true)
+            ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+            ->exists();
+        if ($ocupado) {
+            return back()->withErrors(['equipo' => 'Algún integrante ya pertenece a otro equipo activo.']);
+        }
+
+        DB::transaction(function () use ($equipo, $porRestaurar, $request) {
+            $equipo->update(['equ_status' => true, 'equ_id_usu_updated' => auth()->id()]);
+
+            EquipoIntegrante::whereIn('ein_id', $porRestaurar->pluck('ein_id'))->update([
+                'ein_status' => true, 'ein_fecha_salida' => null, 'ein_id_usu_updated' => auth()->id(),
+            ]);
+
+            $lider = $porRestaurar->firstWhere('ein_es_lider', true);
+            if ($lider) {
+                $this->otorgarAccesoLider(Usuario::findOrFail($lider->ein_id_usu));
+            }
+
+            HistorialEquipo::create([
+                'heq_id_equ'         => $equipo->equ_id,
+                'heq_id_tee'         => $this->eventoId('Reactivado'),
+                'heq_motivo'         => $request->input('motivo', 'Reactivación del equipo.'),
+                'heq_fecha_evento'   => now()->toDateString(),
+                'heq_id_usu_created' => auth()->id(),
+            ]);
+        });
+
+        return back()->with('success', "Equipo {$equipo->equ_codigo} reactivado correctamente.");
     }
 }

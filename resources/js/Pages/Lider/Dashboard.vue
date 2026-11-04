@@ -61,9 +61,32 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Mi Proyecto</div>
-                <Link href="/lider" class="sb-link active"
-                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</Link
+                <Link
+                    href="/lider"
+                    class="sb-link d-flex align-items-center justify-content-between"
                 >
+                    <span
+                        ><i class="bi bi-speedometer2 me-2"></i>Dashboard</span
+                    >
+                    <span
+                        v-if="notifNoLeidas > 0"
+                        style="
+                            background: #dc3545;
+                            color: #fff;
+                            border-radius: 50%;
+                            width: 18px;
+                            height: 18px;
+                            font-size: 0.7rem;
+                            font-weight: 800;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                        "
+                    >
+                        {{ notifNoLeidas > 9 ? "9+" : notifNoLeidas }}
+                    </span>
+                </Link>
                 <Link href="/lider/equipo" class="sb-link"
                     ><i class="bi bi-people"></i> Mi Equipo</Link
                 >
@@ -158,6 +181,89 @@
                 <div class="row g-3">
                     <!-- IZQUIERDA -->
                     <div class="col-lg-5">
+                        <!-- Progreso del equipo -->
+                        <div class="sc mb-3">
+                            <div class="sh">
+                                <i
+                                    class="bi bi-signpost-split me-2 text-danger"
+                                ></i
+                                >Estado del Proyecto
+                            </div>
+                            <div class="p-3">
+                                <div
+                                    class="d-flex align-items-center gap-0 overflow-x-auto pb-2"
+                                >
+                                    <div
+                                        v-for="(paso, idx) in pasos"
+                                        :key="idx"
+                                        class="d-flex align-items-center"
+                                        style="flex-shrink: 0"
+                                    >
+                                        <div
+                                            class="text-center"
+                                            style="min-width: 80px"
+                                        >
+                                            <div
+                                                :style="`width:36px;height:36px;border-radius:50%;margin:0 auto 4px;
+                                  display:flex;align-items:center;justify-content:center;
+                                  font-size:.85rem;font-weight:800;
+                                  background:${paso.completado ? '#198754' : paso.actual ? '#dc3545' : 'var(--bg-th)'};
+                                  color:${paso.completado || paso.actual ? '#fff' : 'var(--text-muted)'}
+                                  ;border:2px solid ${paso.completado ? '#198754' : paso.actual ? '#dc3545' : 'var(--border)'}`"
+                                            >
+                                                <i
+                                                    v-if="paso.completado"
+                                                    class="bi bi-check2"
+                                                ></i>
+                                                <i
+                                                    v-else
+                                                    :class="paso.icono"
+                                                ></i>
+                                            </div>
+                                            <div
+                                                style="
+                                                    font-size: 0.7rem;
+                                                    line-height: 1.2;
+                                                "
+                                                :style="`color:${paso.actual ? '#dc3545' : 'var(--text-muted)'};font-weight:${paso.actual ? '700' : '400'}`"
+                                            >
+                                                {{ paso.label }}
+                                            </div>
+                                        </div>
+                                        <div
+                                            v-if="idx < pasos.length - 1"
+                                            :style="`flex:1;height:2px;min-width:20px;
+                               background:${paso.completado ? '#198754' : 'var(--border)'}`"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Alerta fecha límite -->
+                        <div
+                            v-if="alertaFechaLimite"
+                            class="alert mb-3 py-2 d-flex align-items-center gap-2"
+                            style="
+                                background: rgba(255, 193, 7, 0.12);
+                                border: 1px solid rgba(255, 193, 7, 0.4);
+                                border-radius: 10px;
+                            "
+                        >
+                            <i
+                                class="bi bi-exclamation-triangle-fill"
+                                style="
+                                    color: #ffc107;
+                                    font-size: 1.1rem;
+                                    flex-shrink: 0;
+                                "
+                            ></i>
+                            <div class="small">
+                                <strong style="color: #b8860b"
+                                    >Atención:</strong
+                                >
+                                {{ alertaFechaLimite }}
+                            </div>
+                        </div>
                         <!-- Info proyecto -->
                         <div class="sc">
                             <div class="sh">
@@ -498,6 +604,7 @@ const props = defineProps({
     puntosControl: { type: Array, default: () => [] },
     entregables: { type: Array, default: () => [] },
     carta: { type: Object, default: null },
+    socializaciones: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -578,6 +685,108 @@ onMounted(() => {
         .then((r) => r.json())
         .then((d) => {
             notificaciones.value = d;
+        })
+        .catch(() => {});
+});
+const pasos = computed(() => {
+    const e = props.equipo;
+    const c = props.carta;
+    const pcs = props.puntosControl ?? [];
+    const ents = props.entregables ?? [];
+    const socs = props.socializaciones ?? [];
+
+    const tieneEquipo = !!e;
+    const tieneProyecto = !!e?.proyecto_comunidad?.pco_fecha_aprobacion;
+    const tieneCartaAprobada = !!c?.cpr_fecha_aprobacion;
+    const tienePuntos = pcs.length > 0;
+    const tieneEntregables = ents.some((en) => en.entr_aprobado === 1);
+    const tienePreSoc = socs.some(
+        (s) => s.tipo_socializacion?.tso_orden === 1 && s.soc_apto,
+    );
+    const tieneSocFinal = socs.some(
+        (s) => s.tipo_socializacion?.tso_orden === 2 && s.soc_aprobado,
+    );
+    const tieneResultado = !!e?.resultado_proyecto;
+
+    const lista = [
+        {
+            label: "Equipo Formado",
+            icono: "bi-people",
+            completado: tieneEquipo,
+            actual: tieneEquipo && !tieneProyecto,
+        },
+        {
+            label: "Proyecto Asignado",
+            icono: "bi-folder",
+            completado: tieneProyecto,
+            actual: tieneProyecto && !tieneCartaAprobada,
+        },
+        {
+            label: "Carta Aprobada",
+            icono: "bi-file-earmark-check",
+            completado: tieneCartaAprobada,
+            actual: tieneCartaAprobada && !tienePuntos,
+        },
+        {
+            label: "Pts. Control",
+            icono: "bi-check2-square",
+            completado: tienePuntos,
+            actual: tienePuntos && !tieneEntregables,
+        },
+        {
+            label: "Entregables",
+            icono: "bi-file-earmark-arrow-up",
+            completado: tieneEntregables,
+            actual: tieneEntregables && !tienePreSoc,
+        },
+        {
+            label: "Pre-Soc.",
+            icono: "bi-mic",
+            completado: tienePreSoc,
+            actual: tienePreSoc && !tieneSocFinal,
+        },
+        {
+            label: "Soc. Final",
+            icono: "bi-trophy",
+            completado: tieneSocFinal,
+            actual: tieneSocFinal && !tieneResultado,
+        },
+        {
+            label: "Resultado",
+            icono: "bi-award",
+            completado: tieneResultado,
+            actual: tieneResultado,
+        },
+    ];
+    // Solo uno puede ser "actual"
+    let encontrado = false;
+    return lista.map((p) => {
+        if (!encontrado && p.actual) {
+            encontrado = true;
+            return p;
+        }
+        if (encontrado) return { ...p, actual: false };
+        return p;
+    });
+});
+const alertaFechaLimite = computed(() => {
+    const fecha = props.equipo?.proyecto_comunidad?.pco_fecha_limite;
+    if (!fecha) return null;
+    const hoy = new Date();
+    const limite = new Date(fecha);
+    const diffDias = Math.ceil((limite - hoy) / (1000 * 60 * 60 * 24));
+    if (diffDias < 0)
+        return `La fecha límite del proyecto venció hace ${Math.abs(diffDias)} día(s).`;
+    if (diffDias <= 7)
+        return `La fecha límite del proyecto es en ${diffDias} día(s) — ${fecha}.`;
+    return null;
+});
+const notifNoLeidas = ref(0);
+onMounted(() => {
+    fetch("/notificaciones/lista")
+        .then((r) => r.json())
+        .then((d) => {
+            notifNoLeidas.value = d.filter((n) => !n.not_leida).length;
         })
         .catch(() => {});
 });

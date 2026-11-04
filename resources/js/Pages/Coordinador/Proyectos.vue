@@ -372,18 +372,6 @@
                                             class="bs ba"
                                             >✓ Aprobado</span
                                         >
-                                        <button
-                                            v-else
-                                            class="btn btn-sm btn-outline-success fw-semibold"
-                                            style="
-                                                font-size: 0.78rem;
-                                                padding: 3px 10px;
-                                            "
-                                            @click="aprobar(pco)"
-                                        >
-                                            <i class="bi bi-check-lg me-1"></i
-                                            >Aprobar
-                                        </button>
                                     </td>
                                     <td class="text-end pe-4">
                                         <button
@@ -671,47 +659,7 @@
             </div>
         </div>
 
-        <!-- Modal Aprobar -->
-        <div class="modal fade" id="mAprobar" tabindex="-1">
-            <div class="modal-dialog modal-sm modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-body text-center p-4">
-                        <div style="font-size: 2.5rem; margin-bottom: 0.75rem">
-                            ✅
-                        </div>
-                        <h6 class="fw-bold" style="color: var(--text-main)">
-                            ¿Aprobar Comunidad?
-                        </h6>
-                        <p
-                            style="color: var(--text-muted); font-size: 0.9rem"
-                            class="mb-0"
-                        >
-                            ¿Confirmas que el equipo
-                            <strong>{{
-                                itemSeleccionado?.equipo?.equ_codigo
-                            }}</strong>
-                            puede trabajar con esta comunidad?
-                        </p>
-                    </div>
-                    <div
-                        class="modal-footer border-0 justify-content-center pb-4 gap-2"
-                    >
-                        <button
-                            class="btn btn-secondary px-4"
-                            data-bs-dismiss="modal"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            class="btn btn-success fw-bold px-4"
-                            @click="confirmarAprobar"
-                        >
-                            Sí, aprobar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Modal Desactivar -->
         <div class="modal fade" id="mDesact" tabindex="-1">
@@ -867,17 +815,7 @@ const guardar = () => {
         },
     });
 };
-const aprobar = (pco) => {
-    itemSeleccionado.value = pco;
-    modalAp = modalAp || new Modal(document.getElementById("mAprobar"));
-    modalAp.show();
-};
-const confirmarAprobar = () => {
-    router.post(
-        `/coordinador/proyectos/${itemSeleccionado.value.pco_id}/aprobar`,
-    );
-    modalAp?.hide();
-};
+
 const desactivar = (pco) => {
     itemSeleccionado.value = pco;
     modalDes = modalDes || new Modal(document.getElementById("mDesact"));

@@ -125,10 +125,115 @@
                             "
                         ></i>
                     </button>
-                    <button class="topbar-btn">
+                    <button
+                        class="topbar-btn"
+                        @click="mostrarNotif = !mostrarNotif"
+                        style="position: relative"
+                    >
                         <i class="bi bi-bell"></i>
                         <span v-if="stats.notificaciones > 0" class="nd"></span>
                     </button>
+
+                    <!-- Panel de notificaciones -->
+                    <div
+                        v-if="mostrarNotif"
+                        style="
+                            position: absolute;
+                            top: 56px;
+                            right: 16px;
+                            width: 320px;
+                            z-index: 1000;
+                            background: var(--bg-card);
+                            border: 1px solid var(--border);
+                            border-radius: 12px;
+                            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+                            overflow: hidden;
+                        "
+                    >
+                        <div
+                            style="
+                                padding: 0.75rem 1rem;
+                                border-bottom: 1px solid var(--border);
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                            "
+                        >
+                            <span style="font-weight: 800; font-size: 0.9rem"
+                                >Notificaciones</span
+                            >
+                            <button
+                                @click="mostrarNotif = false"
+                                style="
+                                    background: none;
+                                    border: none;
+                                    color: var(--text-muted);
+                                    cursor: pointer;
+                                "
+                            >
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div style="max-height: 300px; overflow-y: auto">
+                            <div
+                                v-if="!notificaciones?.length"
+                                class="text-center py-4"
+                                style="
+                                    color: var(--text-muted);
+                                    font-size: 0.85rem;
+                                "
+                            >
+                                <i
+                                    class="bi bi-bell-slash d-block fs-3 mb-1"
+                                ></i>
+                                Sin notificaciones
+                            </div>
+                            <div
+                                v-for="n in notificaciones"
+                                :key="n.not_id"
+                                class="notif-item"
+                                :style="
+                                    !n.not_leida
+                                        ? 'background:rgba(220,53,69,.04)'
+                                        : ''
+                                "
+                            >
+                                <div class="d-flex align-items-start gap-2">
+                                    <div
+                                        style="
+                                            width: 8px;
+                                            height: 8px;
+                                            border-radius: 50%;
+                                            flex-shrink: 0;
+                                            margin-top: 5px;
+                                        "
+                                        :style="
+                                            !n.not_leida
+                                                ? 'background:#dc3545'
+                                                : 'background:transparent'
+                                        "
+                                    ></div>
+                                    <div>
+                                        <div style="font-size: 0.84rem">
+                                            {{ n.not_mensaje }}
+                                        </div>
+                                        <div
+                                            style="
+                                                font-size: 0.75rem;
+                                                color: var(--text-muted);
+                                            "
+                                        >
+                                            {{
+                                                n.not_fecha_generacion?.split(
+                                                    "T",
+                                                )[0]
+                                            }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -201,10 +306,16 @@
                                     >Mis Equipos
                                 </h6>
                                 <Link
-                                    href="/profesor/equipos"
-                                    class="btn btn-sm btn-danger rounded-pill px-3 fw-bold"
+                                    href="/profesor/secciones"
+                                    class="btn btn-sm rounded-pill px-3 fw-bold"
+                                    style="
+                                        background: transparent;
+                                        border: 2px solid #dc3545;
+                                        color: #dc3545;
+                                    "
                                 >
-                                    <i class="bi bi-plus me-1"></i>Nuevo
+                                    <i class="bi bi-arrow-right-circle me-1"></i
+                                    >Ver secciones
                                 </Link>
                             </div>
                             <div
@@ -214,59 +325,102 @@
                                 Sin equipos asignados
                             </div>
                             <div
-                                v-for="equ in equipos"
+                                v-for="equ in equiposPaginados"
                                 :key="equ.equ_id"
-                                class="eq-card"
+                                class="d-flex align-items-center gap-3 py-2 px-1"
+                                style="border-bottom: 1px solid var(--border)"
                             >
+                                <!-- Código -->
                                 <div
-                                    class="d-flex justify-content-between align-items-start mb-2"
+                                    style="
+                                        font-size: 0.78rem;
+                                        font-weight: 800;
+                                        color: #dc3545;
+                                        min-width: 120px;
+                                        flex-shrink: 0;
+                                    "
                                 >
-                                    <div>
-                                        <div class="eq-code">
-                                            {{ equ.equ_codigo }}
-                                        </div>
-                                        <div class="eq-title">
-                                            {{ equ.equ_titulo }}
-                                        </div>
-                                    </div>
-                                    <span class="bs bp">{{
-                                        equ.seccion?.sec_codigo
-                                    }}</span>
+                                    {{ equ.equ_codigo }}
                                 </div>
-                                <div class="d-flex flex-wrap mt-1">
-                                    <span
-                                        v-for="int in equ.integrantes"
-                                        :key="int.ein_id"
-                                        class="member-chip"
+
+                                <!-- Título -->
+                                <div
+                                    style="
+                                        flex: 1;
+                                        font-size: 0.85rem;
+                                        font-weight: 600;
+                                        color: var(--text-main);
+                                        min-width: 0;
+                                    "
+                                >
+                                    <div
+                                        style="
+                                            white-space: nowrap;
+                                            overflow: hidden;
+                                            text-overflow: ellipsis;
+                                        "
                                     >
-                                        <div
-                                            class="member-dot"
-                                            :style="{
-                                                background: int.ein_es_lider
-                                                    ? '#dc3545'
-                                                    : '#495057',
-                                            }"
-                                        >
-                                            {{
-                                                int.usuario
-                                                    ?.usu_primer_nombre?.[0]
-                                            }}{{
-                                                int.usuario
-                                                    ?.usu_primer_apellido?.[0]
-                                            }}
-                                        </div>
-                                        {{ int.usuario?.usu_primer_nombre }}
-                                        {{ int.usuario?.usu_primer_apellido }}
-                                        <i
-                                            v-if="int.ein_es_lider"
-                                            class="bi bi-star-fill ms-1"
-                                            style="
-                                                color: #ffd700;
-                                                font-size: 0.65rem;
-                                            "
-                                        ></i>
-                                    </span>
+                                        {{ equ.equ_titulo }}
+                                    </div>
+                                    <div
+                                        style="
+                                            font-size: 0.75rem;
+                                            color: var(--text-muted);
+                                        "
+                                    >
+                                        Sección {{ equ.seccion?.sec_codigo }}
+                                    </div>
                                 </div>
+
+                                <!-- Líder -->
+                                <div
+                                    style="
+                                        font-size: 0.78rem;
+                                        color: var(--text-muted);
+                                        flex-shrink: 0;
+                                        text-align: right;
+                                    "
+                                >
+                                    <i
+                                        class="bi bi-person-fill me-1"
+                                        style="color: #dc3545"
+                                    ></i>
+                                    {{
+                                        equ.integrantes?.find(
+                                            (i) => i.ein_es_lider,
+                                        )?.usuario?.usu_primer_nombre
+                                    }}
+                                    {{
+                                        equ.integrantes?.find(
+                                            (i) => i.ein_es_lider,
+                                        )?.usuario?.usu_primer_apellido
+                                    }}
+                                </div>
+                            </div>
+                            <div
+                                v-if="totalPaginas > 1"
+                                class="d-flex justify-content-center align-items-center gap-2 mt-3"
+                            >
+                                <button
+                                    class="btn btn-sm btn-outline-danger rounded-pill"
+                                    :disabled="paginaActual === 1"
+                                    @click="paginaActual--"
+                                >
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <span
+                                    class="small fw-bold"
+                                    style="color: var(--text-muted)"
+                                >
+                                    {{ paginaActual }} / {{ totalPaginas }}
+                                </span>
+                                <button
+                                    class="btn btn-sm btn-outline-danger rounded-pill"
+                                    :disabled="paginaActual === totalPaginas"
+                                    @click="paginaActual++"
+                                >
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -428,6 +582,7 @@ const props = defineProps({
     equipos: { type: Array, default: () => [] },
     proximosPuntos: { type: Array, default: () => [] },
     entregablesPendientes: { type: Array, default: () => [] },
+    notificaciones: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -447,6 +602,18 @@ const toggleTema = () => {
 };
 
 const logout = () => router.post("/logout");
+const mostrarNotif = ref(false);
+const paginaActual = ref(1);
+const equiposPorPagina = 5;
+
+const equiposPaginados = computed(() => {
+    const inicio = (paginaActual.value - 1) * equiposPorPagina;
+    return props.equipos.slice(inicio, inicio + equiposPorPagina);
+});
+
+const totalPaginas = computed(() =>
+    Math.ceil(props.equipos.length / equiposPorPagina),
+);
 </script>
 <style>
 :root {

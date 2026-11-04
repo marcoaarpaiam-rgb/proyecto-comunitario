@@ -59,9 +59,32 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Mi Proyecto</div>
-                <Link href="/lider" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</Link
+                <Link
+                    href="/lider"
+                    class="sb-lnk d-flex align-items-center justify-content-between"
                 >
+                    <span
+                        ><i class="bi bi-speedometer2 me-2"></i>Dashboard</span
+                    >
+                    <span
+                        v-if="notifNoLeidas > 0"
+                        style="
+                            background: #dc3545;
+                            color: #fff;
+                            border-radius: 50%;
+                            width: 18px;
+                            height: 18px;
+                            font-size: 0.7rem;
+                            font-weight: 800;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                        "
+                    >
+                        {{ notifNoLeidas > 9 ? "9+" : notifNoLeidas }}
+                    </span>
+                </Link>
                 <Link href="/lider/equipo" class="sb-lnk active"
                     ><i class="bi bi-people"></i> Mi Equipo</Link
                 >
@@ -450,7 +473,7 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 const props = defineProps({
@@ -483,6 +506,15 @@ const guardarTutor = () => {
         },
     });
 };
+const notifNoLeidas = ref(0);
+onMounted(() => {
+    fetch("/notificaciones/lista")
+        .then((r) => r.json())
+        .then((d) => {
+            notifNoLeidas.value = d.filter((n) => !n.not_leida).length;
+        })
+        .catch(() => {});
+});
 </script>
 <style>
 :root {

@@ -23,7 +23,6 @@ return new class extends Migration
             ['tpr_nombre' => 'Biblioteca'],
             ['tpr_nombre' => 'Inventario'],
             ['tpr_nombre' => 'Sistema Administrativo'],
-            ['tpr_nombre' => 'Otro'],
         ]);
     }
 

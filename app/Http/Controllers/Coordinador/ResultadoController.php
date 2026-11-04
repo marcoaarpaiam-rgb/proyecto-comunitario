@@ -68,6 +68,7 @@ class ResultadoController extends Controller
         ResultadoProyecto::create([
             'rpr_id_pco'            => $request->rpr_id_pco,
             'rpr_id_tra'            => $request->rpr_id_tra,
+            'rpr_id_equ' => $proyecto->pco_id_equ,
             'rpr_id_epr'            => $request->rpr_id_epr,
             'rpr_habilitado_tardio' => $request->rpr_habilitado_tardio ?? false,
             'rpr_observaciones'     => $request->rpr_observaciones,

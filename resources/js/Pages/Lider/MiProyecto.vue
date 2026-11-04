@@ -59,9 +59,32 @@
             </div>
             <div class="sb-nav">
                 <div class="sb-sec">Mi Proyecto</div>
-                <Link href="/lider" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Mi Dashboard</Link
+                <Link
+                    href="/lider"
+                    class="sb-lnk d-flex align-items-center justify-content-between"
                 >
+                    <span
+                        ><i class="bi bi-speedometer2 me-2"></i>Dashboard</span
+                    >
+                    <span
+                        v-if="notifNoLeidas > 0"
+                        style="
+                            background: #dc3545;
+                            color: #fff;
+                            border-radius: 50%;
+                            width: 18px;
+                            height: 18px;
+                            font-size: 0.7rem;
+                            font-weight: 800;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                        "
+                    >
+                        {{ notifNoLeidas > 9 ? "9+" : notifNoLeidas }}
+                    </span>
+                </Link>
                 <Link href="/lider/equipo" class="sb-lnk"
                     ><i class="bi bi-people"></i> Mi Equipo</Link
                 >
@@ -429,13 +452,35 @@
                             <div class="row g-2 mb-2">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold"
-                                        >Nombre completo *</label
+                                        >Nombre*</label
                                     >
                                     <input
                                         type="text"
                                         class="form-control form-control-sm"
                                         v-model="formResponsable.rco_nombre"
                                         placeholder="Nombre del vocero o responsable"
+                                    />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold"
+                                        >Cédula</label
+                                    >
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        v-model="formResponsable.rco_cedula"
+                                        placeholder="Ej: 28123456"
+                                    />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold"
+                                        >Apellido</label
+                                    >
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        v-model="formResponsable.rco_apellido"
+                                        placeholder="Apellido del responsable"
                                     />
                                 </div>
                                 <div class="col-md-6">
@@ -506,7 +551,7 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 const page = usePage();
@@ -529,11 +574,13 @@ const props = defineProps({
 });
 const mostrarFormResponsable = ref(false);
 const formResponsable = ref({
-    rco_nombre: props.responsable?.rco_nombre ?? "",
-    rco_cargo: props.responsable?.rco_cargo ?? "",
-    rco_telefono: props.responsable?.rco_telefono ?? "",
-    rco_email: props.responsable?.rco_email ?? "",
-    rco_fecha_inicio: props.responsable?.rco_fecha_inicio ?? "",
+    rco_cedula: "",
+    rco_nombre: "",
+    rco_apellido: "",
+    rco_cargo: "",
+    rco_telefono: "",
+    rco_email: "",
+    rco_fecha_inicio: "",
 });
 
 const guardarResponsable = () => {
@@ -544,6 +591,15 @@ const guardarResponsable = () => {
         },
     });
 };
+const notifNoLeidas = ref(0);
+onMounted(() => {
+    fetch("/notificaciones/lista")
+        .then((r) => r.json())
+        .then((d) => {
+            notifNoLeidas.value = d.filter((n) => !n.not_leida).length;
+        })
+        .catch(() => {});
+});
 </script>
 <style>
 :root {

@@ -72,7 +72,7 @@
 <script setup>
 import { ref } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
-
+import NProgress from "nprogress";
 const page = usePage();
 const errors = ref(page.props.errors || {});
 
@@ -85,14 +85,25 @@ const loading = ref(false);
 
 const submit = () => {
     loading.value = true;
-    router.post("/login", form.value, {
-        onError: (e) => {
-            errors.value = e;
-            loading.value = false;
+    NProgress.start(); // AGREGAR ESTA LÍNEA
+    errors.value = {};
+    router.post(
+        "/login",
+        {
+            usu_username: form.value.usu_username,
+            usu_password: form.value.usu_password,
         },
-        onFinish: () => {
-            loading.value = false;
+        {
+            onError: (e) => {
+                errors.value = e;
+                loading.value = false;
+                NProgress.done(); // AGREGAR ESTA LÍNEA
+            },
+            onFinish: () => {
+                loading.value = false;
+                NProgress.done(); // AGREGAR ESTA LÍNEA
+            },
         },
-    });
+    );
 };
 </script>

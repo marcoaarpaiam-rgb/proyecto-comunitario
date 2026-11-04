@@ -12,9 +12,11 @@ use App\Models\Equipo;
 use App\Models\TipoJurado;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Concerns\AutorizaPorSeccion;
 
 class SocializacionController extends Controller
 {
+    use AutorizaPorSeccion;
     public function index()
     {
         $profesor = auth()->user();
@@ -59,6 +61,8 @@ class SocializacionController extends Controller
             'soc_hora.required'   => 'La hora es obligatoria.',
             'soc_lugar.required'  => 'El lugar es obligatorio.',
         ]);
+        
+        $this->autorizarEquipoId($request->soc_id_equ);
 
         // Obtener trayecto del equipo
         $equipo = Equipo::findOrFail($request->soc_id_equ);
@@ -141,6 +145,9 @@ class SocializacionController extends Controller
         ]);
 
         $soc = Socializacion::findOrFail($id);
+
+        $this->autorizarEquipoId($soc->soc_id_equ);
+        
         $soc->update([
             'soc_apto'                   => $request->soc_apto,
             'soc_aprobado'              => $request->soc_aprobado,

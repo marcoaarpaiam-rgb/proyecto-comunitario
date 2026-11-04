@@ -74,7 +74,9 @@ class LiderController extends Controller
                     ->orderBy('soc_fecha', 'desc')
                     ->get()
                 : [],
-                    ]);
+            'carta' => $carta,
+        ]);
+            
     }
 
     public function entregables()
@@ -92,6 +94,11 @@ class LiderController extends Controller
                 'tet_trayecto_numero',
                 $equipo->trayecto->tra_numero
             )->where('tet_status', true)->get(),
+            'cartaAprobada' => $equipo && $equipo->proyectoComunidad
+                ? \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad->pco_id)
+                    ->whereNotNull('cpr_fecha_aprobacion')
+                    ->exists()
+                : false,
         ]);
     }
 
@@ -100,7 +107,7 @@ class LiderController extends Controller
         $request->validate([
             'entr_id_tet'       => 'required|exists:tipo_entregable_trayecto,tet_id',
             'entr_nombre_archivo' => 'required|string|max:255',
-            'archivo'           => 'required|file|max:20480',
+            'archivo' => 'required|file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,odt,zip,png,jpg,jpeg',
         ], [
             'entr_id_tet.required'         => 'El tipo de entregable es obligatorio.',
             'entr_nombre_archivo.required' => 'El nombre del archivo es obligatorio.',
@@ -110,6 +117,17 @@ class LiderController extends Controller
 
         $equipo = $this->getEquipo();
         if (!$equipo) return back()->withErrors(['equipo' => 'No tienes equipo asignado.']);
+        
+        // Verificar que la carta de presentación está aprobada
+        $carta = \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad?->pco_id)
+            ->whereNotNull('cpr_fecha_aprobacion')
+            ->first();
+
+        if (!$carta) {
+            return back()->withErrors([
+                'carta' => 'Debes tener la carta de presentación aprobada antes de subir entregables.'
+            ]);
+        }
 
         if (!$equipo->proyectoComunidad?->pco_fecha_aprobacion) {
             return back()->withErrors([
@@ -117,37 +135,29 @@ class LiderController extends Controller
             ]);
         }
 
-        $ruta = $request->file('archivo')->store('entregables/' . $equipo->equ_codigo, 'public');
+        
 
         $fechaLimite = $equipo->proyectoComunidad?->pco_fecha_limite;
         $aTiempo = $fechaLimite ? now()->toDateString() <= $fechaLimite : null;
         // Verificar si ya existe un entregable del mismo tipo pendiente o aprobado
-        $entregableActivo = \App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
+        $activo = \App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
             ->where('entr_id_tet', $request->entr_id_tet)
             ->where('entr_status', true)
-            ->whereNull('entr_aprobado') // pendiente
-            ->orWhere(function($q) use ($equipo, $request) {
-                $q->where('entr_id_equ', $equipo->equ_id)
-                ->where('entr_id_tet', $request->entr_id_tet)
-                ->where('entr_status', true)
-                ->where('entr_aprobado', true); // aprobado
-            })
-            ->latest('entr_id')
+            ->where(fn($q) => $q->whereNull('entr_aprobado')->orWhere('entr_aprobado', true))
             ->first();
 
-        if ($entregableActivo && is_null($entregableActivo->entr_aprobado)) {
+        if ($activo) {
             return back()->withErrors([
-                'entr_id_tet' => 'Ya tienes un entregable de este tipo pendiente de revisión. Espera a que el profesor lo revise antes de subir otro.'
+                'entr_id_tet' => is_null($activo->entr_aprobado)
+                    ? 'Ya tienes un entregable de este tipo en revisión. Espera la respuesta del profesor.'
+                    : 'Este tipo de entregable ya fue aprobado; no es necesario subir otro.',
             ]);
         }
 
-        // Calcular versión automáticamente
-        $ultimaVersion = \App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
-            ->where('entr_id_tet', $request->entr_id_tet)
-            ->max('entr_version') ?? '0';
+        $nuevaVersion = (\App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
+            ->where('entr_id_tet', $request->entr_id_tet)->count() + 1) . '.0';
 
-        $nuevaVersion = (string)(intval($ultimaVersion) + 1) . '.0';
-
+        $ruta = $request->file('archivo')->store('entregables/' . $equipo->codigo_archivo, 'public');
         Entregable::create([
             'entr_id_equ'          => $equipo->equ_id,
             'entr_id_tet'          => $request->entr_id_tet,
@@ -167,6 +177,9 @@ class LiderController extends Controller
     public function miEquipo()
     {
         $equipo = $this->getEquipo();
+        if (!$equipo) {
+            return redirect('/lider');
+        }
         return Inertia::render('Lider/MiEquipo', [
             'equipo' => $equipo,
             'tutor' => \App\Models\Tutor::where('tut_id_equ', $equipo->equ_id)
@@ -184,14 +197,26 @@ class LiderController extends Controller
     public function miProyecto()
     {
         $equipo = $this->getEquipo();
-
+        if (!$equipo) {
+            return redirect('/lider');
+        }
         // Buscar responsable actual de la comunidad
-        $responsable = $equipo->proyectoComunidad
-            ? \App\Models\ResponsableComunidad::where('rco_id_com', $equipo->proyectoComunidad->pco_id_com)
-                ->where('rco_status', true)
-                ->latest('rco_id')
-                ->first()
+       $resp = $equipo->proyectoComunidad
+            ? \App\Models\ResponsableComunidad::with('usuario')
+                ->where('rco_id_com', $equipo->proyectoComunidad->pco_id_com)
+                ->where('rco_status', true)->latest('rco_id')->first()
             : null;
+
+        $responsable = $resp ? [
+            'rco_id'           => $resp->rco_id,
+            'rco_nombre'       => trim($resp->usuario->usu_primer_nombre . ' ' . $resp->usuario->usu_primer_apellido),
+            'rco_cedula'       => $resp->usuario->usu_cedula,
+            'rco_cargo'        => \App\Models\PersonaCargo::where('pca_id_usu', $resp->rco_id_usu)
+                                    ->where('pca_status', true)->latest('pca_id')->value('pca_cargo'),
+            'rco_telefono'     => $resp->usuario->usu_telefono,
+            'rco_email'        => $resp->usuario->usu_email,
+            'rco_fecha_inicio' => $resp->rco_fecha_inicio,
+        ] : null;
         return Inertia::render('Lider/MiProyecto', [
             'equipo' => $equipo,
             'responsable' => $responsable,
@@ -232,7 +257,7 @@ class LiderController extends Controller
                 )->first(),
             ])->setPaper('letter', 'portrait');
 
-            return $pdf->download("carta-presentacion-{$equipo->equ_codigo}.pdf");
+            return $pdf->download("carta-presentacion-{$equipo->codigo_archivo}.pdf");
         } catch (\Exception $e) {
             return back()->withErrors(['carta' => 'Error al generar el PDF: '.$e->getMessage()]);
         }
@@ -243,56 +268,86 @@ class LiderController extends Controller
         $lider = auth()->user();
 
         $integrante = \App\Models\EquipoIntegrante::where('ein_id_usu', $lider->usu_id)
-            ->where('ein_es_lider', true)
-            ->where('ein_status', true)
-            ->first();
-
+            ->where('ein_es_lider', true)->where('ein_status', true)->first();
         if (!$integrante) {
             return back()->withErrors(['equipo' => 'No tienes equipo asignado.']);
         }
 
-        $equipo = \App\Models\Equipo::with('proyectoComunidad')
-            ->findOrFail($integrante->ein_id_equ);
-
+        $equipo = \App\Models\Equipo::with('proyectoComunidad')->findOrFail($integrante->ein_id_equ);
         if (!$equipo->proyectoComunidad) {
             return back()->withErrors(['proyecto' => 'Tu equipo no tiene proyecto asignado.']);
         }
 
         $request->validate([
-            'rco_nombre'        => 'required|string|max:100',
-            'rco_cargo'         => 'required|string|max:100',
-            'rco_telefono'      => 'nullable|string|max:20',
-            'rco_email'         => 'nullable|email|max:100',
-            'rco_fecha_inicio'  => 'required|date',
+            'rco_cedula'       => 'required|string|max:15',
+            'rco_nombre'       => 'required|string|max:50',
+            'rco_apellido'     => 'required|string|max:50',
+            'rco_cargo'        => 'required|string|max:100',
+            'rco_telefono'     => 'nullable|string|max:20',
+            'rco_email'        => 'nullable|email|max:150',
+            'rco_fecha_inicio' => 'required|date',
         ], [
-            'rco_nombre.required'       => 'El nombre del responsable es obligatorio.',
+            'rco_cedula.required'       => 'La cédula del responsable es obligatoria.',
+            'rco_nombre.required'       => 'El nombre es obligatorio.',
+            'rco_apellido.required'     => 'El apellido es obligatorio.',
             'rco_cargo.required'        => 'El cargo es obligatorio.',
             'rco_fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
         ]);
 
-        // Desactivar responsable anterior si existe
-        \App\Models\ResponsableComunidad::where('rco_id_com', $equipo->proyectoComunidad->pco_id_com)
-            ->where('rco_status', true)
-            ->update(['rco_status' => false, 'rco_fecha_fin' => now()->toDateString()]);
+        $existente = \App\Models\Usuario::where('usu_cedula', $request->rco_cedula)->first();
+        if ($existente && $existente->usu_tiene_acceso) {
+            return back()->withErrors(['rco_cedula' => 'Esa cédula pertenece a un usuario del sistema.']);
+        }
 
-        \App\Models\ResponsableComunidad::create([
-            'rco_id_usu'         => null, // No es usuario del sistema
-            'rco_id_com'         => $equipo->proyectoComunidad->pco_id_com,
-            'rco_fecha_inicio'   => $request->rco_fecha_inicio,
-            'rco_status'         => true,
-            'rco_id_usu_created' => $lider->usu_id,
-        ]);
+        \DB::transaction(function () use ($request, $equipo, $lider) {
+            $persona = \App\Models\Usuario::firstOrCreate(
+                ['usu_cedula' => $request->rco_cedula],
+                [
+                    'usu_primer_nombre'   => $request->rco_nombre,
+                    'usu_primer_apellido' => $request->rco_apellido,
+                    'usu_telefono'        => $request->rco_telefono,
+                    'usu_email'           => $request->rco_email ?: null,
+                    'usu_tiene_acceso'    => false,
+                    'usu_status'          => true,
+                    'usu_id_usu_created'  => $lider->usu_id,
+                ]
+            );
+
+            $comunidadId = $equipo->proyectoComunidad->pco_id_com;
+
+            \App\Models\ResponsableComunidad::where('rco_id_com', $comunidadId)->where('rco_status', true)
+                ->update(['rco_status' => false, 'rco_fecha_fin' => now()->toDateString()]);
+
+            \App\Models\ResponsableComunidad::create([
+                'rco_id_usu'         => $persona->usu_id,
+                'rco_id_com'         => $comunidadId,
+                'rco_fecha_inicio'   => $request->rco_fecha_inicio,
+                'rco_status'         => true,
+                'rco_id_usu_created' => $lider->usu_id,
+            ]);
+
+            \App\Models\PersonaCargo::create([
+                'pca_cargo'          => $request->rco_cargo,
+                'pca_fecha_inicio'   => $request->rco_fecha_inicio,
+                'pca_status'         => true,
+                'pca_id_usu'         => $persona->usu_id,
+                'pca_id_usu_created' => $lider->usu_id,
+            ]);
+        });
 
         return back()->with('success', 'Responsable de la comunidad registrado correctamente.');
     }
 
     public function eliminarResponsable($id)
     {
-        $responsable = \App\Models\ResponsableComunidad::findOrFail($id);
-        $responsable->update([
-            'rco_status'   => false,
-            'rco_fecha_fin'=> now()->toDateString(),
-        ]);
+        $equipo = $this->getEquipo();
+        abort_unless($equipo?->proyectoComunidad, 403);
+
+        $responsable = \App\Models\ResponsableComunidad::where('rco_id', $id)
+            ->where('rco_id_com', $equipo->proyectoComunidad->pco_id_com)->firstOrFail();
+
+        $responsable->update(['rco_status' => false, 'rco_fecha_fin' => now()->toDateString()]);
+
         return back()->with('success', 'Responsable eliminado correctamente.');
     }
 

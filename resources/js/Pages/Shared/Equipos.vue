@@ -64,21 +64,21 @@
                 <template v-if="!esProfesor">
                     <!-- Principal -->
                     <div class="sb-sec">Principal</div>
-                    <a href="/coordinador" class="sb-lnk">
+                    <Link href="/coordinador" class="sb-lnk">
                         <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
-                    <a href="/coordinador/secciones" class="sb-lnk">
+                    </Link>
+                    <Link href="/coordinador/secciones" class="sb-lnk">
                         <i class="bi bi-collection"></i> Secciones
-                    </a>
-                    <a href="/coordinador/comunidades" class="sb-lnk">
+                    </Link>
+                    <Link href="/coordinador/comunidades" class="sb-lnk">
                         <i class="bi bi-building"></i> Comunidades
-                    </a>
-                    <a href="/coordinador/equipos" class="sb-lnk active">
+                    </Link>
+                    <Link href="/coordinador/equipos" class="sb-lnk active">
                         <i class="bi bi-people"></i> Equipos
-                    </a>
-                    <a href="/coordinador/proyectos" class="sb-lnk">
+                    </Link>
+                    <Link href="/coordinador/proyectos" class="sb-lnk">
                         <i class="bi bi-folder"></i> Proyectos
-                    </a>
+                    </Link>
 
                     <!-- Tablas Maestras — desplegable -->
                     <div
@@ -104,48 +104,51 @@
                         ></i>
                     </div>
                     <div v-show="menuMaestras">
-                        <a href="/coordinador/tipos-proyecto" class="sb-lnk">
+                        <Link href="/coordinador/tipos-proyecto" class="sb-lnk">
                             <i class="bi bi-tag"></i> Tipos de Proyecto
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/coordinador/maestras/modalidades"
                             class="sb-lnk"
                         >
                             <i class="bi bi-layers"></i> Modalidades
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/coordinador/maestras/tipos-jurado"
                             class="sb-lnk"
                         >
                             <i class="bi bi-person-badge"></i> Tipos de Jurado
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/coordinador/maestras/tipos-beneficiario"
                             class="sb-lnk"
                         >
                             <i class="bi bi-people"></i> Tipos Beneficiario
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/coordinador/maestras/tipos-entregable"
                             class="sb-lnk"
                         >
                             <i class="bi bi-file-earmark"></i> Tipos Entregable
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/coordinador/maestras/tipos-evento-equipo"
                             class="sb-lnk"
                         >
                             <i class="bi bi-calendar-event"></i> Eventos Equipo
-                        </a>
-                        <a href="/coordinador/maestras/turnos" class="sb-lnk">
+                        </Link>
+                        <Link
+                            href="/coordinador/maestras/turnos"
+                            class="sb-lnk"
+                        >
                             <i class="bi bi-clock"></i> Turnos
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/coordinador/maestras/estados-proyecto"
                             class="sb-lnk"
                         >
                             <i class="bi bi-award"></i> Estados Proyecto
-                        </a>
+                        </Link>
                     </div>
 
                     <!-- Académico — desplegable -->
@@ -172,12 +175,15 @@
                         ></i>
                     </div>
                     <div v-show="menuAcademico">
-                        <a href="/coordinador/socializaciones" class="sb-lnk">
+                        <Link
+                            href="/coordinador/socializaciones"
+                            class="sb-lnk"
+                        >
                             <i class="bi bi-mic"></i> Socializaciones
-                        </a>
-                        <a href="/coordinador/resultados" class="sb-lnk">
+                        </Link>
+                        <Link href="/coordinador/resultados" class="sb-lnk">
                             <i class="bi bi-trophy"></i> Resultados
-                        </a>
+                        </Link>
                     </div>
 
                     <!-- Sistema — desplegable -->
@@ -204,38 +210,39 @@
                         ></i>
                     </div>
                     <div v-show="menuSistema">
-                        <a href="/coordinador/reportes" class="sb-lnk">
+                        <Link href="/coordinador/reportes" class="sb-lnk">
                             <i class="bi bi-bar-chart"></i> Reportes
-                        </a>
-                        <a href="/coordinador/cartas" class="sb-lnk">
+                        </Link>
+                        <Link href="/coordinador/cartas" class="sb-lnk">
                             <i class="bi bi-file-earmark-text"></i> Cartas
-                        </a>
-                        <a href="/coordinador/bitacora" class="sb-lnk">
+                        </Link>
+                        <Link href="/coordinador/bitacora" class="sb-lnk">
                             <i class="bi bi-journal-text"></i> Bitácora
-                        </a>
-                        <a href="/coordinador/configuracion" class="sb-lnk">
+                        </Link>
+                        <Link href="/coordinador/configuracion" class="sb-lnk">
                             <i class="bi bi-gear"></i> Configuración
-                        </a>
+                        </Link>
                     </div>
                 </template>
                 <!-- Profesor -->
                 <template v-else>
                     <div class="sb-sec">Principal</div>
-                    <a href="/profesor" class="sb-lnk"
-                        ><i class="bi bi-speedometer2"></i> Dashboard</a
+                    <Link href="/profesor" class="sb-lnk"
+                        ><i class="bi bi-speedometer2"></i> Dashboard</Link
                     >
-                    <a href="/profesor/equipos" class="sb-lnk active"
-                        ><i class="bi bi-people"></i> Mis Equipos</a
+                    <Link href="/profesor/secciones" class="sb-lnk active"
+                        ><i class="bi bi-people"></i> Mis Equipos</Link
                     >
                     <div class="sb-sec">Gestión</div>
-                    <a href="/profesor/puntos-control" class="sb-lnk"
-                        ><i class="bi bi-flag"></i> Puntos de Control</a
+                    <Link href="/profesor/puntos-control" class="sb-lnk"
+                        ><i class="bi bi-flag"></i> Puntos de Control</Link
                     >
-                    <a href="/profesor/socializaciones" class="sb-lnk"
-                        ><i class="bi bi-mic"></i> Socializaciones</a
+                    <Link href="/profesor/socializaciones" class="sb-lnk"
+                        ><i class="bi bi-mic"></i> Socializaciones</Link
                     >
-                    <a href="/profesor/entregables" class="sb-lnk"
-                        ><i class="bi bi-file-earmark-check"></i> Entregables</a
+                    <Link href="/profesor/entregables" class="sb-lnk"
+                        ><i class="bi bi-file-earmark-check"></i>
+                        Entregables</Link
                     >
                 </template>
                 <div style="padding: 0.75rem 1.4rem">
@@ -459,6 +466,14 @@
                                                     class="bi bi-folder2-open"
                                                 ></i
                                             ></a>
+                                            <a
+                                                v-if="equ.resultado_proyecto"
+                                                :href="`${base}/equipos/${equ.equ_id}/paquete-cierre`"
+                                                class="btn btn-sm btn-outline-secondary me-1"
+                                                title="Paquete de cierre (ZIP)"
+                                            >
+                                                <i class="bi bi-file-zip"></i>
+                                            </a>
                                             <button
                                                 class="btn btn-sm btn-outline-primary me-1"
                                                 @click="abrirModalEditar(equ)"
@@ -483,19 +498,6 @@
                                                     class="bi bi-arrow-counterclockwise me-1"
                                                 ></i
                                                 >Reactivar
-                                            </button>
-                                            <button
-                                                @click="
-                                                    router.post(
-                                                        `/coordinador/equipos/${equ.equ_id}/activar`,
-                                                    )
-                                                "
-                                                class="btn btn-sm btn-success"
-                                            >
-                                                <i
-                                                    class="bi bi-check-circle"
-                                                ></i>
-                                                Activar
                                             </button>
                                         </template>
                                     </td>
@@ -675,12 +677,11 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-semibold"
-                                            >N° de Grupo
+                                            >N° de equipo
                                             <span class="text-danger"
                                                 >*</span
                                             ></label
                                         >
-                                        <!-- Número de grupo -->
                                         <input
                                             type="number"
                                             class="form-control form-control-sm"
@@ -695,12 +696,66 @@
                                         />
                                         <div
                                             v-if="errores.equ_numero_grupo"
-                                            class="invalid-feedback"
+                                            class="text-danger small mt-1"
                                         >
                                             {{ errores.equ_numero_grupo }}
                                         </div>
                                     </div>
-                                    <div class="col-md-8">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold"
+                                            >Equipos en la sección
+                                            <span class="text-danger"
+                                                >*</span
+                                            ></label
+                                        >
+                                        <input
+                                            type="number"
+                                            class="form-control form-control-sm"
+                                            v-model="
+                                                formNuevo.equ_total_seccion
+                                            "
+                                            min="1"
+                                            max="99"
+                                            @keypress="
+                                                (e) =>
+                                                    !/[0-9]/.test(e.key) &&
+                                                    e.preventDefault()
+                                            "
+                                        />
+                                        <div
+                                            v-if="errores.equ_total_seccion"
+                                            class="text-danger small mt-1"
+                                        >
+                                            {{ errores.equ_total_seccion }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold"
+                                            >Semestre
+                                            <span class="text-danger"
+                                                >*</span
+                                            ></label
+                                        >
+                                        <input
+                                            type="number"
+                                            class="form-control form-control-sm"
+                                            v-model="formNuevo.equ_semestre"
+                                            min="1"
+                                            max="9"
+                                            @keypress="
+                                                (e) =>
+                                                    !/[0-9]/.test(e.key) &&
+                                                    e.preventDefault()
+                                            "
+                                        />
+                                        <div
+                                            v-if="errores.equ_semestre"
+                                            class="text-danger small mt-1"
+                                        >
+                                            {{ errores.equ_semestre }}
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
                                         <label class="form-label fw-semibold"
                                             >Código generado (automático)</label
                                         >
@@ -782,20 +837,33 @@
                                 >
                                     {{ errores.integrantes }}
                                 </div>
+                                <!-- INFO: una sola vez, fuera del v-for -->
                                 <div
-                                    class="alert py-2 small mb-2"
+                                    class="py-2 px-3 mb-2 small rounded"
                                     style="
-                                        background: rgba(13, 110, 253, 0.08);
+                                        background: rgba(13, 110, 253, 0.06);
                                         border: 1px solid
-                                            rgba(13, 110, 253, 0.2);
-                                        color: var(--text-main);
+                                            rgba(13, 110, 253, 0.15);
+                                        color: var(--text-muted);
                                     "
                                 >
                                     <i
-                                        class="bi bi-info-circle me-1 text-primary"
-                                    ></i
-                                    >El líder recibirá acceso con su cédula como
+                                        class="bi bi-info-circle me-1"
+                                        style="color: #0d6efd"
+                                    ></i>
+                                    El primer estudiante agregado será el líder
+                                    por defecto. Puedes cambiarlo con el radio.
+                                    El líder recibirá acceso con su cédula como
                                     usuario y contraseña.
+                                </div>
+                                <!-- Barra de búsqueda -->
+                                <div class="mb-2">
+                                    <input
+                                        type="text"
+                                        v-model="busquedaEstudiante"
+                                        class="form-control form-control-sm"
+                                        placeholder="🔍 Buscar estudiante por nombre o cédula..."
+                                    />
                                 </div>
                                 <!-- Barra de búsqueda de estudiantes -->
                                 <div class="mb-2">
@@ -930,14 +998,28 @@
 
                                         <div
                                             v-if="mostrarNuevaComunidad"
-                                            class="p-2 mb-2 rounded"
                                             style="
-                                                background: var(--bg-th);
+                                                position: absolute;
+                                                right: 0;
+                                                top: 100%;
+                                                z-index: 100;
+                                                width: 280px;
+                                                background: var(--bg-card);
                                                 border: 1px solid var(--border);
+                                                border-radius: 10px;
+                                                padding: 12px;
+                                                box-shadow: 0 8px 24px
+                                                    rgba(0, 0, 0, 0.15);
                                             "
                                         >
-                                            <p class="small fw-bold mb-2">
-                                                Registrar nueva comunidad
+                                            <p
+                                                class="small fw-bold mb-2"
+                                                style="color: var(--text-main)"
+                                            >
+                                                <i
+                                                    class="bi bi-plus-circle me-1 text-danger"
+                                                ></i
+                                                >Nueva comunidad
                                             </p>
                                             <input
                                                 type="text"
@@ -949,20 +1031,50 @@
                                             />
                                             <input
                                                 type="text"
-                                                class="form-control form-control-sm mb-1"
+                                                class="form-control form-control-sm mb-2"
                                                 v-model="
                                                     nuevaComunidad.com_ubicacion
                                                 "
                                                 placeholder="Ubicación"
                                             />
-                                            <button
-                                                type="button"
-                                                class="btn btn-sm btn-danger w-100"
-                                                @click="guardarNuevaComunidad"
+                                            <select
+                                                class="form-select form-select-sm mb-2"
+                                                v-model="
+                                                    nuevaComunidad.com_id_tor
+                                                "
                                             >
-                                                <i class="bi bi-check2"></i>
-                                                Guardar comunidad
-                                            </button>
+                                                <option value="">
+                                                    Tipo de organización...
+                                                </option>
+                                                <option
+                                                    v-for="t in tiposOrganizacion"
+                                                    :key="t.tor_id"
+                                                    :value="t.tor_id"
+                                                >
+                                                    {{ t.tor_nombre }}
+                                                </option>
+                                            </select>
+                                            <div class="d-flex gap-1">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-danger fw-bold flex-fill"
+                                                    @click="
+                                                        guardarNuevaComunidad
+                                                    "
+                                                >
+                                                    <i class="bi bi-check2"></i>
+                                                    Guardar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-outline-secondary"
+                                                    @click="
+                                                        mostrarNuevaComunidad = false
+                                                    "
+                                                >
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div
@@ -1289,7 +1401,9 @@
                                     }"
                                 />
                                 <div
-                                    v-if="equipoSeleccionado?.proyectoComunidad"
+                                    v-if="
+                                        equipoSeleccionado?.proyecto_comunidad
+                                    "
                                 >
                                     <hr style="border-color: var(--border)" />
                                     <p
@@ -1748,7 +1862,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 
 const props = defineProps({
@@ -1762,6 +1876,8 @@ const props = defineProps({
     modalidades: { type: Array, default: () => [] },
     tipoBeneficiario: { type: Array, default: () => [] },
     puedeCrear: { type: Boolean, default: true },
+    tiposOrganizacion: Array,
+    sede: { type: String, default: "ACA" },
 });
 
 const page = usePage();
@@ -1814,6 +1930,8 @@ const formNuevo = ref({
     equ_titulo: "",
     integrantes: [{ usu_id: "", es_lider: true }],
     justificacion_integrantes: "",
+    equ_total_seccion: "",
+    equ_semestre: "",
 });
 const formEditar = ref({
     equ_titulo: "",
@@ -1823,19 +1941,7 @@ const formEditar = ref({
     pco_resumen: "",
     pco_fecha_limite: "",
 });
-const abrirEditar = (equ) => {
-    equipoSeleccionado.value = equ;
-    formEditar.value = {
-        equ_titulo: equ.equ_titulo,
-        pco_id_com: equ.proyectoComunidad?.pco_id_com ?? "",
-        pco_id_tpr: equ.proyectoComunidad?.pco_id_tpr ?? "",
-        pco_id_mpr: equ.proyectoComunidad?.pco_id_mpr ?? "",
-        pco_resumen: equ.proyectoComunidad?.pco_resumen ?? "",
-        pco_fecha_limite: equ.proyectoComunidad?.pco_fecha_limite ?? "",
-    };
-    mEditar = mEditar || new Modal(document.getElementById("mEditar"));
-    mEditar.show();
-};
+
 const formProyecto = ref({
     pco_id_com: "",
     pco_id_tpr: "",
@@ -1890,15 +1996,40 @@ const seccionSeleccionada = computed(() =>
 const trayectoSeleccionado = computed(
     () => seccionSeleccionada.value?.trayecto?.tra_nombre || "",
 );
+const referenciaSeccion = computed(() => {
+    const secId = formNuevo.value.equ_id_sec;
+    if (!secId) return null;
+    const re = /^[A-Z]+-[A-Z]+(\d)(\d)-[^-]+-(\d+)\/(\d+)$/;
+    const lista = (props.equipos || [])
+        .filter((e) => e.equ_id_sec == secId)
+        .map((e) => re.exec(e.equ_codigo))
+        .filter(Boolean);
+    if (!lista.length) return null;
+    const ult = lista[lista.length - 1];
+    return {
+        semestre: Number(ult[2]),
+        total: Number(ult[4]),
+        usados: lista.map((m) => Number(m[3])),
+    };
+});
+
 const codigoPreview = computed(() => {
     const sec = seccionSeleccionada.value;
-    if (!sec || !formNuevo.value.equ_numero_grupo) return "—";
-    const pnf = sec.trayecto?.pnf?.pnf_siglas || "PNFI";
-    const tra = sec.trayecto?.tra_numero || "";
-    return `${pnf.toUpperCase()}-${sec.sec_codigo}-G${formNuevo.value.equ_numero_grupo}-T${tra}`;
+    const f = formNuevo.value;
+    if (!sec || !f.equ_numero_grupo || !f.equ_semestre || !f.equ_total_seccion)
+        return "—";
+    const pnf = (sec.trayecto?.pnf?.pnf_siglas || "PNFI").toUpperCase();
+    const tra = sec.trayecto?.tra_numero ?? "";
+    return `${pnf}-${props.sede}${tra}${f.equ_semestre}-${sec.sec_codigo}-${f.equ_numero_grupo}/${f.equ_total_seccion}`;
 });
+
 const onSeccionChange = () => {
-    formNuevo.value.equ_numero_grupo = "";
+    const r = referenciaSeccion.value;
+    formNuevo.value.equ_semestre = r ? String(r.semestre) : "";
+    formNuevo.value.equ_total_seccion = r ? String(r.total) : "";
+    formNuevo.value.equ_numero_grupo = r
+        ? String(Math.max(...r.usados) + 1)
+        : "";
 };
 const busquedaEstudiante = ref("");
 
@@ -1910,6 +2041,7 @@ const estudiantesDisponibles = (idActual) => {
     return (
         props.estudiantes?.filter((e) => {
             if (sel.includes(e.usu_id)) return false;
+            if (e.usu_id === idActual) return true;
             if (busquedaEstudiante.value.trim()) {
                 const q = busquedaEstudiante.value.toLowerCase().trim();
                 return (
@@ -1928,8 +2060,14 @@ const actualizarLider = () => {
     });
 };
 const agregarIntegrante = () => {
-    if (formNuevo.value.integrantes.length >= 6) return;
-    formNuevo.value.integrantes.push({ usu_id: "", es_lider: false });
+    const esElPrimero = formNuevo.value.integrantes.length === 0;
+    formNuevo.value.integrantes.push({
+        usu_id: "",
+        es_lider: esElPrimero, // el primero es líder automáticamente
+    });
+    if (esElPrimero) {
+        liderIndex.value = 0;
+    }
 };
 const quitarIntegrante = (idx) => {
     formNuevo.value.integrantes.splice(idx, 1);
@@ -1958,6 +2096,8 @@ const abrirModalCrear = () => {
         equ_numero_grupo: "",
         equ_titulo: "",
         integrantes: [{ usu_id: "", es_lider: true }],
+        equ_total_seccion: "",
+        equ_semestre: "",
     };
     formProyecto.value = {
         pco_id_com: "",
@@ -1974,10 +2114,19 @@ const abrirModalCrear = () => {
 };
 const abrirModalEditar = (equ) => {
     equipoEditando.value = equ;
-    formEditar.value = { equ_titulo: equ.equ_titulo };
-    erroresEditar.value = {};
-    mEditar = mEditar || new Modal(document.getElementById("mEditar"));
-    mEditar.show();
+    equipoSeleccionado.value = equ;
+    const p = equ.proyecto_comunidad;
+    formEditar.value = {
+        equ_titulo: equ.equ_titulo,
+        pco_id_com: p?.pco_id_com ?? "",
+        pco_id_tpr: p?.pco_id_tpr ?? "",
+        pco_id_mpr: p?.pco_id_mpr ?? "",
+        pco_resumen: p?.pco_resumen ?? "",
+        pco_fecha_limite: p?.pco_fecha_limite
+            ? String(p.pco_fecha_limite).slice(0, 10)
+            : "",
+    };
+    // deja aquí las líneas existentes que muestran el modal (mEditar...show())
 };
 const verIntegrantes = (equ) => {
     equipoSeleccionado.value = equ;
@@ -2004,6 +2153,23 @@ const irPaso2 = () => {
         errores.value.equ_numero_grupo = "El número de grupo es obligatorio.";
         return;
     }
+    if (!formNuevo.value.equ_total_seccion) {
+        errores.value.equ_total_seccion =
+            "Indica cuántos equipos tiene la sección.";
+        return;
+    }
+    if (
+        Number(formNuevo.value.equ_total_seccion) <
+        Number(formNuevo.value.equ_numero_grupo)
+    ) {
+        errores.value.equ_total_seccion =
+            "El total no puede ser menor que el N° de equipo.";
+        return;
+    }
+    if (!formNuevo.value.equ_semestre) {
+        errores.value.equ_semestre = "El semestre es obligatorio.";
+        return;
+    }
     if (!formNuevo.value.equ_titulo) {
         errores.value.equ_titulo = "El título es obligatorio.";
         return;
@@ -2022,6 +2188,8 @@ const guardarNuevo = () => {
     loading.value = true;
     const payload = {
         ...formNuevo.value,
+        justificacion_integrantes:
+            formNuevo.value.justificacion_integrantes ?? "",
         proyecto: formProyecto.value.pco_id_com ? formProyecto.value : null,
     };
     router.post(`${base.value}/equipos`, payload, {
@@ -2054,53 +2222,7 @@ const guardarEdicion = () => {
         },
     );
 };
-const guardar = () => {
-    errores.value = {};
 
-    // Validar paso 1
-    if (!formNuevo.value.equ_id_sec) {
-        errores.value.equ_id_sec = "Selecciona una sección.";
-        return;
-    }
-    if (!formNuevo.value.equ_numero_grupo) {
-        errores.value.equ_numero_grupo = "El número de grupo es obligatorio.";
-        return;
-    }
-    if (!formNuevo.value.equ_titulo?.trim()) {
-        errores.value.equ_titulo = "El título es obligatorio.";
-        return;
-    }
-    const sinEstudiante = formNuevo.value.integrantes.some((i) => !i.usu_id);
-    if (sinEstudiante) {
-        errores.value.integrantes =
-            "Todos los campos de integrante deben tener un estudiante seleccionado.";
-        return;
-    }
-    // Validar beneficiarios
-    const bens = formProyecto.value.beneficiarios ?? [];
-    const bensValidos = bens.filter((b) => b.tbe_id && b.cantidad > 0);
-    if (bensValidos.length === 0) {
-        errores.value.beneficiarios =
-            "Debe agregar al menos un beneficiario con cantidad mayor a 0.";
-        return;
-    }
-    // Enviar si todo ok
-    router.post(
-        "/coordinador/equipos",
-        {
-            ...formNuevo.value,
-            proyecto: formProyecto.value,
-        },
-        {
-            onSuccess: () => {
-                mNuevo?.hide();
-            },
-            onError: (e) => {
-                errores.value = e;
-            },
-        },
-    );
-};
 const confirmarDisolver = () => {
     intentoDisolver.value = true;
     if (!motivoDisolucion.value.trim()) return;
@@ -2182,15 +2304,28 @@ const fechaMaxima = computed(() => {
     return d.toISOString().split("T")[0];
 });
 const mostrarNuevaComunidad = ref(false);
-const nuevaComunidad = ref({ com_nombre: "", com_ubicacion: "" });
+const nuevaComunidad = ref({
+    com_nombre: "",
+    com_ubicacion: "",
+    com_id_tor: "",
+});
 
 const guardarNuevaComunidad = () => {
-    if (!nuevaComunidad.value.com_nombre.trim()) return;
-    router.post("/coordinador/comunidades", nuevaComunidad.value, {
+    if (
+        !nuevaComunidad.value.com_nombre.trim() ||
+        !nuevaComunidad.value.com_id_tor
+    )
+        return;
+    const ruta = base.value + "/comunidades";
+    router.post(ruta, nuevaComunidad.value, {
         preserveScroll: true,
         onSuccess: () => {
             mostrarNuevaComunidad.value = false;
-            nuevaComunidad.value = { com_nombre: "", com_ubicacion: "" };
+            nuevaComunidad.value = {
+                com_nombre: "",
+                com_ubicacion: "",
+                com_id_tor: "",
+            };
         },
     });
 };
@@ -2199,7 +2334,7 @@ const nuevoTipo = ref({ tpr_nombre: "" });
 
 const guardarNuevoTipo = () => {
     if (!nuevoTipo.value.tpr_nombre.trim()) return;
-    router.post("/coordinador/tipos-proyecto", nuevoTipo.value, {
+    router.post(`${base.value}/tipos-proyecto`, nuevoTipo.value, {
         preserveScroll: true,
         onSuccess: () => {
             mostrarNuevoTipo.value = false;

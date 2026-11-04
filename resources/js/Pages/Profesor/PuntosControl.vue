@@ -56,7 +56,7 @@
                 <Link href="/profesor" class="sb-lnk"
                     ><i class="bi bi-speedometer2"></i> Dashboard</Link
                 >
-                <Link href="/profesor/secciones" class="sb-link"
+                <Link href="/profesor/secciones" class="sb-lnk"
                     ><i class="bi bi-collection"></i> Mis Secciones</Link
                 >
                 <div class="sb-sec">Gestión</div>
@@ -223,7 +223,11 @@
                                     </td>
                                     <td>
                                         <span
-                                            v-if="puc.seguimiento?.seq_cumplido"
+                                            v-if="
+                                                puc.seguimientos?.some(
+                                                    (s) => s.seq_cumplido,
+                                                )
+                                            "
                                             class="bs ba"
                                             >Cumplido</span
                                         >
@@ -258,9 +262,9 @@
                                             ></i>
                                         </button>
                                         <button
-                                            class="btn btn-sm btn-outline-warning me-1"
+                                            class="btn btn-sm btn-outline-warning rounded-pill"
                                             @click="abrirReprogramar(puc)"
-                                            title="Reprogramar"
+                                            title="Reprogramar fecha"
                                         >
                                             <i class="bi bi-calendar-event"></i>
                                         </button>
@@ -442,7 +446,10 @@
                     </div>
                     <form @submit.prevent="guardarSeguimiento">
                         <div class="modal-body">
-                            <div v-if="pc.seguimientos?.length" class="mt-2">
+                            <div
+                                v-if="puntoActual?.seguimientos?.length"
+                                class="mt-2"
+                            >
                                 <p
                                     class="small fw-bold mb-1"
                                     style="color: var(--text-muted)"
@@ -458,7 +465,8 @@
                                     </thead>
                                     <tbody>
                                         <tr
-                                            v-for="a in pc.seguimientos[0]
+                                            v-for="a in puntoActual
+                                                ?.seguimientos?.[0]
                                                 ?.asistencias"
                                             :key="a.apc_id"
                                         >
@@ -740,7 +748,7 @@ const formSeg = ref({
 });
 const loadingSeg = ref(false);
 const formReprog = ref({ nueva_fecha: "", motivo: "" });
-const puntoActual = ref(null);
+
 const puntoAEliminar = ref(null);
 let mPunto = null;
 let mSeg = null;
@@ -834,6 +842,7 @@ const confirmarEliminar = () => {
     router.delete(`/profesor/puntos-control/${puntoAEliminar.value.puc_id}`);
     mElim?.hide();
 };
+const puntoActual = ref(null);
 </script>
 <style>
 :root {

@@ -154,6 +154,12 @@ class DatabaseSeeder extends Seeder
             ['tno_nombre' => 'Entregable aprobado por el profesor'],
             ['tno_nombre' => 'Entregable rechazado por el profesor'],
             ['tno_nombre' => 'Carta de presentacion aprobada'],
+            ['tno_nombre' => 'Carta invalidada por cambio de comunidad'],
+        ]);
+
+        DB::table('tipo_evento_equipo')->insert([
+            ['tee_nombre' => 'Proyecto asignado'],
+            ['tee_nombre' => 'Proyecto modificado'],
         ]);
 
         // ── PROFESORES ADICIONALES ───────────────────────────────────
@@ -329,21 +335,9 @@ class DatabaseSeeder extends Seeder
             ['pse_id_usu'=>6, 'pse_id_sec'=>7,'pse_fecha_asignacion'=>$hoy,'pse_status'=>true,'pse_id_usu_created'=>1],
         ]);
 
-        $this->command->info('');
-        $this->command->info('✅ Seeder completado.');
-        $this->command->info('');
-        $this->command->info('  coordinador@uptp.edu.ve   |  password123');
-        $this->command->info('  profesor@uptp.edu.ve      |  password123  → Sección 331');
-        $this->command->info('  lider@uptp.edu.ve         |  password123  → Sección 331');
-        $this->command->info('  maria.rodriguez@uptp.edu.ve | password123 → Sección 331');
-        $this->command->info('  jose.martinez@uptp.edu.ve   | password123 → Sección 332');
-        $this->command->info('  ana.gonzalez@uptp.edu.ve    | password123 → Sección 332');
-        $this->command->info('  luis.hernandez@uptp.edu.ve  | password123 → Sección 221');
-        $this->command->info('  carmen.lopez@uptp.edu.ve    | password123 → Sección 221');
-        $this->command->info('  pedro.ramirez@uptp.edu.ve   | password123 → Sección 441');
-        $this->command->info('  luisa.morales@uptp.edu.ve   | password123 → Sección 441');
-        $this->command->info('');
-        $this->command->info('  48 estudiantes distribuidos en 4 secciones.');
-        $this->command->info('  Entra como profesor y crea los equipos desde la interfaz.');
+        $this->command->info('✅ Seeder completado. Se entra con USUARIO (no email) y contraseña password123:');
+        $this->command->info('   coordinador · profesor (secciones 331 y 332) · lider');
+        $this->command->info('   Profesores adicionales: usuario = su cédula (10000004 … 10000012)');
+        $this->command->info('   84 estudiantes en 7 secciones. El líder entra con su cédula al ser designado.');
     }
 }
