@@ -166,8 +166,9 @@ class EquipoController extends Controller
         $request->validate([
             'equ_id_sec'                        => 'required|exists:seccion,sec_id',
             'equ_numero_grupo'                  => 'required|integer|min:1|max:99',
-            'equ_total_seccion' => 'required|integer|min:1|max:99|gte:equ_numero_grupo',
-            'equ_semestre'      => 'required|integer|min:1|max:9',
+            'equ_codigo'                        => 'nullable|string|max:30',
+            'equ_total_seccion'                 => 'nullable|integer|min:1|max:99',
+            'equ_semestre'                      => 'nullable|integer|min:1|max:9',
             'equ_titulo'                        => 'required|string|max:150',
             'integrantes'                       => 'required|array|min:1|max:6',
             'integrantes.*.usu_id'              => 'required|distinct|exists:usuario,usu_id',
@@ -185,9 +186,6 @@ class EquipoController extends Controller
         ], [
             'equ_id_sec.required'                       => 'La sección es obligatoria.',
             'equ_numero_grupo.required'                 => 'El número de grupo es obligatorio.',
-            'equ_total_seccion.required' => 'Indica cuántos equipos tiene la sección.',
-            'equ_total_seccion.gte'      => 'El total de equipos no puede ser menor que el N° de este equipo.',
-            'equ_semestre.required'      => 'El semestre es obligatorio.',
             'equ_titulo.required'                       => 'El título es obligatorio.',
             'integrantes.required'                      => 'Debe agregar al menos un integrante.',
             'integrantes.max'                           => 'El equipo no puede tener más de 6 integrantes.',
@@ -230,41 +228,18 @@ class EquipoController extends Controller
             ]);
         }
 
-        // Código oficial del PST: PNFI-ACA11-131-1/7
+        // Generación estándar y limpia del código del equipo
         $trayecto = $seccion->trayecto;
         $numero   = (int) $request->equ_numero_grupo;
-        $total    = (int) $request->equ_total_seccion;
-        $semestre = (int) $request->equ_semestre;
         $pnf      = strtoupper($trayecto->pnf?->pnf_siglas ?? 'PNFI');
-        $codigo   = "{$pnf}-" . config('siscon.sede', 'ACA')
-                . "{$trayecto->tra_numero}{$semestre}-{$seccion->sec_codigo}-{$numero}/{$total}";
 
-        $existentes = Equipo::where('equ_id_sec', $seccion->sec_id)->get(['equ_codigo', 'equ_status'])
-            ->map(function ($e) {
-                if (!preg_match('#^[A-Z]+-[A-Z]+(\d)(\d)-[^-]+-(\d+)/(\d+)$#', $e->equ_codigo, $m)) {
-                    return null;
-                }
-                return ['activo' => (bool) $e->equ_status, 'semestre' => (int) $m[2], 'n' => (int) $m[3], 'total' => (int) $m[4]];
-            })->filter();
-
-        if ($existentes->contains('n', $numero)) {
-            return back()->withErrors(['equ_numero_grupo' => "Ya existe el equipo N° {$numero} en esta sección (puede estar disuelto)."]);
+        if (!empty($request->equ_codigo) && trim($request->equ_codigo) !== '') {
+            $codigo = trim($request->equ_codigo);
+        } else {
+            $codigo = "{$pnf}-{$seccion->sec_codigo}-G{$numero}-T{$trayecto->tra_numero}";
         }
 
-        $ref = $existentes->where('activo', true)->last();
-        if ($ref) {
-            if ($ref['semestre'] !== $semestre) {
-                return back()->withErrors([
-                    'equ_semestre' => "Los demás equipos de la sección usan semestre {$ref['semestre']}. Usa el mismo valor.",
-                ]);
-            }
-            if ($total < $ref['total'] && $total < count($existentes)) {
-                return back()->withErrors([
-                    'equ_total_seccion' => "El total de equipos ({$total}) no puede ser menor a los equipos ya registrados en esta sección ({$ref['total']}).",
-                ]);
-            }
-        }
-
+        // Validar que el código no esté duplicado
         if (Equipo::where('equ_codigo', $codigo)->exists()) {
             return back()->withErrors(['equ_numero_grupo' => "Ya existe un equipo con el código {$codigo}."]);
         }
@@ -278,15 +253,11 @@ class EquipoController extends Controller
             return back()->withErrors(['integrantes' => "El estudiante {$n} ya pertenece a otro equipo activo."]);
         }
 
-        // Proyecto opcional: se valida ANTES de crear nada
+        // Proyecto opcional: si se eligen comunidad y tipo, se crea el proyecto; beneficiarios son opcionales
         $proy          = $request->input('proyecto', []);
         $crearProyecto = !empty($proy['pco_id_com']) && !empty($proy['pco_id_tpr']);
         $beneficiarios = collect($proy['beneficiarios'] ?? [])
             ->filter(fn($b) => !empty($b['tbe_id']) && (int) ($b['cantidad'] ?? 0) > 0)->values();
-
-        if ($crearProyecto && $beneficiarios->isEmpty()) {
-            return back()->withErrors(['proyecto.beneficiarios' => 'Debe agregar al menos un tipo de beneficiario con cantidad mayor a 0.']);
-        }
 
         DB::transaction(function () use ($request, $seccion, $trayecto, $codigo, $integrantes, $total, $crearProyecto, $proy, $beneficiarios) {
             $equipo = Equipo::create([
@@ -970,5 +941,36 @@ class EquipoController extends Controller
         });
 
         return back()->with('success', "Equipo {$equipo->equ_codigo} reactivado correctamente.");
+    }
+
+    public function historialAcademico($id)
+    {
+        $user = auth()->user();
+
+        $equipo = Equipo::with([
+            'seccion.trayecto.pnf',
+            'trayecto',
+            'integrantes.usuario',
+            'proyectoComunidad.comunidad',
+            'proyectoComunidad.tipoProyecto',
+            'proyectoComunidad.modalidad',
+            'puntosControl.seguimientos.asistencias.usuario',
+            'puntosControl.jurados.usuario',
+            'entregables.tipoEntregable',
+            'entregables.puntoControl',
+            'socializaciones.tipoSocializacion',
+            'socializaciones.jurados.usuario',
+            'socializaciones.integrantes.usuario',
+            'resultadoProyecto.estadoProyecto',
+        ])->findOrFail($id);
+
+        if ($user->esProfesor()) {
+            $seccionesProfesor = $user->seccionesProfesor()->where('pse_status', true)->pluck('pse_id_sec');
+            abort_unless($seccionesProfesor->contains($equipo->equ_id_sec), 403, 'No tienes acceso a este equipo.');
+        }
+
+        return response()->json([
+            'equipo' => $equipo,
+        ]);
     }
 }

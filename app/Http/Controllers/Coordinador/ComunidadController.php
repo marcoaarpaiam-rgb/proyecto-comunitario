@@ -46,6 +46,13 @@ class ComunidadController extends Controller
             'com_id_usu_created' => auth()->id(),
         ]);
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success'   => true,
+                'comunidad' => $comunidad->load('tipoOrganizacion'),
+            ]);
+        }
+
         return back()->with('success', 'Comunidad registrada correctamente.')->with('nueva_comunidad_id', $comunidad->com_id);
     }
 

@@ -395,4 +395,33 @@ class LiderController extends Controller
 
         return back()->with('success', 'Tutor asignado correctamente.');
     }
+
+    public function historialAcademico()
+    {
+        $equipo = $this->getEquipo();
+        if (!$equipo) {
+            return redirect()->route('lider.dashboard');
+        }
+
+        $equipoCompleto = Equipo::with([
+            'seccion.trayecto.pnf',
+            'trayecto',
+            'integrantes.usuario',
+            'proyectoComunidad.comunidad',
+            'proyectoComunidad.tipoProyecto',
+            'proyectoComunidad.modalidad',
+            'puntosControl.seguimientos.asistencias.usuario',
+            'puntosControl.jurados.usuario',
+            'entregables.tipoEntregable',
+            'entregables.puntoControl',
+            'socializaciones.tipoSocializacion',
+            'socializaciones.jurados.usuario',
+            'socializaciones.integrantes.usuario',
+            'resultadoProyecto.estadoProyecto',
+        ])->find($equipo->equ_id);
+
+        return Inertia::render('Lider/HistorialAcademico', [
+            'equipo' => $equipoCompleto,
+        ]);
+    }
 }

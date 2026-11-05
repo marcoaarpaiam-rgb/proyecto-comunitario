@@ -2,14 +2,18 @@
     <div
         class="min-vh-100 d-flex align-items-center justify-content-center bg-light"
     >
-        <div class="card shadow" style="width: 420px">
+        <div class="card shadow border-0 overflow-hidden" style="width: 420px; border-radius: 12px;">
             <div
-                class="card-header text-white text-center py-4"
+                class="card-header text-white text-center py-4 border-0 position-relative"
                 style="background-color: #1f3864"
             >
                 <h4 class="mb-1 fw-bold">Sistema de Proyectos</h4>
-                <small>PNF Informática — UPTP Juan de Jesús Montilla</small>
+                <small class="text-white-50">PNF Informática — UPTP Juan de Jesús Montilla</small>
             </div>
+            <!-- Barra de progreso fluida y sutil -->
+            <div v-if="loading" class="login-progress-bar"></div>
+            <div v-else style="height: 3px; background: transparent;"></div>
+
             <div class="card-body p-4">
                 <form @submit.prevent="submit">
                     <div class="mb-3">
@@ -60,7 +64,7 @@
                 </form>
             </div>
             <div
-                class="card-footer text-center text-muted py-3"
+                class="card-footer text-center text-muted py-3 bg-white border-0"
                 style="font-size: 0.8rem"
             >
                 © 2026 UPTP Juan de Jesús Montilla
@@ -72,7 +76,7 @@
 <script setup>
 import { ref } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
-import NProgress from "nprogress";
+
 const page = usePage();
 const errors = ref(page.props.errors || {});
 
@@ -85,7 +89,6 @@ const loading = ref(false);
 
 const submit = () => {
     loading.value = true;
-    NProgress.start(); // AGREGAR ESTA LÍNEA
     errors.value = {};
     router.post(
         "/login",
@@ -97,11 +100,9 @@ const submit = () => {
             onError: (e) => {
                 errors.value = e;
                 loading.value = false;
-                NProgress.done(); // AGREGAR ESTA LÍNEA
             },
             onFinish: () => {
                 loading.value = false;
-                NProgress.done(); // AGREGAR ESTA LÍNEA
             },
         },
     );

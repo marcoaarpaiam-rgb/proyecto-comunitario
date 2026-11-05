@@ -254,6 +254,10 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         [EquipoController::class, 'historial'])
         ->name('equipos.historial');
 
+    Route::get('equipos/{id}/historial-academico',
+        [EquipoController::class, 'historialAcademico'])
+        ->name('equipos.historial-academico');
+
     
     Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
         ->name('equipos.expediente');
@@ -397,6 +401,10 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::get('equipos/{equipoId}/historial',
         [EquipoController::class, 'historial'])
         ->name('equipos.historial');
+
+    Route::get('equipos/{id}/historial-academico',
+        [EquipoController::class, 'historialAcademico'])
+        ->name('equipos.historial-academico');
     
 
     Route::post('equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
@@ -431,6 +439,10 @@ Route::middleware(['auth', 'rol:lider'])
     Route::post('entregables',
         [App\Http\Controllers\Lider\LiderController::class, 'subirEntregable'])
         ->name('entregables.store');
+
+    Route::get('historial-academico',
+        [App\Http\Controllers\Lider\LiderController::class, 'historialAcademico'])
+        ->name('historial-academico');
     
 
     Route::get('carta', function () {

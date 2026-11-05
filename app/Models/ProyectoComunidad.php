@@ -48,6 +48,11 @@ class ProyectoComunidad extends Model
         return $this->belongsTo(ModalidadProyecto::class, 'pco_id_mpr', 'mpr_id');
     }
 
+    public function modalidadProyecto()
+    {
+        return $this->modalidad();
+    }
+
     public function proyectoPrevio()
     {
         return $this->belongsTo(ProyectoComunidad::class, 'pco_id_pco_previo', 'pco_id');

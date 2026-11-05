@@ -76,7 +76,7 @@
                 <!-- Tablas Maestras — desplegable -->
                 <div
                     class="sb-sec sb-toggle"
-                    @click="menuMaestras = !menuMaestras"
+                    @click="toggleMenuMaestras"
                     style="
                         cursor: pointer;
                         display: flex;
@@ -539,6 +539,18 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal Confirmación Cerrar Sesión -->
+        <ModalConfirmar
+            ref="modalLogout"
+            titulo="Cerrar Sesión"
+            mensaje="¿Estás seguro de que deseas cerrar sesión en el sistema?"
+            icono="🚪"
+            textoConfirmar="Sí, cerrar sesión"
+            textoCancelar="Cancelar"
+            colorConfirmar="#dc3545"
+            @confirmar="ejecutarLogout"
+        />
     </div>
 </template>
 
@@ -547,6 +559,20 @@ import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
+import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+
+const esRutaMaestra = typeof window !== "undefined" && (
+    window.location.pathname.includes("/coordinador/maestras") ||
+    window.location.pathname.includes("/coordinador/tipos-proyecto")
+);
+const menuMaestras = ref(esRutaMaestra || localStorage.getItem("coord-menu-maestras") === "true");
+const menuAcademico = ref(localStorage.getItem("coord-menu-academico") === "true");
+const menuSistema = ref(localStorage.getItem("coord-menu-sistema") === "true");
+
+const toggleMenuMaestras = () => {
+    menuMaestras.value = !menuMaestras.value;
+    localStorage.setItem("coord-menu-maestras", menuMaestras.value ? "true" : "false");
+};
 
 const props = defineProps({ registros: Array, config: Object, tabla: String });
 const page = usePage();
@@ -556,7 +582,14 @@ const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem("coord-theme", tema.value);
 };
-const logout = () => router.post("/logout");
+
+const modalLogout = ref(null);
+const logout = () => {
+    modalLogout.value?.abrir();
+};
+const ejecutarLogout = () => {
+    router.post("/logout");
+};
 const iniciales = computed(() => {
     const u = page.props.auth.user;
     return (
@@ -648,9 +681,6 @@ const reactivar = (reg) => {
         `/coordinador/maestras/${props.tabla}/${reg[props.config.pk]}/reactivar`,
     );
 };
-const menuMaestras = ref(false);
-const menuAcademico = ref(false);
-const menuSistema = ref(false);
 </script>
 <style>
 :root {

@@ -27,4 +27,9 @@ class AsistenciaPuntoControl extends Model
     {
         return $this->belongsTo(Usuario::class, 'apc_id_usu', 'usu_id');
     }
+
+    public function estudiante()
+    {
+        return $this->usuario();
+    }
 }

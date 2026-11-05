@@ -98,6 +98,9 @@
                 <Link href="/lider/carta" class="sb-lnk"
                     ><i class="bi bi-send"></i> Carta de Presentación</Link
                 >
+                <Link href="/lider/historial-academico" class="sb-lnk"
+                    ><i class="bi bi-mortarboard"></i> Historial Académico</Link
+                >
                 <div style="padding: 0.75rem 1.4rem">
                     <form @submit.prevent="logout">
                         <button
@@ -548,12 +551,26 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal Confirmación Cerrar Sesión -->
+        <ModalConfirmar
+            ref="modalLogout"
+            titulo="Cerrar Sesión"
+            mensaje="¿Estás seguro de que deseas cerrar sesión en el sistema?"
+            icono="🚪"
+            textoConfirmar="Sí, cerrar sesión"
+            textoCancelar="Cancelar"
+            colorConfirmar="#dc3545"
+            @confirmar="ejecutarLogout"
+        />
     </div>
 </template>
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
+import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
@@ -561,7 +578,14 @@ const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem("lid-theme", tema.value);
 };
-const logout = () => router.post("/logout");
+
+const modalLogout = ref(null);
+const logout = () => {
+    modalLogout.value?.abrir();
+};
+const ejecutarLogout = () => {
+    router.post("/logout");
+};
 const iniciales = computed(() => {
     const u = page.props.auth.user;
     return (

@@ -1,9 +1,9 @@
 import "./bootstrap";
-import "../css/app.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap";
+import "bootstrap-icons/font/bootstrap-icons.css";
 import "nprogress/nprogress.css";
+import "../css/app.css";
+import "bootstrap";
 
 import NProgress from "nprogress";
 import { createApp, h } from "vue";

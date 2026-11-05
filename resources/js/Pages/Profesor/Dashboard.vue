@@ -561,6 +561,17 @@
                 </div>
             </div>
         </div>
+        <!-- Modal Confirmación Cerrar Sesión -->
+        <ModalConfirmar
+            ref="modalLogout"
+            titulo="Cerrar Sesión"
+            mensaje="¿Estás seguro de que deseas cerrar sesión en el sistema?"
+            icono="🚪"
+            textoConfirmar="Sí, cerrar sesión"
+            textoCancelar="Cancelar"
+            colorConfirmar="#dc3545"
+            @confirmar="ejecutarLogout"
+        />
     </div>
 </template>
 
@@ -568,6 +579,7 @@
 import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
+import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 const props = defineProps({
     stats: {
         type: Object,
@@ -601,7 +613,13 @@ const toggleTema = () => {
     localStorage.setItem("prof-theme", tema.value);
 };
 
-const logout = () => router.post("/logout");
+const modalLogout = ref(null);
+const logout = () => {
+    modalLogout.value?.abrir();
+};
+const ejecutarLogout = () => {
+    router.post("/logout");
+};
 const mostrarNotif = ref(false);
 const paginaActual = ref(1);
 const equiposPorPagina = 5;

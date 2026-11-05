@@ -83,7 +83,7 @@
                     <!-- Tablas Maestras — desplegable -->
                     <div
                         class="sb-sec sb-toggle"
-                        @click="menuMaestras = !menuMaestras"
+                        @click="toggleMenuMaestras"
                         style="
                             cursor: pointer;
                             display: flex;
@@ -489,6 +489,13 @@
                                                     class="bi bi-folder2-open"
                                                 ></i
                                             ></a>
+                                            <button
+                                                class="btn btn-sm btn-outline-warning me-1"
+                                                @click="abrirHistorialAcademico(equ)"
+                                                title="Historial Académico"
+                                            >
+                                                <i class="bi bi-mortarboard-fill"></i>
+                                            </button>
                                             <a
                                                 v-if="equ.resultado_proyecto"
                                                 :href="`${base}/equipos/${equ.equ_id}/paquete-cierre`"
@@ -707,7 +714,7 @@
                                         >
                                         <input
                                             type="number"
-                                            class="form-control form-control-sm"
+                                            class="form-control"
                                             v-model="formNuevo.equ_numero_grupo"
                                             min="1"
                                             max="99"
@@ -724,61 +731,7 @@
                                             {{ errores.equ_numero_grupo }}
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-semibold"
-                                            >Equipos en la sección
-                                            <span class="text-danger"
-                                                >*</span
-                                            ></label
-                                        >
-                                        <input
-                                            type="number"
-                                            class="form-control form-control-sm"
-                                            v-model="
-                                                formNuevo.equ_total_seccion
-                                            "
-                                            min="1"
-                                            max="99"
-                                            @keypress="
-                                                (e) =>
-                                                    !/[0-9]/.test(e.key) &&
-                                                    e.preventDefault()
-                                            "
-                                        />
-                                        <div
-                                            v-if="errores.equ_total_seccion"
-                                            class="text-danger small mt-1"
-                                        >
-                                            {{ errores.equ_total_seccion }}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-semibold"
-                                            >Semestre
-                                            <span class="text-danger"
-                                                >*</span
-                                            ></label
-                                        >
-                                        <input
-                                            type="number"
-                                            class="form-control form-control-sm"
-                                            v-model="formNuevo.equ_semestre"
-                                            min="1"
-                                            max="9"
-                                            @keypress="
-                                                (e) =>
-                                                    !/[0-9]/.test(e.key) &&
-                                                    e.preventDefault()
-                                            "
-                                        />
-                                        <div
-                                            v-if="errores.equ_semestre"
-                                            class="text-danger small mt-1"
-                                        >
-                                            {{ errores.equ_semestre }}
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
+                                    <div class="col-md-8">
                                         <label class="form-label fw-semibold"
                                             >Código generado (automático)</label
                                         >
@@ -1048,29 +1001,24 @@
 
                                         <div
                                             v-if="mostrarNuevaComunidad"
+                                            class="mt-2 p-3 rounded"
                                             style="
-                                                position: absolute;
-                                                right: 0;
-                                                top: 100%;
-                                                z-index: 100;
-                                                width: 280px;
                                                 background: var(--bg-card);
-                                                border: 1px solid var(--border);
-                                                border-radius: 10px;
-                                                padding: 12px;
-                                                box-shadow: 0 8px 24px
-                                                    rgba(0, 0, 0, 0.15);
+                                                border: 1px dashed #dc3545;
                                             "
                                         >
-                                            <p
-                                                class="small fw-bold mb-2"
-                                                style="color: var(--text-main)"
-                                            >
-                                                <i
-                                                    class="bi bi-plus-circle me-1 text-danger"
-                                                ></i
-                                                >Nueva comunidad
-                                            </p>
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <span class="small fw-bold" style="color: var(--text-main)">
+                                                    <i class="bi bi-plus-circle me-1 text-danger"></i>Registrar Nueva Comunidad
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm text-muted p-0"
+                                                    @click="mostrarNuevaComunidad = false"
+                                                >
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </div>
                                             <div
                                                 v-if="erroresNuevaComunidad.com_nombre"
                                                 class="text-danger small mb-1"
@@ -1079,11 +1027,11 @@
                                             </div>
                                             <input
                                                 type="text"
-                                                class="form-control form-control-sm mb-1"
+                                                class="form-control form-control-sm mb-2"
                                                 v-model="
                                                     nuevaComunidad.com_nombre
                                                 "
-                                                placeholder="Nombre de la comunidad"
+                                                placeholder="Nombre de la comunidad *"
                                             />
                                             <input
                                                 type="text"
@@ -1106,7 +1054,7 @@
                                                 "
                                             >
                                                 <option value="">
-                                                    Tipo de organización...
+                                                    Seleccione tipo de organización *
                                                 </option>
                                                 <option
                                                     v-for="t in tiposOrganizacion"
@@ -1116,7 +1064,7 @@
                                                     {{ t.tor_nombre }}
                                                 </option>
                                             </select>
-                                            <div class="d-flex gap-1">
+                                            <div class="d-flex gap-2">
                                                 <button
                                                     type="button"
                                                     class="btn btn-sm btn-danger fw-bold flex-fill"
@@ -1129,8 +1077,8 @@
                                                         v-if="guardandoComunidad"
                                                         class="spinner-border spinner-border-sm me-1"
                                                     ></span>
-                                                    <i v-else class="bi bi-check2"></i>
-                                                    Guardar
+                                                    <i v-else class="bi bi-check2 me-1"></i>
+                                                    Guardar Comunidad
                                                 </button>
                                                 <button
                                                     type="button"
@@ -1139,7 +1087,7 @@
                                                         mostrarNuevaComunidad = false
                                                     "
                                                 >
-                                                    <i class="bi bi-x"></i>
+                                                    Cancelar
                                                 </button>
                                             </div>
                                         </div>
@@ -2060,6 +2008,281 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal Historial Académico -->
+        <div class="modal fade" id="mHistorialAcademico" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg overflow-hidden" style="background: var(--bg-card); border-radius: 12px;">
+                    <div class="mh" style="background: #1a1d23; border-bottom: 2px solid #dc3545; padding: 1.1rem 1.4rem;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 34px; height: 34px; background: #dc3545; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800;">
+                                <i class="bi bi-mortarboard-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 text-white fw-bold">Historial Académico del Equipo</h5>
+                                <small class="text-white-50" v-if="equipoHistorial">
+                                    <span class="badge bg-danger me-1">{{ equipoHistorial.equ_codigo }}</span> {{ equipoHistorial.equ_titulo }}
+                                </small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm text-white p-0 fs-5" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div v-if="cargandoHistorialAcademico" class="text-center py-5">
+                            <div class="spinner-border text-danger" role="status"></div>
+                            <p class="text-muted mt-2">Cargando historial académico...</p>
+                        </div>
+                        <template v-else-if="equipoHistorial">
+                            <!-- Resumen del Equipo -->
+                            <div class="sc mb-3 p-3" style="border-left: 4px solid #dc3545 !important;">
+                                <div class="row g-3 text-center text-md-start">
+                                    <div class="col-md-3">
+                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Sección & Trayecto</span>
+                                        <span class="fw-bold" style="color: var(--text-main);">{{ equipoHistorial.seccion?.sec_codigo }} — {{ equipoHistorial.trayecto?.tra_nombre }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Comunidad</span>
+                                        <span class="fw-bold" style="color: var(--text-main);">{{ equipoHistorial.proyecto_comunidad?.comunidad?.com_nombre || 'Sin asignar' }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Tipo de Proyecto</span>
+                                        <span class="fw-bold" style="color: var(--text-main);">{{ equipoHistorial.proyecto_comunidad?.tipo_proyecto?.tpr_nombre || 'Sin definir' }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Estado del Proyecto</span>
+                                        <span class="bs" :class="equipoHistorial.resultado_proyecto?.estado_proyecto?.epr_nombre === 'Aprobado' ? 'ba' : 'bd'">
+                                            {{ equipoHistorial.resultado_proyecto?.estado_proyecto?.epr_nombre || 'En Desarrollo' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Navegación por pestañas (Rojo, Negro y Blanco) -->
+                            <div class="d-flex gap-2 mb-3 pb-2 overflow-x-auto" style="border-bottom: 1px solid var(--border);">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm fw-bold px-3 py-2 rounded-3"
+                                    :style="tabHistorial === 'puntos' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    @click="tabHistorial = 'puntos'"
+                                >
+                                    <i class="bi bi-flag me-1"></i> Puntos de Control ({{ equipoHistorial.puntos_control?.length || 0 }})
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm fw-bold px-3 py-2 rounded-3"
+                                    :style="tabHistorial === 'entregables' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    @click="tabHistorial = 'entregables'"
+                                >
+                                    <i class="bi bi-file-earmark-check me-1"></i> Entregables ({{ equipoHistorial.entregables?.length || 0 }})
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm fw-bold px-3 py-2 rounded-3"
+                                    :style="tabHistorial === 'socializaciones' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    @click="tabHistorial = 'socializaciones'"
+                                >
+                                    <i class="bi bi-people me-1"></i> Socializaciones ({{ equipoHistorial.socializaciones?.length || 0 }})
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm fw-bold px-3 py-2 rounded-3"
+                                    :style="tabHistorial === 'integrantes' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    @click="tabHistorial = 'integrantes'"
+                                >
+                                    <i class="bi bi-person-lines-fill me-1"></i> Integrantes ({{ equipoHistorial.integrantes?.length || 0 }})
+                                </button>
+                            </div>
+
+                            <!-- Contenido Pestaña 1: Puntos de Control -->
+                            <div v-if="tabHistorial === 'puntos'">
+                                <div v-if="!equipoHistorial.puntos_control || equipoHistorial.puntos_control.length === 0" class="text-center py-4 text-muted">
+                                    <i class="bi bi-info-circle fs-3 d-block mb-2 text-danger"></i>
+                                    No hay puntos de control registrados para este equipo.
+                                </div>
+                                <div v-else class="sc">
+                                    <div class="table-responsive">
+                                        <table class="ct">
+                                            <thead>
+                                                <tr>
+                                                    <th>N°</th>
+                                                    <th>Punto de Control</th>
+                                                    <th>Fecha Límite</th>
+                                                    <th>Estado</th>
+                                                    <th>Observaciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="(puc, idx) in equipoHistorial.puntos_control" :key="puc.puc_id">
+                                                    <td><span class="bs bsec">{{ puc.puc_orden || idx + 1 }}</span></td>
+                                                    <td>
+                                                        <div class="fw-bold">{{ puc.puc_nombre }}</div>
+                                                        <small class="text-muted" v-if="puc.puc_descripcion">{{ puc.puc_descripcion }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <span>{{ puc.puc_fecha_reprogramada || puc.puc_fecha_limite }}</span>
+                                                        <span v-if="puc.puc_fecha_reprogramada" class="bs bw ms-1">Reprogramada</span>
+                                                    </td>
+                                                    <td>
+                                                        <span v-if="puc.seguimientos && puc.seguimientos.length > 0 && puc.seguimientos[0].seq_cumplido" class="bs ba">
+                                                            <i class="bi bi-check-circle me-1"></i>Cumplido
+                                                        </span>
+                                                        <span v-else-if="puc.seguimientos && puc.seguimientos.length > 0 && puc.seguimientos[0].seq_cumplido === false" class="bs bd">
+                                                            <i class="bi bi-x-circle me-1"></i>No Cumplido
+                                                        </span>
+                                                        <span v-else class="bs bw">
+                                                            <i class="bi bi-clock me-1"></i>Pendiente
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <small v-if="puc.seguimientos && puc.seguimientos.length > 0 && puc.seguimientos[0].seq_observaciones">
+                                                            {{ puc.seguimientos[0].seq_observaciones }}
+                                                        </small>
+                                                        <small v-else class="text-muted">—</small>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contenido Pestaña 2: Entregables -->
+                            <div v-if="tabHistorial === 'entregables'">
+                                <div v-if="!equipoHistorial.entregables || equipoHistorial.entregables.length === 0" class="text-center py-4 text-muted">
+                                    <i class="bi bi-info-circle fs-3 d-block mb-2 text-danger"></i>
+                                    No hay entregables subidos por este equipo.
+                                </div>
+                                <div v-else class="sc">
+                                    <div class="table-responsive">
+                                        <table class="ct">
+                                            <thead>
+                                                <tr>
+                                                    <th>Tipo / Archivo</th>
+                                                    <th>Punto de Control</th>
+                                                    <th>Versión</th>
+                                                    <th>Estado</th>
+                                                    <th class="text-end pe-3">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="ent in equipoHistorial.entregables" :key="ent.entr_id">
+                                                    <td>
+                                                        <div class="fw-bold">{{ ent.tipo_entregable?.tet_nombre || 'Entregable' }}</div>
+                                                        <small class="text-muted"><i class="bi bi-file-earmark me-1"></i>{{ ent.entr_nombre_archivo }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <span v-if="ent.punto_control" class="bs bsec">{{ ent.punto_control.puc_nombre }}</span>
+                                                        <span v-else class="text-muted">—</span>
+                                                    </td>
+                                                    <td><span class="bs bsec">v{{ ent.entr_version || 1 }}</span></td>
+                                                    <td>
+                                                        <span v-if="ent.entr_aprobado === true" class="bs ba">Aprobado</span>
+                                                        <span v-else-if="ent.entr_aprobado === false" class="bs bd">Rechazado</span>
+                                                        <span v-else class="bs bw">En Revisión</span>
+                                                    </td>
+                                                    <td class="text-end pe-3">
+                                                        <a v-if="ent.entr_ruta" :href="`/storage/${ent.entr_ruta}`" target="_blank" class="btn btn-sm btn-outline-danger">
+                                                            <i class="bi bi-download me-1"></i>Descargar
+                                                        </a>
+                                                        <span v-else class="text-muted">—</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contenido Pestaña 3: Socializaciones -->
+                            <div v-if="tabHistorial === 'socializaciones'">
+                                <div v-if="!equipoHistorial.socializaciones || equipoHistorial.socializaciones.length === 0" class="text-center py-4 text-muted">
+                                    <i class="bi bi-info-circle fs-3 d-block mb-2 text-danger"></i>
+                                    No hay socializaciones registradas para este equipo.
+                                </div>
+                                <div v-else class="row g-3">
+                                    <div v-for="soc in equipoHistorial.socializaciones" :key="soc.soc_id" class="col-md-6">
+                                        <div class="sc h-100 p-3" style="border-left: 3px solid #dc3545 !important;">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="fw-bold mb-0" style="color: var(--text-main);">{{ soc.tipo_socializacion?.tso_nombre || 'Socialización' }}</h6>
+                                                <span v-if="soc.soc_apto === true" class="bs ba">Apto</span>
+                                                <span v-else-if="soc.soc_apto === false" class="bs bd">No Apto</span>
+                                                <span v-else class="bs bw">Pendiente</span>
+                                            </div>
+                                            <div class="small text-muted mb-2">
+                                                <div><i class="bi bi-calendar-event me-1 text-danger"></i>{{ soc.soc_fecha }} a las {{ soc.soc_hora }}</div>
+                                                <div><i class="bi bi-geo-alt me-1 text-danger"></i>{{ soc.soc_lugar }}</div>
+                                            </div>
+                                            <div v-if="soc.soc_observaciones" class="p-2 rounded small mb-2" style="background: var(--bg-th); border: 1px solid var(--border);">
+                                                <strong>Observaciones:</strong> {{ soc.soc_observaciones }}
+                                            </div>
+                                            <div v-if="soc.jurados && soc.jurados.length > 0">
+                                                <small class="fw-semibold text-muted d-block mb-1">Jurados:</small>
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    <span v-for="j in soc.jurados" :key="j.jso_id" class="bs bsec">
+                                                        {{ j.usuario?.usu_primer_nombre }} {{ j.usuario?.usu_primer_apellido }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contenido Pestaña 4: Integrantes -->
+                            <div v-if="tabHistorial === 'integrantes'">
+                                <div class="sc">
+                                    <div class="table-responsive">
+                                        <table class="ct">
+                                            <thead>
+                                                <tr>
+                                                    <th>Cédula</th>
+                                                    <th>Estudiante</th>
+                                                    <th>Rol en Equipo</th>
+                                                    <th>Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="integ in equipoHistorial.integrantes" :key="integ.ein_id">
+                                                    <td>{{ integ.usuario?.usu_cedula }}</td>
+                                                    <td class="fw-bold">{{ integ.usuario?.usu_primer_nombre }} {{ integ.usuario?.usu_primer_apellido }}</td>
+                                                    <td>
+                                                        <span v-if="integ.ein_es_lider" class="bs bd">
+                                                            <i class="bi bi-star-fill me-1 text-warning"></i>Líder
+                                                        </span>
+                                                        <span v-else class="bs bsec">Integrante</span>
+                                                    </td>
+                                                    <td>
+                                                        <span v-if="integ.ein_status" class="bs ba">Activo</span>
+                                                        <span v-else class="bs bsec">Retirado</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="modal-footer" style="background: var(--bg-th); border-top: 1px solid var(--border);">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Confirmación Cerrar Sesión -->
+        <ModalConfirmar
+            ref="modalLogout"
+            titulo="Cerrar Sesión"
+            mensaje="¿Estás seguro de que deseas cerrar sesión en el sistema?"
+            icono="🚪"
+            textoConfirmar="Sí, cerrar sesión"
+            textoCancelar="Cancelar"
+            colorConfirmar="#dc3545"
+            @confirmar="ejecutarLogout"
+        />
     </div>
 </template>
 
@@ -2067,6 +2290,7 @@
 import { ref, computed, watch } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
+import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 
 const props = defineProps({
     equipos: Array,
@@ -2100,7 +2324,43 @@ const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem(k, tema.value);
 };
-const logout = () => router.post("/logout");
+
+const modalLogout = ref(null);
+const logout = () => {
+    modalLogout.value?.abrir();
+};
+const ejecutarLogout = () => {
+    router.post("/logout");
+};
+
+// Historial Académico
+const equipoHistorial = ref(null);
+const cargandoHistorialAcademico = ref(false);
+const tabHistorial = ref("puntos");
+
+const abrirHistorialAcademico = async (equ) => {
+    cargandoHistorialAcademico.value = true;
+    equipoHistorial.value = equ;
+    tabHistorial.value = "puntos";
+
+    const modalEl = document.getElementById("mHistorialAcademico");
+    if (modalEl) {
+        const bsModal = Modal.getInstance(modalEl) || new Modal(modalEl);
+        bsModal.show();
+    }
+
+    try {
+        const ruta = `${base.value}/equipos/${equ.equ_id}/historial-academico`;
+        const res = await window.axios.get(ruta);
+        if (res.data?.equipo) {
+            equipoHistorial.value = res.data.equipo;
+        }
+    } catch (e) {
+        console.error("Error al cargar historial académico", e);
+    } finally {
+        cargandoHistorialAcademico.value = false;
+    }
+};
 const iniciales = computed(() => {
     const u = page.props.auth.user;
     return (
@@ -2208,41 +2468,34 @@ const seccionSeleccionada = computed(() =>
 const trayectoSeleccionado = computed(
     () => seccionSeleccionada.value?.trayecto?.tra_nombre || "",
 );
-const referenciaSeccion = computed(() => {
+const siguienteNumeroEquipo = computed(() => {
     const secId = formNuevo.value.equ_id_sec;
-    if (!secId) return null;
-    const re = /^[A-Z]+-[A-Z]+(\d)(\d)-[^-]+-(\d+)\/(\d+)$/;
-    const lista = (props.equipos || [])
-        .filter((e) => e.equ_id_sec == secId)
-        .map((e) => re.exec(e.equ_codigo))
-        .filter(Boolean);
-    if (!lista.length) return null;
-    const ult = lista[lista.length - 1];
-    return {
-        semestre: Number(ult[2]),
-        total: Number(ult[4]),
-        usados: lista.map((m) => Number(m[3])),
-    };
+    if (!secId) return 1;
+    const equiposSec = (props.equipos || []).filter((e) => e.equ_id_sec == secId);
+    let maxN = 0;
+    equiposSec.forEach((e) => {
+        const m = e.equ_codigo ? e.equ_codigo.match(/G(\d+)/i) : null;
+        if (m) {
+            maxN = Math.max(maxN, parseInt(m[1]));
+        } else {
+            const mAlt = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/\d+$/) : null;
+            if (mAlt) maxN = Math.max(maxN, parseInt(mAlt[1]));
+        }
+    });
+    return maxN + 1;
 });
 
 const codigoPreview = computed(() => {
     const sec = seccionSeleccionada.value;
     const f = formNuevo.value;
-    if (!sec || !f.equ_numero_grupo || !f.equ_semestre || !f.equ_total_seccion)
-        return "—";
+    if (!sec || !f.equ_numero_grupo) return "—";
     const pnf = (sec.trayecto?.pnf?.pnf_siglas || "PNFI").toUpperCase();
     const tra = sec.trayecto?.tra_numero ?? "";
-    return `${pnf}-${props.sede}${tra}${f.equ_semestre}-${sec.sec_codigo}-${f.equ_numero_grupo}/${f.equ_total_seccion}`;
+    return `${pnf}-${sec.sec_codigo}-G${f.equ_numero_grupo}-T${tra}`;
 });
 
 const onSeccionChange = () => {
-    const r = referenciaSeccion.value;
-    const nextN = r && r.usados.length ? Math.max(...r.usados) + 1 : 1;
-    formNuevo.value.equ_semestre = r ? String(r.semestre) : "1";
-    formNuevo.value.equ_numero_grupo = String(nextN);
-    formNuevo.value.equ_total_seccion = r
-        ? String(Math.max(r.total, nextN))
-        : String(nextN);
+    formNuevo.value.equ_numero_grupo = String(siguienteNumeroEquipo.value);
 };
 const busquedaEstudiante = ref("");
 
@@ -2523,9 +2776,18 @@ const iconEvt = (n) => {
     if (n === "Reactivado") return "bi-arrow-counterclockwise";
     return "bi-circle";
 };
-const menuMaestras = ref(false);
-const menuAcademico = ref(false);
-const menuSistema = ref(false);
+const esRutaMaestra = typeof window !== "undefined" && (
+    window.location.pathname.includes("/coordinador/maestras") ||
+    window.location.pathname.includes("/coordinador/tipos-proyecto")
+);
+const menuMaestras = ref(esRutaMaestra || localStorage.getItem("coord-menu-maestras") === "true");
+const menuAcademico = ref(localStorage.getItem("coord-menu-academico") === "true");
+const menuSistema = ref(localStorage.getItem("coord-menu-sistema") === "true");
+
+const toggleMenuMaestras = () => {
+    menuMaestras.value = !menuMaestras.value;
+    localStorage.setItem("coord-menu-maestras", menuMaestras.value ? "true" : "false");
+};
 const fechaMinima = computed(() => {
     return new Date().toISOString().split("T")[0];
 });
@@ -2544,7 +2806,7 @@ const nuevaComunidad = ref({
     com_id_tor: "",
 });
 
-const guardarNuevaComunidad = () => {
+const guardarNuevaComunidad = async () => {
     erroresNuevaComunidad.value = {};
     if (!nuevaComunidad.value.com_nombre.trim()) {
         erroresNuevaComunidad.value.com_nombre = "El nombre es obligatorio.";
@@ -2556,33 +2818,35 @@ const guardarNuevaComunidad = () => {
     }
     guardandoComunidad.value = true;
     const ruta = base.value + "/comunidades";
-    router.post(ruta, nuevaComunidad.value, {
-        preserveScroll: true,
-        onSuccess: (page) => {
-            guardandoComunidad.value = false;
-            mostrarNuevaComunidad.value = false;
-            const nuevoId = page.props.flash?.nueva_comunidad_id;
-            if (nuevoId) {
-                formProyecto.value.pco_id_com = nuevoId;
-            } else {
-                const comCreada = (props.comunidades || []).find(
-                    (c) => c.com_nombre.toLowerCase() === nuevaComunidad.value.com_nombre.trim().toLowerCase(),
-                );
-                if (comCreada) {
-                    formProyecto.value.pco_id_com = comCreada.com_id;
-                }
-            }
-            nuevaComunidad.value = {
-                com_nombre: "",
-                com_ubicacion: "",
-                com_id_tor: "",
-            };
-        },
-        onError: (err) => {
-            guardandoComunidad.value = false;
-            erroresNuevaComunidad.value = err;
-        },
-    });
+
+    try {
+        const response = await window.axios.post(ruta, nuevaComunidad.value);
+        guardandoComunidad.value = false;
+        mostrarNuevaComunidad.value = false;
+
+        const creada = response.data?.comunidad;
+        if (creada) {
+            props.comunidades.push(creada);
+            formProyecto.value.pco_id_com = creada.com_id;
+        }
+
+        nuevaComunidad.value = {
+            com_nombre: "",
+            com_ubicacion: "",
+            com_id_tor: "",
+        };
+    } catch (error) {
+        guardandoComunidad.value = false;
+        if (error.response?.data?.errors) {
+            erroresNuevaComunidad.value = Object.fromEntries(
+                Object.entries(error.response.data.errors).map(([k, v]) => [k, v[0]])
+            );
+        } else if (error.response?.data?.message) {
+            erroresNuevaComunidad.value.com_nombre = error.response.data.message;
+        } else {
+            erroresNuevaComunidad.value.com_nombre = "Error al registrar la comunidad.";
+        }
+    }
 };
 const mostrarNuevoTipo = ref(false);
 const nuevoTipo = ref({ tpr_nombre: "" });
