@@ -19,9 +19,13 @@ class PuntoControlController extends Controller
     public function index()
     {
         $profesor  = auth()->user();
-        $secciones = $profesor->seccionesProfesor()->where('pse_status', true)->pluck('pse_id_sec');
+        $profSecciones = $profesor->seccionesProfesor()
+            ->where('pse_status', true)
+            ->with(['seccion.trayecto', 'seccion.turno'])
+            ->get();
+        $seccionesIds = $profSecciones->pluck('pse_id_sec');
 
-        $equipos = Equipo::whereIn('equ_id_sec', $secciones)
+        $equipos = Equipo::whereIn('equ_id_sec', $seccionesIds)
             ->where('equ_status', true)
             ->with(['trayecto', 'seccion', 'integrantes.usuario'])
             ->get();
@@ -29,10 +33,11 @@ class PuntoControlController extends Controller
         return Inertia::render('Profesor/PuntosControl', [
             'puntosControl' => PuntoControl::whereIn('puc_id_equ', $equipos->pluck('equ_id'))
                 ->where('puc_status', true)
-                ->with(['equipo', 'trayecto', 'seguimientos.asistencias.usuario'])
+                ->with(['equipo.integrantes.usuario', 'trayecto', 'seguimientos.asistencias.usuario'])
                 ->orderBy('puc_fecha_limite')
                 ->get(),
             'equipos'   => $equipos,
+            'secciones' => $profSecciones->map(fn($ps) => $ps->seccion)->filter()->values(),
             'trayectos' => Trayecto::where('tra_status', true)->get(),
         ]);
     }
@@ -60,7 +65,7 @@ class PuntoControlController extends Controller
             ->where('puc_status', true)
             ->max('puc_orden') ?? 0;
 
-        PuntoControl::create([
+        $punto = PuntoControl::create([
             'puc_id_equ'         => $request->puc_id_equ,
             'puc_id_tra'         => $equipo->equ_id_tra,
             'puc_nombre'         => $request->puc_nombre,
@@ -73,6 +78,27 @@ class PuntoControlController extends Controller
             'puc_id_usu_created' => auth()->id(),
         ]);
 
+        // Notificar al líder del equipo
+        $lider = \App\Models\EquipoIntegrante::where('ein_id_equ', $request->puc_id_equ)
+            ->where('ein_es_lider', true)
+            ->where('ein_status', true)
+            ->first();
+        if ($lider) {
+            $tnoId = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%punto%')
+                ->orWhere('tno_nombre', 'like', '%control%')
+                ->value('tno_id') ?? \App\Models\TipoNotificacion::first()?->tno_id;
+
+            \App\Models\Notificacion::create([
+                'not_id_usu'           => $lider->ein_id_usu,
+                'not_id_tno'           => $tnoId,
+                'not_id_equ'           => $request->puc_id_equ,
+                'not_id_puc'           => $punto->puc_id,
+                'not_mensaje'          => "Se ha programado el Punto de Control: \"{$punto->puc_nombre}\" con fecha límite: {$punto->puc_fecha_limite}.",
+                'not_leida'            => false,
+                'not_fecha_generacion' => now(),
+            ]);
+        }
+
         return back()->with('success', 'Punto de control creado correctamente.');
     }
 
@@ -81,9 +107,7 @@ class PuntoControlController extends Controller
         $request->validate([
             'seq_cumplido'      => 'required|boolean',
             'seq_observaciones' => 'nullable|string',
-            'asistencias'       => 'required|array',
-            'asistencias.*.usu_id'   => 'required|exists:usuario,usu_id',
-            'asistencias.*.asistio'  => 'required|boolean',
+            'asistencias'       => 'nullable',
         ]);
 
         $punto = PuntoControl::findOrFail($id);
@@ -103,11 +127,28 @@ class PuntoControlController extends Controller
             ]
         );
 
-        foreach ($request->asistencias as $asistencia) {
+        $rawAsistencias = $request->input('asistencias', []);
+        $asistenciasList = [];
+        if (is_array($rawAsistencias)) {
+            // Check if associative (usu_id => bool) or indexed array of objects
+            if (array_is_list($rawAsistencias)) {
+                $asistenciasList = $rawAsistencias;
+            } else {
+                foreach ($rawAsistencias as $uId => $asistio) {
+                    $asistenciasList[] = [
+                        'usu_id'  => $uId,
+                        'asistio' => (bool)$asistio,
+                    ];
+                }
+            }
+        }
+
+        foreach ($asistenciasList as $asistencia) {
+            if (empty($asistencia['usu_id'])) continue;
             AsistenciaPuntoControl::updateOrCreate(
                 ['apc_id_seq' => $seq->seq_id, 'apc_id_usu' => $asistencia['usu_id']],
                 [
-                    'apc_asistio'        => $asistencia['asistio'],
+                    'apc_asistio'        => (bool)($asistencia['asistio'] ?? false),
                     'apc_observaciones'  => $asistencia['observacion'] ?? null,
                     'apc_id_usu_created' => auth()->id(),
                 ]
@@ -137,6 +178,27 @@ class PuntoControlController extends Controller
             'puc_motivo_reprogramacion'   => $request->motivo,
             'puc_id_usu_updated'          => auth()->id(),
         ]);
+
+        // Notificar al líder del equipo
+        $lider = \App\Models\EquipoIntegrante::where('ein_id_equ', $punto->puc_id_equ)
+            ->where('ein_es_lider', true)
+            ->where('ein_status', true)
+            ->first();
+        if ($lider) {
+            $tnoId = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%reprogram%')
+                ->orWhere('tno_nombre', 'like', '%punto%')
+                ->value('tno_id') ?? \App\Models\TipoNotificacion::first()?->tno_id;
+
+            \App\Models\Notificacion::create([
+                'not_id_usu'           => $lider->ein_id_usu,
+                'not_id_tno'           => $tnoId,
+                'not_id_equ'           => $punto->puc_id_equ,
+                'not_id_puc'           => $punto->puc_id,
+                'not_mensaje'          => "Se ha reprogramado el Punto de Control: \"{$punto->puc_nombre}\" para el {$request->nueva_fecha}. Motivo: {$request->motivo}",
+                'not_leida'            => false,
+                'not_fecha_generacion' => now(),
+            ]);
+        }
 
         return back()->with('success', 'Punto de control reprogramado correctamente.');
     }

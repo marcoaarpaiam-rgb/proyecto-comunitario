@@ -346,14 +346,25 @@
                                         <button
                                             class="btn btn-sm btn-outline-primary me-1"
                                             @click="abrirModal(reg)"
+                                            title="Editar"
                                         >
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <button
+                                            v-if="reg[config.status]"
                                             class="btn btn-sm btn-outline-danger"
                                             @click="desactivar(reg)"
+                                            title="Desactivar"
                                         >
                                             <i class="bi bi-trash"></i>
+                                        </button>
+                                        <button
+                                            v-else
+                                            class="btn btn-sm btn-outline-success"
+                                            @click="reactivar(reg)"
+                                            title="Activar"
+                                        >
+                                            <i class="bi bi-arrow-clockwise"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -631,6 +642,11 @@ const confirmarDesactivar = () => {
         `/coordinador/maestras/${props.tabla}/${itemAEliminar.value[props.config.pk]}`,
     );
     modalConf?.hide();
+};
+const reactivar = (reg) => {
+    router.post(
+        `/coordinador/maestras/${props.tabla}/${reg[props.config.pk]}/reactivar`,
+    );
 };
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);

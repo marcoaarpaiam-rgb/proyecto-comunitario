@@ -691,6 +691,21 @@
                         </div>
                         <div
                             v-else-if="
+                                filtroEjecutado &&
+                                !cargandoFiltro &&
+                                resultadosFiltro.length === 0
+                            "
+                            class="alert alert-warning d-flex align-items-center gap-2 my-3 p-3 rounded-3"
+                            role="alert"
+                        >
+                            <i class="bi bi-exclamation-triangle-fill fs-4 text-warning flex-shrink-0"></i>
+                            <div>
+                                <div class="fw-bold">Inexistencia de los datos ingresados</div>
+                                <div class="small">No se encontraron registros que coincidan con los filtros seleccionados. Intenta con otros parámetros.</div>
+                            </div>
+                        </div>
+                        <div
+                            v-else-if="
                                 !cargandoFiltro &&
                                 totalFiltro === 0 &&
                                 resultadosFiltro.length === 0
@@ -1155,10 +1170,12 @@ const filtros = ref({
 const resultadosFiltro = ref([]);
 const totalFiltro = ref(0);
 const cargandoFiltro = ref(false);
+const filtroEjecutado = ref(false);
 const tabActiva = ref("general");
 
 const aplicarFiltro = async () => {
     cargandoFiltro.value = true;
+    filtroEjecutado.value = true;
     const params = new URLSearchParams();
     Object.entries(filtros.value).forEach(([k, v]) => {
         if (v !== "" && v !== false) params.append(k, v);
@@ -1195,6 +1212,7 @@ const limpiarFiltros = () => {
     };
     resultadosFiltro.value = [];
     totalFiltro.value = 0;
+    filtroEjecutado.value = false;
 };
 
 // ── Por comunidad ────────────────────────────────────────────────────

@@ -163,4 +163,14 @@ class TablaMaestraController extends Controller
         ]);
         return back()->with('success', 'Registro desactivado.');
     }
+
+    public function reactivar(string $tabla, $id)
+    {
+        $c = $this->config($tabla);
+        DB::table($c['tabla'])->where($c['pk'], $id)->update([
+            $c['status']  => true,
+            $c['updated'] => auth()->id(),
+        ]);
+        return back()->with('success', 'Registro reactivado correctamente.');
+    }
 }

@@ -126,7 +126,7 @@
   </div>
 
   @if($carta->cpr_sello)
-    <div class="sello">★ UPTP ★</div>
+    <div class="sello">UPTP</div>
   @endif
 
   <div class="footer">

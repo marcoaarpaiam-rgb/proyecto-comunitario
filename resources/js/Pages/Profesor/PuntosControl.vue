@@ -299,6 +299,34 @@
                     </div>
                     <form @submit.prevent="guardar">
                         <div class="modal-body">
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Filtrar por Sección</label>
+                                    <select
+                                        v-model="seccionSeleccionadaModal"
+                                        class="form-select form-select-sm"
+                                        @change="onSeccionModalChange"
+                                    >
+                                        <option value="">Todas las secciones...</option>
+                                        <option
+                                            v-for="sec in secciones"
+                                            :key="sec.sec_id"
+                                            :value="sec.sec_id"
+                                        >
+                                            Sección {{ sec.sec_codigo }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Buscar Equipo</label>
+                                    <input
+                                        type="text"
+                                        v-model="busquedaEquipoModal"
+                                        class="form-control form-control-sm"
+                                        placeholder="🔍 Código o título..."
+                                    />
+                                </div>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Equipo
@@ -311,14 +339,17 @@
                                         'is-invalid': errores.puc_id_equ,
                                     }"
                                 >
-                                    <option value="">Seleccionar...</option>
+                                    <option value="">Seleccionar equipo...</option>
                                     <option
-                                        v-for="equ in equipos"
+                                        v-for="equ in equiposModalFiltrados"
                                         :key="equ.equ_id"
                                         :value="equ.equ_id"
                                     >
                                         {{ equ.equ_codigo }} —
                                         {{ equ.equ_titulo }}
+                                        <template v-if="equ.seccion">
+                                            (Sec: {{ equ.seccion.sec_codigo }})
+                                        </template>
                                     </option>
                                 </select>
                                 <div
@@ -716,7 +747,11 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 
-const props = defineProps({ puntosControl: Array, equipos: Array });
+const props = defineProps({
+    puntosControl: Array,
+    equipos: Array,
+    secciones: { type: Array, default: () => [] },
+});
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("prof-theme") || "light");
@@ -732,6 +767,34 @@ const iniciales = computed(() => {
     );
 });
 const busqueda = ref("");
+const seccionSeleccionadaModal = ref("");
+const busquedaEquipoModal = ref("");
+
+const onSeccionModalChange = () => {
+    if (seccionSeleccionadaModal.value && form.value.puc_id_equ) {
+        const eq = props.equipos?.find((e) => e.equ_id == form.value.puc_id_equ);
+        if (eq && eq.equ_id_sec != seccionSeleccionadaModal.value) {
+            form.value.puc_id_equ = "";
+        }
+    }
+};
+
+const equiposModalFiltrados = computed(() => {
+    let list = props.equipos || [];
+    if (seccionSeleccionadaModal.value) {
+        list = list.filter((e) => e.equ_id_sec == seccionSeleccionadaModal.value);
+    }
+    if (busquedaEquipoModal.value.trim()) {
+        const q = busquedaEquipoModal.value.toLowerCase().trim();
+        list = list.filter(
+            (e) =>
+                e.equ_codigo?.toLowerCase().includes(q) ||
+                e.equ_titulo?.toLowerCase().includes(q),
+        );
+    }
+    return list;
+});
+
 const form = ref({
     puc_id_equ: "",
     puc_nombre: "",
@@ -740,6 +803,7 @@ const form = ref({
     puc_descripcion: "",
 });
 const errores = ref({});
+const erroresSeg = ref({});
 const loading = ref(false);
 const formSeg = ref({
     seq_cumplido: true,
@@ -770,6 +834,8 @@ const filtrados = computed(() => {
     );
 });
 const abrirModal = () => {
+    seccionSeleccionadaModal.value = "";
+    busquedaEquipoModal.value = "";
     form.value = {
         puc_id_equ: "",
         puc_nombre: "",
@@ -796,11 +862,29 @@ const guardar = () => {
 };
 const abrirSeguimiento = (puc) => {
     puntoActual.value = puc;
+    const initialAsist = {};
+    const ints = puc.equipo?.integrantes || [];
+    const prevSeg = puc.seguimientos?.[0];
+    const prevAsist = prevSeg?.asistencias || [];
+    const prevMap = {};
+    prevAsist.forEach((a) => {
+        prevMap[a.apc_id_usu] = Boolean(a.apc_asistio);
+    });
+
+    ints.forEach((i) => {
+        initialAsist[i.ein_id_usu] =
+            prevMap[i.ein_id_usu] !== undefined ? prevMap[i.ein_id_usu] : true;
+    });
+
     formSeg.value = {
-        seq_cumplido: true,
-        seq_observaciones: "",
-        asistencias: {},
+        seq_cumplido:
+            prevSeg?.seq_cumplido !== undefined
+                ? Boolean(prevSeg.seq_cumplido)
+                : true,
+        seq_observaciones: prevSeg?.seq_observaciones || "",
+        asistencias: initialAsist,
     };
+    erroresSeg.value = {};
     mSeg = mSeg || new Modal(document.getElementById("mSeg"));
     mSeg.show();
 };
@@ -810,12 +894,14 @@ const guardarSeguimiento = () => {
         `/profesor/puntos-control/${puntoActual.value.puc_id}/seguimiento`,
         formSeg.value,
         {
+            preserveScroll: true,
             onSuccess: () => {
                 loadingSeg.value = false;
                 mSeg?.hide();
             },
-            onError: () => {
+            onError: (e) => {
                 loadingSeg.value = false;
+                erroresSeg.value = e;
             },
         },
     );

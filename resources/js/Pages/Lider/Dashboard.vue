@@ -145,13 +145,87 @@
                             "
                         ></i>
                     </button>
-                    <button class="tb-btn">
+                    <button class="tb-btn" @click="mostrarNotif = !mostrarNotif" style="position: relative" title="Notificaciones">
                         <i class="bi bi-bell"></i>
                         <span
-                            v-if="notificaciones.length > 0"
+                            v-if="notifNoLeidas > 0"
                             class="nd"
                         ></span>
                     </button>
+
+                    <!-- Dropdown de Notificaciones -->
+                    <div
+                        v-if="mostrarNotif"
+                        style="
+                            position: absolute;
+                            top: 56px;
+                            right: 16px;
+                            width: 330px;
+                            z-index: 1050;
+                            background: var(--bg-card);
+                            border: 1px solid var(--border);
+                            border-radius: 12px;
+                            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+                            overflow: hidden;
+                        "
+                    >
+                        <div
+                            style="
+                                padding: 0.75rem 1rem;
+                                border-bottom: 1px solid var(--border);
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                            "
+                        >
+                            <span style="font-weight: 800; font-size: 0.9rem">
+                                Notificaciones
+                                <span v-if="notifNoLeidas > 0" class="badge bg-danger rounded-pill ms-1">{{ notifNoLeidas }}</span>
+                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <button
+                                    v-if="notifNoLeidas > 0"
+                                    @click="marcarTodasLeidas"
+                                    class="btn btn-link p-0 text-decoration-none"
+                                    style="font-size: 0.75rem; color: #dc3545;"
+                                >
+                                    Marcar leídas
+                                </button>
+                                <button
+                                    @click="mostrarNotif = false"
+                                    style="background: none; border: none; color: var(--text-muted); cursor: pointer;"
+                                >
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="max-height: 320px; overflow-y: auto">
+                            <div
+                                v-if="!notificaciones?.length"
+                                class="text-center py-4"
+                                style="color: var(--text-muted); font-size: 0.85rem;"
+                            >
+                                <i class="bi bi-bell-slash d-block fs-3 mb-1"></i>
+                                Sin notificaciones
+                            </div>
+                            <div
+                                v-for="n in notificaciones"
+                                :key="n.not_id"
+                                class="p-2 border-bottom"
+                                :style="{ background: n.not_leida ? 'transparent' : 'rgba(220, 53, 69, 0.06)' }"
+                            >
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-bell-fill text-danger mt-1 flex-shrink-0"></i>
+                                    <div class="flex-grow-1" style="font-size: 0.82rem;">
+                                        <div :class="{ 'fw-bold': !n.not_leida }">{{ n.not_mensaje }}</div>
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                            {{ n.not_fecha_generacion ? String(n.not_fecha_generacion).slice(0, 16).replace('T', ' ') : '' }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -680,13 +754,35 @@ const formatFecha = (f) => {
     return d.toLocaleDateString("es-VE");
 };
 
-onMounted(() => {
+const mostrarNotif = ref(false);
+const notifNoLeidas = ref(0);
+
+const cargarNotificaciones = () => {
     fetch("/notificaciones/lista")
         .then((r) => r.json())
         .then((d) => {
             notificaciones.value = d;
+            notifNoLeidas.value = d.filter((n) => !n.not_leida).length;
         })
         .catch(() => {});
+};
+
+const marcarTodasLeidas = async () => {
+    try {
+        await fetch("/notificaciones/leer-todas", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+                "Accept": "application/json"
+            }
+        });
+        notificaciones.value.forEach((n) => (n.not_leida = true));
+        notifNoLeidas.value = 0;
+    } catch (e) {}
+};
+
+onMounted(() => {
+    cargarNotificaciones();
 });
 const pasos = computed(() => {
     const e = props.equipo;
@@ -781,15 +877,7 @@ const alertaFechaLimite = computed(() => {
         return `La fecha límite del proyecto es en ${diffDias} día(s) — ${fecha}.`;
     return null;
 });
-const notifNoLeidas = ref(0);
-onMounted(() => {
-    fetch("/notificaciones/lista")
-        .then((r) => r.json())
-        .then((d) => {
-            notifNoLeidas.value = d.filter((n) => !n.not_leida).length;
-        })
-        .catch(() => {});
-});
+
 </script>
 <style>
 :root {

@@ -20,11 +20,13 @@ class SocializacionController extends Controller
     public function index()
     {
         $profesor = auth()->user();
-        $secciones = $profesor->seccionesProfesor()
+        $profSecciones = $profesor->seccionesProfesor()
             ->where('pse_status', true)
-            ->pluck('pse_id_sec');
+            ->with(['seccion.trayecto', 'seccion.turno'])
+            ->get();
+        $seccionesIds = $profSecciones->pluck('pse_id_sec');
 
-        $equipos = Equipo::whereIn('equ_id_sec', $secciones)
+        $equipos = Equipo::whereIn('equ_id_sec', $seccionesIds)
             ->where('equ_status', true)
             ->with(['trayecto', 'seccion', 'integrantes.usuario'])
             ->get();
@@ -32,13 +34,14 @@ class SocializacionController extends Controller
         return Inertia::render('Profesor/Socializaciones', [
             'socializaciones' => Socializacion::whereIn('soc_id_equ', $equipos->pluck('equ_id'))
                 ->with([
-                    'equipo', 'trayecto', 'tipoSocializacion',
+                    'equipo.seccion', 'trayecto', 'tipoSocializacion',
                     'jurados', 'integrantes.usuario',
                     'socializacionPrevia',
                 ])
                 ->orderBy('soc_fecha', 'desc')
                 ->get(),
             'equipos'          => $equipos,
+            'secciones'        => $profSecciones->map(fn($ps) => $ps->seccion)->filter()->values(),
             'tiposSocializacion' => TipoSocializacion::orderBy('tso_orden')->get(),
             'tiposJurado'      => TipoJurado::where('tju_status', true)->get(),
         ]);
@@ -144,7 +147,7 @@ class SocializacionController extends Controller
             'soc_observaciones'        => 'nullable|string',
         ]);
 
-        $soc = Socializacion::findOrFail($id);
+        $soc = Socializacion::with(['tipoSocializacion', 'equipo'])->findOrFail($id);
 
         $this->autorizarEquipoId($soc->soc_id_equ);
         
@@ -165,6 +168,61 @@ class SocializacionController extends Controller
                     'iso_justificacion' => $int['justificacion'] ?? null,
                 ]
             );
+        }
+
+        // Si es socialización final y fue aprobada, procesar resultado de proyecto automáticamente
+        if ($request->soc_aprobado !== null) {
+            $proyecto = \App\Models\ProyectoComunidad::where('pco_id_equ', $soc->soc_id_equ)
+                ->where('pco_status', true)->first();
+
+            if ($proyecto) {
+                $estadoNombre = $request->soc_aprobado ? 'Aprobado' : 'Aplazado';
+                $estadoId = \App\Models\EstadoProyecto::where('epr_nombre', $estadoNombre)->value('epr_id')
+                    ?? ($request->soc_aprobado ? 1 : 2);
+
+                \App\Models\ResultadoProyecto::updateOrCreate(
+                    ['rpr_id_pco' => $proyecto->pco_id],
+                    [
+                        'rpr_id_tra'         => $soc->soc_id_tra ?? $soc->equipo?->equ_id_tra,
+                        'rpr_id_equ'         => $soc->soc_id_equ,
+                        'rpr_id_epr'         => $estadoId,
+                        'rpr_observaciones'  => $request->soc_observaciones,
+                        'rpr_fecha_registro' => now()->toDateString(),
+                        'rpr_status'         => true,
+                        'rpr_id_usu_created' => auth()->id(),
+                    ]
+                );
+            }
+        }
+
+        // Notificar al líder del equipo
+        $lider = \App\Models\EquipoIntegrante::where('ein_id_equ', $soc->soc_id_equ)
+            ->where('ein_es_lider', true)
+            ->where('ein_status', true)
+            ->first();
+
+        if ($lider) {
+            $msg = '';
+            if ($soc->tipoSocializacion?->tso_orden === 1) {
+                $msg = $request->soc_apto 
+                    ? "Tu equipo fue calificado como APTO en la Pre-Socialización." 
+                    : "Tu equipo fue calificado como NO APTO en la Pre-Socialización.";
+            } else {
+                $msg = $request->soc_aprobado 
+                    ? "¡Felicitaciones! El proyecto de tu equipo fue APROBADO en la Socialización Final." 
+                    : "El proyecto de tu equipo fue calificado como NO APROBADO en la Socialización Final.";
+            }
+
+            if ($msg) {
+                \App\Models\Notificacion::create([
+                    'not_id_usu'           => $lider->ein_id_usu,
+                    'not_id_tno'           => \App\Models\TipoNotificacion::first()?->tno_id,
+                    'not_id_equ'           => $soc->soc_id_equ,
+                    'not_mensaje'          => $msg,
+                    'not_leida'            => false,
+                    'not_fecha_generacion' => now(),
+                ]);
+            }
         }
 
         return back()->with('success', 'Resultado registrado correctamente.');

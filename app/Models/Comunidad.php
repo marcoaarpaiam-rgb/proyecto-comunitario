@@ -35,4 +35,9 @@ class Comunidad extends Model
     {
         return $this->hasMany(ProyectoComunidad::class, 'pco_id_com', 'com_id');
     }
+
+    public function proyectosComunidad()
+    {
+        return $this->hasMany(ProyectoComunidad::class, 'pco_id_com', 'com_id');
+    }
 }

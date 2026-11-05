@@ -28,6 +28,12 @@ class Socializacion extends Model
         'soc_id_usu_updated',
     ];
 
+    protected $casts = [
+        'soc_apto'     => 'boolean',
+        'soc_aprobado' => 'boolean',
+        'soc_status'   => 'boolean',
+    ];
+
     public function equipo()
     {
         return $this->belongsTo(Equipo::class, 'soc_id_equ', 'equ_id');

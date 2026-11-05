@@ -300,6 +300,29 @@
             </div>
 
             <div class="content">
+                <!-- Banner si viene filtrado por Sección -->
+                <div
+                    v-if="seccion"
+                    class="mb-3 d-flex align-items-center justify-content-between p-3 rounded"
+                    style="
+                        background: rgba(220, 53, 69, 0.08);
+                        border: 1px solid rgba(220, 53, 69, 0.2);
+                    "
+                >
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="badge bg-danger fs-6">Sección {{ seccion.sec_codigo }}</span>
+                        <span class="fw-bold" style="color: var(--text-main)">{{ seccion.trayecto }}</span>
+                        <span class="badge bg-secondary">Turno {{ seccion.turno }}</span>
+                    </div>
+                    <Link
+                        v-if="modoProfesor || esProfesor"
+                        href="/profesor/secciones"
+                        class="btn btn-sm btn-outline-danger fw-bold"
+                    >
+                        <i class="bi bi-arrow-left me-1"></i>Volver a Mis Secciones
+                    </Link>
+                </div>
+
                 <div
                     style="
                         display: flex;
@@ -856,22 +879,13 @@
                                     El líder recibirá acceso con su cédula como
                                     usuario y contraseña.
                                 </div>
-                                <!-- Barra de búsqueda -->
-                                <div class="mb-2">
-                                    <input
-                                        type="text"
-                                        v-model="busquedaEstudiante"
-                                        class="form-control form-control-sm"
-                                        placeholder="🔍 Buscar estudiante por nombre o cédula..."
-                                    />
-                                </div>
                                 <!-- Barra de búsqueda de estudiantes -->
                                 <div class="mb-2">
                                     <input
                                         type="text"
                                         v-model="busquedaEstudiante"
                                         class="form-control form-control-sm"
-                                        placeholder="Buscar por nombre o cédula..."
+                                        placeholder="🔍 Buscar por nombre o cédula..."
                                     />
                                 </div>
                                 <!-- Encabezado de columnas ANTES del v-for -->
@@ -938,6 +952,42 @@
                                         >
                                             <i class="bi bi-trash"></i>
                                         </button>
+                                    </div>
+                                </div>
+
+                                <!-- Justificación si hay menos de 3 integrantes -->
+                                <div
+                                    v-if="
+                                        integrantesAgregados < 3 &&
+                                        integrantesAgregados > 0
+                                    "
+                                    class="alert py-2 small mb-2 mt-3"
+                                    style="
+                                        background: rgba(255, 193, 7, 0.1);
+                                        border: 1px solid rgba(255, 193, 7, 0.4);
+                                    "
+                                >
+                                    <i
+                                        class="bi bi-exclamation-triangle me-1"
+                                        style="color: #ffc107"
+                                    ></i>
+                                    <strong>Atención:</strong> El equipo tiene
+                                    {{ integrantesAgregados }} integrante(s). El
+                                    mínimo recomendado es 3. Si deseas
+                                    continuar, escribe la justificación:
+                                    <textarea
+                                        v-model="
+                                            formNuevo.justificacion_integrantes
+                                        "
+                                        class="form-control form-control-sm mt-2"
+                                        rows="2"
+                                        placeholder="Razón por la que el equipo tiene menos de 3 integrantes..."
+                                    ></textarea>
+                                    <div
+                                        v-if="errores.justificacion_integrantes"
+                                        class="text-danger small mt-1"
+                                    >
+                                        {{ errores.justificacion_integrantes }}
                                     </div>
                                 </div>
                             </div>
@@ -1021,6 +1071,12 @@
                                                 ></i
                                                 >Nueva comunidad
                                             </p>
+                                            <div
+                                                v-if="erroresNuevaComunidad.com_nombre"
+                                                class="text-danger small mb-1"
+                                            >
+                                                {{ erroresNuevaComunidad.com_nombre }}
+                                            </div>
                                             <input
                                                 type="text"
                                                 class="form-control form-control-sm mb-1"
@@ -1035,8 +1091,14 @@
                                                 v-model="
                                                     nuevaComunidad.com_ubicacion
                                                 "
-                                                placeholder="Ubicación"
+                                                placeholder="Ubicación (opcional)"
                                             />
+                                            <div
+                                                v-if="erroresNuevaComunidad.com_id_tor"
+                                                class="text-danger small mb-1"
+                                            >
+                                                {{ erroresNuevaComunidad.com_id_tor }}
+                                            </div>
                                             <select
                                                 class="form-select form-select-sm mb-2"
                                                 v-model="
@@ -1058,11 +1120,16 @@
                                                 <button
                                                     type="button"
                                                     class="btn btn-sm btn-danger fw-bold flex-fill"
+                                                    :disabled="guardandoComunidad"
                                                     @click="
                                                         guardarNuevaComunidad
                                                     "
                                                 >
-                                                    <i class="bi bi-check2"></i>
+                                                    <span
+                                                        v-if="guardandoComunidad"
+                                                        class="spinner-border spinner-border-sm me-1"
+                                                    ></span>
+                                                    <i v-else class="bi bi-check2"></i>
                                                     Guardar
                                                 </button>
                                                 <button
@@ -1152,6 +1219,36 @@
                                                 {{ m.mpr_nombre }}
                                             </option>
                                         </select>
+                                    </div>
+                                    <!-- Buscador de proyectos anteriores si la modalidad lo requiere -->
+                                    <div v-if="requiereProyectoPrevio" class="col-12">
+                                        <div
+                                            class="p-2 rounded border"
+                                            style="
+                                                background: rgba(13, 110, 253, 0.05);
+                                                border-color: rgba(13, 110, 253, 0.2) !important;
+                                            "
+                                        >
+                                            <label class="form-label fw-semibold small mb-1">
+                                                <i class="bi bi-search me-1 text-primary"></i>Proyecto previo en esta comunidad:
+                                            </label>
+                                            <select
+                                                v-model="formProyecto.pco_id_pco_previo"
+                                                class="form-select form-select-sm"
+                                            >
+                                                <option value="">Seleccionar proyecto anterior...</option>
+                                                <option
+                                                    v-for="prev in proyectosPreviosComunidad"
+                                                    :key="prev.pco_id"
+                                                    :value="prev.pco_id"
+                                                >
+                                                    {{ prev.equipo?.equ_titulo || prev.pco_resumen || ('Proyecto #' + prev.pco_id) }} ({{ prev.equipo?.equ_codigo || 'Sin código' }})
+                                                </option>
+                                            </select>
+                                            <small v-if="proyectosPreviosComunidad.length === 0" class="text-muted d-block mt-1">
+                                                No se encontraron proyectos previos en esta comunidad.
+                                            </small>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold"
@@ -1289,41 +1386,6 @@
                                     Siguiente
                                     <i class="bi bi-arrow-right ms-1"></i>
                                 </button>
-                                <!-- Justificación si hay menos de 3 integrantes -->
-                                <div
-                                    v-if="
-                                        integrantesAgregados < 3 &&
-                                        integrantesAgregados > 0
-                                    "
-                                    class="alert py-2 small mb-2"
-                                    style="
-                                        background: rgba(255, 193, 7, 0.1);
-                                        border: 1px solid rgba(255, 193, 7, 0.4);
-                                    "
-                                >
-                                    <i
-                                        class="bi bi-exclamation-triangle me-1"
-                                        style="color: #ffc107"
-                                    ></i>
-                                    <strong>Atención:</strong> El equipo tiene
-                                    {{ integrantesAgregados }} integrante(s). El
-                                    mínimo recomendado es 3. Si deseas
-                                    continuar, escribe la justificación:
-                                    <textarea
-                                        v-model="
-                                            formNuevo.justificacion_integrantes
-                                        "
-                                        class="form-control form-control-sm mt-2"
-                                        rows="2"
-                                        placeholder="Razón por la que el equipo tiene menos de 3 integrantes..."
-                                    ></textarea>
-                                    <div
-                                        v-if="errores.justificacion_integrantes"
-                                        class="text-danger small mt-1"
-                                    >
-                                        {{ errores.justificacion_integrantes }}
-                                    </div>
-                                </div>
                                 <button
                                     v-if="paso === 2"
                                     type="submit"
@@ -1401,93 +1463,141 @@
                                     }"
                                 />
                                 <div
-                                    v-if="
-                                        equipoSeleccionado?.proyecto_comunidad
-                                    "
-                                >
-                                    <hr style="border-color: var(--border)" />
-                                    <p
-                                        class="fw-bold small mb-2"
-                                        style="color: var(--text-muted)"
-                                    >
-                                        Proyecto asignado
-                                    </p>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold"
-                                            >Comunidad</label
-                                        >
-                                        <select
-                                            class="form-select form-select-sm"
-                                            v-model="formEditar.pco_id_com"
-                                        >
-                                            <option value="">
-                                                Seleccionar...
-                                            </option>
-                                            <option
-                                                v-for="c in comunidades"
-                                                :key="c.com_id"
-                                                :value="c.com_id"
-                                            >
-                                                {{ c.com_nombre }}
-                                            </option>
-                                        </select>
-                                    </div>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold"
-                                            >Tipo de Proyecto</label
-                                        >
-                                        <select
-                                            class="form-select form-select-sm"
-                                            v-model="formEditar.pco_id_tpr"
-                                        >
-                                            <option value="">
-                                                Seleccionar...
-                                            </option>
-                                            <option
-                                                v-for="t in tiposProyecto"
-                                                :key="t.tpr_id"
-                                                :value="t.tpr_id"
-                                            >
-                                                {{ t.tpr_nombre }}
-                                            </option>
-                                        </select>
-                                    </div>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold"
-                                            >Fecha Límite</label
-                                        >
-                                        <input
-                                            type="date"
-                                            class="form-control form-control-sm"
-                                            v-model="
-                                                formEditar.pco_fecha_limite
-                                            "
-                                            :min="fechaMinima"
-                                            :max="fechaMaxima"
-                                        />
-                                    </div>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold"
-                                            >Resumen</label
-                                        >
-                                        <textarea
-                                            class="form-control form-control-sm"
-                                            rows="2"
-                                            v-model="formEditar.pco_resumen"
-                                            maxlength="150"
-                                        ></textarea>
-                                    </div>
-                                </div>
-                                <div
                                     v-if="erroresEditar.equ_titulo"
                                     class="invalid-feedback"
                                 >
                                     {{ erroresEditar.equ_titulo }}
                                 </div>
+                            </div>
+
+                            <hr style="border-color: var(--border)" />
+                            <p
+                                class="fw-bold small mb-2"
+                                style="color: var(--text-muted)"
+                            >
+                                <i class="bi bi-folder me-1 text-danger"></i>
+                                Proyecto Comunitario
+                                <span v-if="!equipoSeleccionado?.proyecto_comunidad" class="badge bg-secondary ms-1">Sin asignar</span>
+                            </p>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold"
+                                    >Comunidad</label
+                                >
+                                <select
+                                    class="form-select form-select-sm"
+                                    v-model="formEditar.pco_id_com"
+                                >
+                                    <option value="">
+                                        Seleccionar comunidad...
+                                    </option>
+                                    <option
+                                        v-for="c in comunidades"
+                                        :key="c.com_id"
+                                        :value="c.com_id"
+                                    >
+                                        {{ c.com_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold"
+                                    >Tipo de Proyecto</label
+                                >
+                                <select
+                                    class="form-select form-select-sm"
+                                    v-model="formEditar.pco_id_tpr"
+                                >
+                                    <option value="">
+                                        Seleccionar tipo...
+                                    </option>
+                                    <option
+                                        v-for="t in tiposProyecto"
+                                        :key="t.tpr_id"
+                                        :value="t.tpr_id"
+                                    >
+                                        {{ t.tpr_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold"
+                                    >Modalidad</label
+                                >
+                                <select
+                                    class="form-select form-select-sm"
+                                    v-model="formEditar.pco_id_mpr"
+                                >
+                                    <option value="">
+                                        Seleccionar modalidad...
+                                    </option>
+                                    <option
+                                        v-for="m in modalidades"
+                                        :key="m.mpr_id"
+                                        :value="m.mpr_id"
+                                    >
+                                        {{ m.mpr_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div v-if="requiereProyectoPrevioEditar" class="mb-2">
+                                <div
+                                    class="p-2 rounded border"
+                                    style="
+                                        background: rgba(13, 110, 253, 0.05);
+                                        border-color: rgba(13, 110, 253, 0.2) !important;
+                                    "
+                                >
+                                    <label class="form-label fw-semibold small mb-1">
+                                        <i class="bi bi-search me-1 text-primary"></i>Proyecto previo en esta comunidad:
+                                    </label>
+                                    <select
+                                        v-model="formEditar.pco_id_pco_previo"
+                                        class="form-select form-select-sm"
+                                    >
+                                        <option value="">Seleccionar proyecto anterior...</option>
+                                        <option
+                                            v-for="prev in proyectosPreviosComunidadEditar"
+                                            :key="prev.pco_id"
+                                            :value="prev.pco_id"
+                                        >
+                                            {{ prev.equipo?.equ_titulo || prev.pco_resumen || ('Proyecto #' + prev.pco_id) }} ({{ prev.equipo?.equ_codigo || 'Sin código' }})
+                                        </option>
+                                    </select>
+                                    <small v-if="proyectosPreviosComunidadEditar.length === 0" class="text-muted d-block mt-1">
+                                        No se encontraron proyectos previos en esta comunidad.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold"
+                                    >Fecha Límite</label
+                                >
+                                <input
+                                    type="date"
+                                    class="form-control form-control-sm"
+                                    v-model="
+                                        formEditar.pco_fecha_limite
+                                    "
+                                    :min="fechaMinima"
+                                    :max="fechaMaxima"
+                                />
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold"
+                                    >Resumen</label
+                                >
+                                <textarea
+                                    class="form-control form-control-sm"
+                                    rows="2"
+                                    v-model="formEditar.pco_resumen"
+                                    maxlength="150"
+                                ></textarea>
                             </div>
                         </div>
                         <div class="modal-footer border-0">
@@ -1673,6 +1783,17 @@
                                                 int.ein_status &&
                                                 !int.ein_es_lider
                                             "
+                                            class="btn btn-sm btn-outline-primary"
+                                            @click="abrirTraslado(int)"
+                                            title="Trasladar a otro equipo"
+                                        >
+                                            <i class="bi bi-arrow-left-right"></i>
+                                        </button>
+                                        <button
+                                            v-if="
+                                                int.ein_status &&
+                                                !int.ein_es_lider
+                                            "
                                             class="btn btn-sm btn-outline-danger"
                                             @click="removerIntegrante(int)"
                                             title="Remover"
@@ -1760,6 +1881,88 @@
                             data-bs-dismiss="modal"
                         >
                             Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Trasladar Integrante -->
+        <div class="modal fade" id="mTrasladar" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="mh">
+                        <h5>Trasladar Integrante</h5>
+                        <button
+                            class="btn btn-sm text-white p-0 fs-5"
+                            data-bs-dismiss="modal"
+                        >
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div
+                            class="alert py-2 small mb-3"
+                            style="
+                                background: rgba(13, 110, 253, 0.08);
+                                border: 1px solid rgba(13, 110, 253, 0.2);
+                                color: var(--text-main);
+                            "
+                        >
+                            <i class="bi bi-info-circle me-1 text-primary"></i>
+                            Vas a trasladar a
+                            <strong>{{
+                                integranteATrasladar?.usuario?.usu_primer_nombre
+                            }}
+                            {{
+                                integranteATrasladar?.usuario?.usu_primer_apellido
+                            }}</strong>
+                            (CI: {{ integranteATrasladar?.usuario?.usu_cedula }}) a otro equipo de la misma sección.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">
+                                Equipo de destino en la sección:
+                            </label>
+                            <select
+                                v-model="equipoDestinoId"
+                                class="form-select"
+                            >
+                                <option value="">Seleccionar equipo de destino...</option>
+                                <option
+                                    v-for="eq in equiposDestinoDisponibles"
+                                    :key="eq.equ_id"
+                                    :value="eq.equ_id"
+                                >
+                                    {{ eq.equ_codigo }} — {{ eq.equ_titulo }} ({{ eq.integrantes?.length || 0 }} integrantes)
+                                </option>
+                            </select>
+                            <small
+                                v-if="equiposDestinoDisponibles.length === 0"
+                                class="text-danger d-block mt-1"
+                            >
+                                No hay otros equipos activos en esta sección a los cuales trasladar.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-danger fw-bold"
+                            :disabled="!equipoDestinoId || cargandoTraslado"
+                            @click="confirmarTraslado"
+                        >
+                            <span
+                                v-if="cargandoTraslado"
+                                class="spinner-border spinner-border-sm me-1"
+                            ></span>
+                            Confirmar Traslado
                         </button>
                     </div>
                 </div>
@@ -1878,6 +2081,8 @@ const props = defineProps({
     puedeCrear: { type: Boolean, default: true },
     tiposOrganizacion: Array,
     sede: { type: String, default: "ACA" },
+    seccion: { type: Object, default: null },
+    modoProfesor: { type: Boolean, default: false },
 });
 
 const page = usePage();
@@ -1938,6 +2143,7 @@ const formEditar = ref({
     pco_id_com: "",
     pco_id_tpr: "",
     pco_id_mpr: "",
+    pco_id_pco_previo: "",
     pco_resumen: "",
     pco_fecha_limite: "",
 });
@@ -1946,15 +2152,21 @@ const formProyecto = ref({
     pco_id_com: "",
     pco_id_tpr: "",
     pco_id_mpr: "",
+    pco_id_pco_previo: "",
     pco_fecha_limite: "",
     pco_resumen: "",
     beneficiarios: [],
 });
 
+const integranteATrasladar = ref(null);
+const equipoDestinoId = ref("");
+const cargandoTraslado = ref(false);
+
 let mCrear = null;
 let mEditar = null;
 let mInts = null;
 let mDisolver = null;
+let mTrasladar = null;
 
 watch([busqueda, verDisueltos], () => {
     pagina.value = 1;
@@ -2025,11 +2237,12 @@ const codigoPreview = computed(() => {
 
 const onSeccionChange = () => {
     const r = referenciaSeccion.value;
-    formNuevo.value.equ_semestre = r ? String(r.semestre) : "";
-    formNuevo.value.equ_total_seccion = r ? String(r.total) : "";
-    formNuevo.value.equ_numero_grupo = r
-        ? String(Math.max(...r.usados) + 1)
-        : "";
+    const nextN = r && r.usados.length ? Math.max(...r.usados) + 1 : 1;
+    formNuevo.value.equ_semestre = r ? String(r.semestre) : "1";
+    formNuevo.value.equ_numero_grupo = String(nextN);
+    formNuevo.value.equ_total_seccion = r
+        ? String(Math.max(r.total, nextN))
+        : String(nextN);
 };
 const busquedaEstudiante = ref("");
 
@@ -2115,18 +2328,21 @@ const abrirModalCrear = () => {
 const abrirModalEditar = (equ) => {
     equipoEditando.value = equ;
     equipoSeleccionado.value = equ;
-    const p = equ.proyecto_comunidad;
+    const p = equ.proyecto_comunidad || equ.proyectoComunidad;
     formEditar.value = {
         equ_titulo: equ.equ_titulo,
         pco_id_com: p?.pco_id_com ?? "",
         pco_id_tpr: p?.pco_id_tpr ?? "",
         pco_id_mpr: p?.pco_id_mpr ?? "",
+        pco_id_pco_previo: p?.pco_id_pco_previo ?? "",
         pco_resumen: p?.pco_resumen ?? "",
         pco_fecha_limite: p?.pco_fecha_limite
             ? String(p.pco_fecha_limite).slice(0, 10)
             : "",
     };
-    // deja aquí las líneas existentes que muestran el modal (mEditar...show())
+    erroresEditar.value = {};
+    mEditar = mEditar || new Modal(document.getElementById("mEditar"));
+    mEditar.show();
 };
 const verIntegrantes = (equ) => {
     equipoSeleccionado.value = equ;
@@ -2145,6 +2361,7 @@ const abrirDisolver = (equ) => {
 };
 
 const irPaso2 = () => {
+    errores.value = {};
     if (!formNuevo.value.equ_id_sec) {
         errores.value.equ_id_sec = "La sección es obligatoria.";
         return;
@@ -2170,15 +2387,27 @@ const irPaso2 = () => {
         errores.value.equ_semestre = "El semestre es obligatorio.";
         return;
     }
-    if (!formNuevo.value.equ_titulo) {
+    if (!formNuevo.value.equ_titulo?.trim()) {
         errores.value.equ_titulo = "El título es obligatorio.";
         return;
     }
-    if (formNuevo.value.integrantes.some((i) => !i.usu_id)) {
+    const intsValidos = formNuevo.value.integrantes.filter((i) => i.usu_id);
+    if (intsValidos.length === 0) {
         errores.value.integrantes =
-            "Todos los integrantes deben ser seleccionados.";
+            "Debes seleccionar al menos un integrante para el equipo.";
         return;
     }
+    formNuevo.value.integrantes = intsValidos;
+    actualizarLider();
+
+    if (intsValidos.length < 3) {
+        if (!formNuevo.value.justificacion_integrantes?.trim()) {
+            errores.value.justificacion_integrantes =
+                "Debes justificar la creación del equipo con menos de 3 integrantes.";
+            return;
+        }
+    }
+
     errores.value = {};
     paso.value = 2;
 };
@@ -2196,7 +2425,10 @@ const guardarNuevo = () => {
         onError: (e) => {
             errores.value = e;
             loading.value = false;
-            paso.value = 1;
+            const tieneErrorProyecto = Object.keys(e).some((k) =>
+                k.startsWith("proyecto"),
+            );
+            paso.value = tieneErrorProyecto ? 2 : 1;
         },
         onSuccess: () => {
             loading.value = false;
@@ -2304,6 +2536,8 @@ const fechaMaxima = computed(() => {
     return d.toISOString().split("T")[0];
 });
 const mostrarNuevaComunidad = ref(false);
+const guardandoComunidad = ref(false);
+const erroresNuevaComunidad = ref({});
 const nuevaComunidad = ref({
     com_nombre: "",
     com_ubicacion: "",
@@ -2311,21 +2545,42 @@ const nuevaComunidad = ref({
 });
 
 const guardarNuevaComunidad = () => {
-    if (
-        !nuevaComunidad.value.com_nombre.trim() ||
-        !nuevaComunidad.value.com_id_tor
-    )
+    erroresNuevaComunidad.value = {};
+    if (!nuevaComunidad.value.com_nombre.trim()) {
+        erroresNuevaComunidad.value.com_nombre = "El nombre es obligatorio.";
         return;
+    }
+    if (!nuevaComunidad.value.com_id_tor) {
+        erroresNuevaComunidad.value.com_id_tor = "El tipo de organización es obligatorio.";
+        return;
+    }
+    guardandoComunidad.value = true;
     const ruta = base.value + "/comunidades";
     router.post(ruta, nuevaComunidad.value, {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: (page) => {
+            guardandoComunidad.value = false;
             mostrarNuevaComunidad.value = false;
+            const nuevoId = page.props.flash?.nueva_comunidad_id;
+            if (nuevoId) {
+                formProyecto.value.pco_id_com = nuevoId;
+            } else {
+                const comCreada = (props.comunidades || []).find(
+                    (c) => c.com_nombre.toLowerCase() === nuevaComunidad.value.com_nombre.trim().toLowerCase(),
+                );
+                if (comCreada) {
+                    formProyecto.value.pco_id_com = comCreada.com_id;
+                }
+            }
             nuevaComunidad.value = {
                 com_nombre: "",
                 com_ubicacion: "",
                 com_id_tor: "",
             };
+        },
+        onError: (err) => {
+            guardandoComunidad.value = false;
+            erroresNuevaComunidad.value = err;
         },
     });
 };
@@ -2342,6 +2597,102 @@ const guardarNuevoTipo = () => {
         },
     });
 };
+
+const requiereProyectoPrevio = computed(() => {
+    if (!formProyecto.value.pco_id_mpr) return false;
+    const mod = props.modalidades?.find(
+        (m) => m.mpr_id == formProyecto.value.pco_id_mpr,
+    );
+    if (!mod) return false;
+    const n = mod.mpr_nombre.toLowerCase();
+    return (
+        n.includes("continua") ||
+        n.includes("reing") ||
+        n.includes("reactiva") ||
+        n.includes("previo")
+    );
+});
+
+const proyectosPreviosComunidad = computed(() => {
+    if (!formProyecto.value.pco_id_com) return [];
+    const com = props.comunidades?.find(
+        (c) => c.com_id == formProyecto.value.pco_id_com,
+    );
+    if (!com || !com.proyectos) return [];
+    return com.proyectos.filter((p) => p.pco_status || p.equipo);
+});
+
+const requiereProyectoPrevioEditar = computed(() => {
+    if (!formEditar.value.pco_id_mpr) return false;
+    const mod = props.modalidades?.find(
+        (m) => m.mpr_id == formEditar.value.pco_id_mpr,
+    );
+    if (!mod) return false;
+    const n = mod.mpr_nombre.toLowerCase();
+    return (
+        n.includes("continua") ||
+        n.includes("reing") ||
+        n.includes("reactiva") ||
+        n.includes("previo")
+    );
+});
+
+const proyectosPreviosComunidadEditar = computed(() => {
+    if (!formEditar.value.pco_id_com) return [];
+    const com = props.comunidades?.find(
+        (c) => c.com_id == formEditar.value.pco_id_com,
+    );
+    if (!com || !com.proyectos) return [];
+    return com.proyectos.filter(
+        (p) =>
+            (p.pco_status || p.equipo) &&
+            p.pco_id_equ !== equipoEditando.value?.equ_id,
+    );
+});
+
+const abrirTraslado = (int) => {
+    integranteATrasladar.value = int;
+    equipoDestinoId.value = "";
+    mTrasladar = mTrasladar || new Modal(document.getElementById("mTrasladar"));
+    mTrasladar.show();
+};
+
+const equiposDestinoDisponibles = computed(() => {
+    if (!equipoSeleccionado.value) return [];
+    return (props.equipos || []).filter(
+        (e) =>
+            e.equ_id !== equipoSeleccionado.value.equ_id &&
+            e.equ_status &&
+            e.equ_id_sec === equipoSeleccionado.value.equ_id_sec,
+    );
+});
+
+const confirmarTraslado = () => {
+    if (!equipoDestinoId.value || !integranteATrasladar.value) return;
+    cargandoTraslado.value = true;
+    router.post(
+        `${base.value}/equipos/${equipoSeleccionado.value.equ_id}/integrantes/${integranteATrasladar.value.ein_id}/trasladar`,
+        { nuevo_equipo_id: equipoDestinoId.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                cargandoTraslado.value = false;
+                mTrasladar?.hide();
+                const act = (props.equipos || []).find(
+                    (e) => e.equ_id === equipoSeleccionado.value.equ_id,
+                );
+                if (act) {
+                    equipoSeleccionado.value = act;
+                }
+            },
+            onError: (err) => {
+                cargandoTraslado.value = false;
+                alert(Object.values(err)[0] || "Error al trasladar integrante.");
+            },
+        },
+    );
+};
+
 const integrantesAgregados = computed(
     () => formNuevo.value.integrantes.filter((i) => i.usu_id).length,
 );

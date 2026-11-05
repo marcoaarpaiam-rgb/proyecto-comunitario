@@ -30,24 +30,23 @@ class ComunidadController extends Controller
     {
         $request->validate([
             'com_nombre'    => 'required|string|max:150|unique:comunidad,com_nombre',
-            'com_ubicacion' => 'required|string|max:255',
+            'com_ubicacion' => 'nullable|string|max:255',
             'com_id_tor'    => 'required|exists:tipo_organizacion,tor_id',
         ], [
             'com_nombre.required'    => 'El nombre es obligatorio.',
             'com_nombre.unique'      => 'Ya existe una comunidad con ese nombre.',
-            'com_ubicacion.required' => 'La ubicación es obligatoria.',
             'com_id_tor.required'    => 'El tipo de organización es obligatorio.',
         ]);
 
-        Comunidad::create([
+        $comunidad = Comunidad::create([
             'com_nombre'         => $request->com_nombre,
-            'com_ubicacion'      => $request->com_ubicacion,
+            'com_ubicacion'      => $request->com_ubicacion ?: 'Sin ubicación registrada',
             'com_id_tor'         => $request->com_id_tor,
             'com_status'         => true,
             'com_id_usu_created' => auth()->id(),
         ]);
 
-        return back()->with('success', 'Comunidad registrada correctamente.');
+        return back()->with('success', 'Comunidad registrada correctamente.')->with('nueva_comunidad_id', $comunidad->com_id);
     }
 
     public function update(Request $request, $id)

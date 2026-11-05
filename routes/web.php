@@ -36,9 +36,42 @@ Route::get('/home', fn() => Inertia::render('Home'))->name('home');
 
 Route::middleware('auth')->group(function () {
     Route::get('/notificaciones/lista', function () {
-        return \App\Models\Notificacion::where('not_id_usu', auth()->id())
+        $userId = auth()->id();
+        $liderEquipos = \App\Models\EquipoIntegrante::where('ein_id_usu', $userId)
+            ->where('ein_es_lider', true)
+            ->where('ein_status', true)
+            ->pluck('ein_id_equ');
+
+        if ($liderEquipos->isNotEmpty()) {
+            $puntosCercanos = \App\Models\PuntoControl::whereIn('puc_id_equ', $liderEquipos)
+                ->where('puc_status', true)
+                ->where('puc_fecha_limite', '>=', now()->toDateString())
+                ->where('puc_fecha_limite', '<=', now()->addDays(7)->toDateString())
+                ->get();
+
+            foreach ($puntosCercanos as $punto) {
+                $yaNotificado = \App\Models\Notificacion::where('not_id_usu', $userId)
+                    ->where('not_id_puc', $punto->puc_id)
+                    ->where('not_mensaje', 'like', '%próximo a vencer%')
+                    ->exists();
+
+                if (!$yaNotificado) {
+                    \App\Models\Notificacion::create([
+                        'not_id_usu'           => $userId,
+                        'not_id_tno'           => \App\Models\TipoNotificacion::first()?->tno_id,
+                        'not_id_equ'           => $punto->puc_id_equ,
+                        'not_id_puc'           => $punto->puc_id,
+                        'not_mensaje'          => "Recordatorio: El punto de control \"{$punto->puc_nombre}\" está próximo a vencer el {$punto->puc_fecha_limite}.",
+                        'not_leida'            => false,
+                        'not_fecha_generacion' => now(),
+                    ]);
+                }
+            }
+        }
+
+        return \App\Models\Notificacion::where('not_id_usu', $userId)
             ->orderBy('not_fecha_generacion', 'desc')
-            ->take(10)->get();
+            ->take(15)->get();
     });
 
     Route::post('/notificaciones/{id}/leer', function ($id) {
@@ -115,6 +148,7 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('maestras/{tabla}', [TablaMaestraController::class, 'store'])->name('maestras.store');
     Route::put('maestras/{tabla}/{id}', [TablaMaestraController::class, 'update'])->name('maestras.update');
     Route::delete('maestras/{tabla}/{id}', [TablaMaestraController::class, 'destroy'])->name('maestras.destroy');
+    Route::post('maestras/{tabla}/{id}/reactivar', [TablaMaestraController::class, 'reactivar'])->name('maestras.reactivar');
 
     
 
@@ -207,6 +241,10 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
         [EquipoController::class, 'removerIntegrante'])
         ->name('equipos.integrantes.remover');
+
+    Route::post('equipos/{equipoId}/integrantes/{integranteId}/trasladar',
+        [EquipoController::class, 'trasladarIntegrante'])
+        ->name('equipos.integrantes.trasladar');
 
     Route::post('equipos/{equipoId}/cambiar-lider',
         [EquipoController::class, 'cambiarLider'])
@@ -347,6 +385,10 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
         [EquipoController::class, 'removerIntegrante'])
         ->name('equipos.integrantes.remover');
+
+    Route::post('equipos/{equipoId}/integrantes/{integranteId}/trasladar',
+        [EquipoController::class, 'trasladarIntegrante'])
+        ->name('equipos.integrantes.trasladar');
 
     Route::post('equipos/{equipoId}/cambiar-lider',
         [EquipoController::class, 'cambiarLider'])

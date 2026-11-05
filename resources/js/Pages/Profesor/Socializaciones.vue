@@ -213,36 +213,40 @@
                                         {{ soc.soc_lugar }}
                                     </td>
                                     <td>
-                                        <span
-                                            v-if="soc.soc_apto === true"
-                                            class="bs ba"
-                                            >Apto</span
-                                        >
-                                        <span
-                                            v-else-if="soc.soc_apto === false"
-                                            class="bs bd"
-                                            >No Apto</span
-                                        >
-                                        <span
-                                            v-if="soc.soc_aprobado === true"
-                                            class="bs ba ms-1"
-                                            >Aprobado</span
-                                        >
-                                        <span
-                                            v-else-if="
-                                                soc.soc_aprobado === false
-                                            "
-                                            class="bs bd ms-1"
-                                            >No Aprobado</span
-                                        >
-                                        <span
-                                            v-if="
-                                                soc.soc_apto === null &&
-                                                soc.soc_aprobado === null
-                                            "
-                                            class="bs bsec"
-                                            >Pendiente</span
-                                        >
+                                        <template v-if="soc.tipo_socializacion?.tso_orden === 1">
+                                            <span
+                                                v-if="soc.soc_apto === true || soc.soc_apto == 1"
+                                                class="bs ba"
+                                                >Apto</span
+                                            >
+                                            <span
+                                                v-else-if="soc.soc_apto === false || soc.soc_apto === 0 || soc.soc_apto === '0'"
+                                                class="bs bd"
+                                                >No Apto</span
+                                            >
+                                            <span
+                                                v-else
+                                                class="bs bsec"
+                                                >Pendiente</span
+                                            >
+                                        </template>
+                                        <template v-else>
+                                            <span
+                                                v-if="soc.soc_aprobado === true || soc.soc_aprobado == 1"
+                                                class="bs ba"
+                                                >Aprobado</span
+                                            >
+                                            <span
+                                                v-else-if="soc.soc_aprobado === false || soc.soc_aprobado === 0 || soc.soc_aprobado === '0'"
+                                                class="bs bd"
+                                                >No Aprobado</span
+                                            >
+                                            <span
+                                                v-else
+                                                class="bs bsec"
+                                                >Pendiente</span
+                                            >
+                                        </template>
                                     </td>
                                     <td class="text-end pe-4">
                                         <button
@@ -277,6 +281,34 @@
                     </div>
                     <form @submit.prevent="guardar">
                         <div class="modal-body">
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Filtrar por Sección</label>
+                                    <select
+                                        v-model="seccionSeleccionadaModal"
+                                        class="form-select form-select-sm"
+                                        @change="onSeccionModalChange"
+                                    >
+                                        <option value="">Todas las secciones...</option>
+                                        <option
+                                            v-for="sec in secciones"
+                                            :key="sec.sec_id"
+                                            :value="sec.sec_id"
+                                        >
+                                            Sección {{ sec.sec_codigo }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Buscar Equipo</label>
+                                    <input
+                                        type="text"
+                                        v-model="busquedaEquipoModal"
+                                        class="form-control form-control-sm"
+                                        placeholder="🔍 Código o título..."
+                                    />
+                                </div>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Equipo
@@ -289,14 +321,17 @@
                                         'is-invalid': errores.soc_id_equ,
                                     }"
                                 >
-                                    <option value="">Seleccionar...</option>
+                                    <option value="">Seleccionar equipo...</option>
                                     <option
-                                        v-for="equ in equipos"
+                                        v-for="equ in equiposModalFiltrados"
                                         :key="equ.equ_id"
                                         :value="equ.equ_id"
                                     >
                                         {{ equ.equ_codigo }} —
                                         {{ equ.equ_titulo }}
+                                        <template v-if="equ.seccion">
+                                            (Sec: {{ equ.seccion.sec_codigo }})
+                                        </template>
                                     </option>
                                 </select>
                                 <div
@@ -550,6 +585,7 @@ import { Link } from "@inertiajs/vue3";
 const props = defineProps({
     socializaciones: Array,
     equipos: Array,
+    secciones: { type: Array, default: () => [] },
     tiposSocializacion: Array,
 });
 const page = usePage();
@@ -566,6 +602,34 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
+const seccionSeleccionadaModal = ref("");
+const busquedaEquipoModal = ref("");
+
+const onSeccionModalChange = () => {
+    if (seccionSeleccionadaModal.value && form.value.soc_id_equ) {
+        const eq = props.equipos?.find((e) => e.equ_id == form.value.soc_id_equ);
+        if (eq && eq.equ_id_sec != seccionSeleccionadaModal.value) {
+            form.value.soc_id_equ = "";
+        }
+    }
+};
+
+const equiposModalFiltrados = computed(() => {
+    let list = props.equipos || [];
+    if (seccionSeleccionadaModal.value) {
+        list = list.filter((e) => e.equ_id_sec == seccionSeleccionadaModal.value);
+    }
+    if (busquedaEquipoModal.value.trim()) {
+        const q = busquedaEquipoModal.value.toLowerCase().trim();
+        list = list.filter(
+            (e) =>
+                e.equ_codigo?.toLowerCase().includes(q) ||
+                e.equ_titulo?.toLowerCase().includes(q),
+        );
+    }
+    return list;
+});
+
 const form = ref({
     soc_id_equ: "",
     soc_id_tso: "",
@@ -585,6 +649,8 @@ const socActual = ref(null);
 let mSoc = null;
 let mRes = null;
 const abrirModal = () => {
+    seccionSeleccionadaModal.value = "";
+    busquedaEquipoModal.value = "";
     form.value = {
         soc_id_equ: "",
         soc_id_tso: "",

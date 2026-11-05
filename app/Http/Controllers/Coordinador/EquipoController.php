@@ -144,9 +144,11 @@ class EquipoController extends Controller
                                     ->orderBy('equ_codigo')->get(),
             'estudiantes'      => $estudiantes,
             'comunidades'      => \App\Models\Comunidad::where('com_status', true)
+                                    ->with(['proyectos.equipo'])
                                     ->orderBy('com_nombre')->get(),
             'tiposProyecto'    => \App\Models\TipoProyecto::where('tpr_status', true)->get(),
             'modalidades'      => \App\Models\ModalidadProyecto::where('mpr_status', true)->get(),
+            'tiposOrganizacion'=> \App\Models\TipoOrganizacion::where('tor_status', true)->orderBy('tor_nombre')->get(),
             'tipoBeneficiario' => \App\Models\TipoBeneficiario::where('tbe_status', true)->get(),
             'puedeCrear'       => true,
             'sede' => config('siscon.sede', 'ACA'),
@@ -174,6 +176,7 @@ class EquipoController extends Controller
             'proyecto.pco_id_com'               => 'nullable|exists:comunidad,com_id',
             'proyecto.pco_id_tpr'               => 'nullable|exists:tipo_proyecto,tpr_id',
             'proyecto.pco_id_mpr'               => 'nullable|exists:modalidad_proyecto,mpr_id',
+            'proyecto.pco_id_pco_previo'        => 'nullable|exists:proyecto_comunidad,pco_id',
             'proyecto.pco_resumen'              => 'nullable|string|max:150',
             'proyecto.pco_fecha_limite'         => 'nullable|date|after_or_equal:today|before_or_equal:' . now()->addYear()->toDateString(),
             'proyecto.beneficiarios'            => 'nullable|array',
@@ -249,10 +252,17 @@ class EquipoController extends Controller
         }
 
         $ref = $existentes->where('activo', true)->last();
-        if ($ref && ($ref['total'] !== $total || $ref['semestre'] !== $semestre)) {
-            return back()->withErrors([
-                'equ_total_seccion' => "Los demás equipos de la sección usan semestre {$ref['semestre']} y total {$ref['total']}. Usa los mismos valores.",
-            ]);
+        if ($ref) {
+            if ($ref['semestre'] !== $semestre) {
+                return back()->withErrors([
+                    'equ_semestre' => "Los demás equipos de la sección usan semestre {$ref['semestre']}. Usa el mismo valor.",
+                ]);
+            }
+            if ($total < $ref['total'] && $total < count($existentes)) {
+                return back()->withErrors([
+                    'equ_total_seccion' => "El total de equipos ({$total}) no puede ser menor a los equipos ya registrados en esta sección ({$ref['total']}).",
+                ]);
+            }
         }
 
         if (Equipo::where('equ_codigo', $codigo)->exists()) {
@@ -313,13 +323,17 @@ class EquipoController extends Controller
             }
 
             if ($crearProyecto) {
+                $mprId = !empty($proy['pco_id_mpr']) ? $proy['pco_id_mpr'] : (\App\Models\ModalidadProyecto::where('mpr_nombre', 'Nuevo')->value('mpr_id') ?? \App\Models\ModalidadProyecto::first()?->mpr_id);
+                $fechaLim = !empty($proy['pco_fecha_limite']) ? $proy['pco_fecha_limite'] : now()->addMonths(6)->toDateString();
+
                 $proyecto = ProyectoComunidad::create([
                     'pco_id_equ'          => $equipo->equ_id,
                     'pco_id_com'          => $proy['pco_id_com'],
                     'pco_id_tpr'          => $proy['pco_id_tpr'],
-                    'pco_id_mpr'          => $proy['pco_id_mpr'] ?? null,
+                    'pco_id_mpr'          => $mprId,
+                    'pco_id_pco_previo'   => !empty($proy['pco_id_pco_previo']) ? $proy['pco_id_pco_previo'] : null,
                     'pco_resumen'         => $proy['pco_resumen'] ?? '',
-                    'pco_fecha_limite'    => $proy['pco_fecha_limite'] ?? null,
+                    'pco_fecha_limite'    => $fechaLim,
                     'pco_fecha_aprobacion'=> now()->toDateString(),   // aprobado al crear
                     'pco_id_usu_aprobado' => auth()->id(),
                     'pco_status'          => true,
@@ -363,18 +377,46 @@ class EquipoController extends Controller
         }
 
         $request->validate([
-            'equ_titulo'       => 'required|string|max:150',
-            'pco_id_com'       => 'nullable|exists:comunidad,com_id',
-            'pco_id_tpr'       => 'nullable|exists:tipo_proyecto,tpr_id',
-            'pco_id_mpr'       => 'nullable|exists:modalidad_proyecto,mpr_id',
-            'pco_resumen'      => 'nullable|string|max:150',
-            'pco_fecha_limite' => $reglaFecha,
+            'equ_titulo'          => 'required|string|max:150',
+            'pco_id_com'          => 'nullable|exists:comunidad,com_id',
+            'pco_id_tpr'          => 'nullable|exists:tipo_proyecto,tpr_id',
+            'pco_id_mpr'          => 'nullable|exists:modalidad_proyecto,mpr_id',
+            'pco_id_pco_previo'   => 'nullable|exists:proyecto_comunidad,pco_id',
+            'pco_resumen'         => 'nullable|string|max:150',
+            'pco_fecha_limite'    => $reglaFecha,
         ], ['equ_titulo.required' => 'El título es obligatorio.']);
 
         DB::transaction(function () use ($request, $equipo, $proyecto) {
             $equipo->update(['equ_titulo' => $request->equ_titulo, 'equ_id_usu_updated' => auth()->id()]);
 
             if (!$proyecto) {
+                if ($request->filled('pco_id_com')) {
+                    $mprId = $request->pco_id_mpr ?: (\App\Models\ModalidadProyecto::where('mpr_nombre', 'Nuevo')->value('mpr_id') ?? \App\Models\ModalidadProyecto::first()?->mpr_id);
+                    $tprId = $request->pco_id_tpr ?: (\App\Models\TipoProyecto::first()?->tpr_id);
+                    $fechaLim = $request->filled('pco_fecha_limite') ? $request->pco_fecha_limite : now()->addMonths(6)->toDateString();
+
+                    $proyecto = ProyectoComunidad::create([
+                        'pco_id_equ'          => $equipo->equ_id,
+                        'pco_id_com'          => $request->pco_id_com,
+                        'pco_id_tpr'          => $tprId,
+                        'pco_id_mpr'          => $mprId,
+                        'pco_id_pco_previo'   => $request->pco_id_pco_previo ?: null,
+                        'pco_resumen'         => $request->pco_resumen ?? '',
+                        'pco_fecha_limite'    => $fechaLim,
+                        'pco_fecha_aprobacion'=> now()->toDateString(),
+                        'pco_id_usu_aprobado' => auth()->id(),
+                        'pco_status'          => true,
+                        'pco_id_usu_created'  => auth()->id(),
+                    ]);
+
+                    HistorialEquipo::create([
+                        'heq_id_equ'         => $equipo->equ_id,
+                        'heq_id_tee'         => $this->eventoId('Proyecto asignado'),
+                        'heq_motivo'         => 'Proyecto asignado en la comunidad "' . (Comunidad::find($request->pco_id_com)?->com_nombre ?? '—') . '".',
+                        'heq_fecha_evento'   => now()->toDateString(),
+                        'heq_id_usu_created' => auth()->id(),
+                    ]);
+                }
                 return;
             }
 
@@ -459,6 +501,81 @@ class EquipoController extends Controller
         return back()->with('success', 'Integrante removido correctamente.');
     }
 
+    public function trasladarIntegrante(Request $request, $equipoId, $integranteId)
+    {
+        $this->autorizarEquipoId($equipoId);
+        $request->validate([
+            'nuevo_equipo_id' => 'required|exists:equipo,equ_id',
+        ], [
+            'nuevo_equipo_id.required' => 'Debes seleccionar el equipo de destino.',
+        ]);
+
+        if ((int)$request->nuevo_equipo_id === (int)$equipoId) {
+            return back()->withErrors(['integrante' => 'El equipo de destino debe ser diferente al actual.']);
+        }
+
+        $integrante = EquipoIntegrante::where('ein_id', $integranteId)
+            ->where('ein_id_equ', $equipoId)
+            ->where('ein_status', true)
+            ->with('usuario')
+            ->firstOrFail();
+
+        if ($integrante->ein_es_lider) {
+            return back()->withErrors(['integrante' => 'No puedes trasladar al líder del equipo. Primero asigna otro líder.']);
+        }
+
+        $equipoOrigen = Equipo::findOrFail($equipoId);
+        $equipoDestino = Equipo::with('integrantes')->findOrFail($request->nuevo_equipo_id);
+
+        $this->autorizarEquipoId($equipoDestino->equ_id);
+
+        $integrantesDestino = $equipoDestino->integrantes->where('ein_status', true);
+        if ($integrantesDestino->count() >= 6) {
+            return back()->withErrors(['integrante' => "El equipo destino {$equipoDestino->equ_codigo} ya tiene el máximo de 6 integrantes."]);
+        }
+
+        if ($integrantesDestino->contains('ein_id_usu', $integrante->ein_id_usu)) {
+            return back()->withErrors(['integrante' => 'El estudiante ya pertenece al equipo de destino.']);
+        }
+
+        DB::transaction(function () use ($integrante, $equipoOrigen, $equipoDestino) {
+            $integrante->update([
+                'ein_status'         => false,
+                'ein_fecha_salida'   => now()->toDateString(),
+                'ein_id_usu_updated' => auth()->id(),
+            ]);
+
+            EquipoIntegrante::create([
+                'ein_id_equ'         => $equipoDestino->equ_id,
+                'ein_id_usu'         => $integrante->ein_id_usu,
+                'ein_es_lider'       => false,
+                'ein_fecha_ingreso'  => now()->toDateString(),
+                'ein_status'         => true,
+                'ein_id_usu_created' => auth()->id(),
+            ]);
+
+            $nombre = $integrante->usuario?->usu_primer_nombre . ' ' . $integrante->usuario?->usu_primer_apellido;
+
+            HistorialEquipo::create([
+                'heq_id_equ'         => $equipoOrigen->equ_id,
+                'heq_id_tee'         => $this->eventoId('Integrante Removido') ?? 1,
+                'heq_motivo'         => "Integrante {$nombre} trasladado al equipo {$equipoDestino->equ_codigo}.",
+                'heq_fecha_evento'   => now()->toDateString(),
+                'heq_id_usu_created' => auth()->id(),
+            ]);
+
+            HistorialEquipo::create([
+                'heq_id_equ'         => $equipoDestino->equ_id,
+                'heq_id_tee'         => $this->eventoId('Modificado') ?? 1,
+                'heq_motivo'         => "Integrante {$nombre} recibido por traslado desde el equipo {$equipoOrigen->equ_codigo}.",
+                'heq_fecha_evento'   => now()->toDateString(),
+                'heq_id_usu_created' => auth()->id(),
+            ]);
+        });
+
+        return back()->with('success', "Integrante trasladado correctamente al equipo {$equipoDestino->equ_codigo}.");
+    }
+
     
 
     public function historial($equipoId)
@@ -535,8 +652,10 @@ class EquipoController extends Controller
                 'turno'      => $seccion->turno?->tur_nombre,
             ],
             'equipos'          => \App\Models\Equipo::with([
-                                    'seccion.trayecto','integrantes.usuario',
+                                    'seccion.trayecto','trayecto','integrantes.usuario',
                                     'proyectoComunidad.comunidad',
+                                    'proyectoComunidad.tipoProyecto',
+                                    'resultadoProyecto',
                                 ])->where('equ_id_sec', $id)
                                 ->where('equ_status', true)
                                 ->orderBy('equ_codigo')->get(),
@@ -548,9 +667,10 @@ class EquipoController extends Controller
             'secciones'        => \App\Models\Seccion::where('sec_id', $id)->with(['trayecto','turno'])->get(),
             'trayectos'        => \App\Models\Trayecto::where('tra_status', true)->get(),
             'estudiantes'      => $estudiantes,
-            'comunidades'      => \App\Models\Comunidad::where('com_status', true)->orderBy('com_nombre')->get(),
+            'comunidades'      => \App\Models\Comunidad::where('com_status', true)->with('proyectos.equipo')->orderBy('com_nombre')->get(),
             'tiposProyecto'    => \App\Models\TipoProyecto::where('tpr_status', true)->get(),
             'modalidades'      => \App\Models\ModalidadProyecto::where('mpr_status', true)->get(),
+            'tiposOrganizacion'=> \App\Models\TipoOrganizacion::where('tor_status', true)->orderBy('tor_nombre')->get(),
             'tipoBeneficiario' => \App\Models\TipoBeneficiario::where('tbe_status', true)->get(),
             'puedeCrear'       => true,
             'modoProfesor'     => true,

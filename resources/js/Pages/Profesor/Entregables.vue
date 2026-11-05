@@ -248,7 +248,7 @@
                                             v-if="ent.entr_aprobado === null"
                                         >
                                             <a
-                                                :href="`/storage/${entr.entr_ruta}`"
+                                                :href="`/storage/${ent.entr_ruta}`"
                                                 target="_blank"
                                                 class="btn btn-sm btn-outline-primary me-1"
                                             >
