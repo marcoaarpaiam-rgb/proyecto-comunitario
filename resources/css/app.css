@@ -317,3 +317,8 @@
     border-color: #3d424e !important;
     color: #e2e8f0 !important;
 }
+
+/* Tipografía global del sistema */
+html, body, [data-theme] {
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif;
+}

@@ -5,7 +5,6 @@
             min-height: 100vh;
             background: var(--bg-body);
             color: var(--text-main);
-            font-family: &quot;Segoe UI&quot;, system-ui, sans-serif;
         "
     >
         <div
@@ -283,13 +282,13 @@
                                         color: var(--text-muted);
                                         font-weight: 500;
                                     "
-                                    >({{ equipo.integrantes?.length || 0 }} /
+                                    >({{ (equipo.integrantes || []).filter(i => i.ein_status !== false).length }} /
                                     6)</span
                                 >
                             </h6>
                         </div>
                         <div
-                            v-for="int in equipo.integrantes"
+                            v-for="int in (equipo.integrantes || []).filter(i => i.ein_status !== false)"
                             :key="int.ein_id"
                             class="miembro-card"
                         >

@@ -35,19 +35,6 @@
                     animation: mfadeIn 0.15s ease;
                 "
             >
-                <style>
-                    @keyframes mfadeIn {
-                        from {
-                            opacity: 0;
-                            transform: scale(0.95);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: scale(1);
-                        }
-                    }
-                </style>
-
                 <!-- Ícono + Título -->
                 <div style="padding: 1.75rem 1.5rem 1rem; text-align: center">
                     <div
@@ -139,13 +126,6 @@
                                 vertical-align: middle;
                             "
                         ></span>
-                        <style>
-                            @keyframes spin {
-                                to {
-                                    transform: rotate(360deg);
-                                }
-                            }
-                        </style>
                         {{ textoConfirmar }}
                     </button>
                 </div>
@@ -189,3 +169,22 @@ const cancelar = () => {
 
 defineExpose({ abrir, cerrar });
 </script>
+
+<style>
+@keyframes mfadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+</style>

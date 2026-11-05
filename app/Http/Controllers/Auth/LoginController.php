@@ -21,29 +21,30 @@ class LoginController extends Controller
             'usu_username' => 'required|string',
             'usu_password' => 'required|string',
         ], [
-            'usu_username.required' => 'El usuario es obligatorio.',
+            'usu_username.required' => 'La cédula o usuario es obligatorio.',
             'usu_password.required' => 'La contraseña es obligatoria.',
         ]);
 
-        $credentials = [
-            'usu_username' => $request->usu_username,
-            'password'     => $request->usu_password,
-        ];
+        $loginInput = trim($request->usu_username);
 
-        if (!Auth::attempt($credentials)) {
+        // Buscar por usu_username o usu_cedula
+        $usuario = Usuario::where('usu_username', $loginInput)
+            ->orWhere('usu_cedula', $loginInput)
+            ->first();
+
+        if (!$usuario || !\Illuminate\Support\Facades\Hash::check($request->usu_password, $usuario->usu_password)) {
             return back()->withErrors([
-                'usu_username' => 'Usuario o contraseña incorrectos.',
+                'usu_username' => 'Cédula o contraseña incorrectas. Intenta de nuevo.',
             ]);
         }
 
-        $usuario = Auth::user();
-
         if (!$usuario->usu_tiene_acceso) {
-            Auth::logout();
             return back()->withErrors([
                 'usu_username' => 'No tienes permiso para acceder al sistema.',
             ]);
         }
+
+        Auth::login($usuario);
 
         $request->session()->regenerate();
 

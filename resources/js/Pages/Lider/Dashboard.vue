@@ -5,7 +5,6 @@
             min-height: 100vh;
             background: var(--bg-body);
             color: var(--text-main);
-            font-family: &quot;Segoe UI&quot;, system-ui, sans-serif;
         "
     >
         <div
@@ -215,7 +214,13 @@
                                 v-for="n in notificaciones"
                                 :key="n.not_id"
                                 class="p-2 border-bottom"
-                                :style="{ background: n.not_leida ? 'transparent' : 'rgba(220, 53, 69, 0.06)' }"
+                                :style="{
+                                    background: n.not_leida ? 'transparent' : 'rgba(220, 53, 69, 0.08)',
+                                    cursor: n.not_leida ? 'default' : 'pointer',
+                                    transition: 'background 0.2s'
+                                }"
+                                @click="marcarLeida(n)"
+                                :title="n.not_leida ? '' : 'Clic para marcar como leída'"
                             >
                                 <div class="d-flex align-items-start gap-2">
                                     <i class="bi bi-bell-fill text-danger mt-1 flex-shrink-0"></i>
@@ -225,6 +230,7 @@
                                             {{ n.not_fecha_generacion ? String(n.not_fecha_generacion).slice(0, 16).replace('T', ' ') : '' }}
                                         </small>
                                     </div>
+                                    <span v-if="!n.not_leida" class="badge bg-danger rounded-circle p-1" style="width: 8px; height: 8px;" title="No leída"></span>
                                 </div>
                             </div>
                         </div>
@@ -777,29 +783,30 @@ const formatFecha = (f) => {
 };
 
 const mostrarNotif = ref(false);
-const notifNoLeidas = ref(0);
+const notifNoLeidas = ref(page.props.notificacionesNoLeidas || 0);
 
-const cargarNotificaciones = () => {
-    fetch("/notificaciones/lista")
-        .then((r) => r.json())
-        .then((d) => {
-            notificaciones.value = d;
-            notifNoLeidas.value = d.filter((n) => !n.not_leida).length;
-        })
-        .catch(() => {});
+const cargarNotificaciones = async () => {
+    try {
+        const res = await window.axios.get("/notificaciones/lista");
+        notificaciones.value = res.data;
+        notifNoLeidas.value = (res.data || []).filter((n) => !n.not_leida).length;
+    } catch (e) {}
 };
 
 const marcarTodasLeidas = async () => {
     try {
-        await fetch("/notificaciones/leer-todas", {
-            method: "POST",
-            headers: {
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
-                "Accept": "application/json"
-            }
-        });
+        await window.axios.post("/notificaciones/leer-todas");
         notificaciones.value.forEach((n) => (n.not_leida = true));
         notifNoLeidas.value = 0;
+    } catch (e) {}
+};
+
+const marcarLeida = async (n) => {
+    if (n.not_leida) return;
+    try {
+        await window.axios.post(`/notificaciones/${n.not_id}/leer`);
+        n.not_leida = true;
+        notifNoLeidas.value = Math.max(0, notifNoLeidas.value - 1);
     } catch (e) {}
 };
 

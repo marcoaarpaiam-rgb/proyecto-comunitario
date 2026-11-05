@@ -5,7 +5,6 @@
             min-height: 100vh;
             background: var(--bg-body);
             color: var(--text-main);
-            font-family: &quot;Segoe UI&quot;, system-ui, sans-serif;
         "
     >
         <div
@@ -136,7 +135,7 @@
                             Entregables
                         </h4>
                         <p
-                            style="color:var(--text-muted);font-size:.85rem;margin-top:2px);"
+                            style="color:var(--text-muted);font-size:.85rem;margin-top:2px;"
                         >
                             <span
                                 v-if="pendientes > 0"

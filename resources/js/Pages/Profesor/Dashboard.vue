@@ -5,7 +5,6 @@
             min-height: 100vh;
             background: var(--bg-body);
             color: var(--text-main);
-            font-family: &quot;Segoe UI&quot;, system-ui, sans-serif;
         "
     >
         <div
@@ -129,9 +128,10 @@
                         class="topbar-btn"
                         @click="mostrarNotif = !mostrarNotif"
                         style="position: relative"
+                        title="Notificaciones"
                     >
                         <i class="bi bi-bell"></i>
-                        <span v-if="stats.notificaciones > 0" class="nd"></span>
+                        <span v-if="notifNoLeidas > 0" class="nd"></span>
                     </button>
 
                     <!-- Panel de notificaciones -->
@@ -159,24 +159,35 @@
                                 justify-content: space-between;
                             "
                         >
-                            <span style="font-weight: 800; font-size: 0.9rem"
-                                >Notificaciones</span
-                            >
-                            <button
-                                @click="mostrarNotif = false"
-                                style="
-                                    background: none;
-                                    border: none;
-                                    color: var(--text-muted);
-                                    cursor: pointer;
-                                "
-                            >
-                                <i class="bi bi-x-lg"></i>
-                            </button>
+                            <span style="font-weight: 800; font-size: 0.9rem">
+                                Notificaciones
+                                <span v-if="notifNoLeidas > 0" class="badge bg-danger rounded-pill ms-1">{{ notifNoLeidas }}</span>
+                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <button
+                                    v-if="notifNoLeidas > 0"
+                                    @click="marcarTodasLeidas"
+                                    class="btn btn-link p-0 text-decoration-none"
+                                    style="font-size: 0.75rem; color: #dc3545;"
+                                >
+                                    Marcar leídas
+                                </button>
+                                <button
+                                    @click="mostrarNotif = false"
+                                    style="
+                                        background: none;
+                                        border: none;
+                                        color: var(--text-muted);
+                                        cursor: pointer;
+                                    "
+                                >
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
                         </div>
                         <div style="max-height: 300px; overflow-y: auto">
                             <div
-                                v-if="!notificaciones?.length"
+                                v-if="!listaNotificaciones?.length"
                                 class="text-center py-4"
                                 style="
                                     color: var(--text-muted);
@@ -189,14 +200,15 @@
                                 Sin notificaciones
                             </div>
                             <div
-                                v-for="n in notificaciones"
+                                v-for="n in listaNotificaciones"
                                 :key="n.not_id"
                                 class="notif-item"
-                                :style="
-                                    !n.not_leida
-                                        ? 'background:rgba(220,53,69,.04)'
-                                        : ''
-                                "
+                                :style="{
+                                    background: !n.not_leida ? 'rgba(220,53,69,.06)' : 'transparent',
+                                    cursor: !n.not_leida ? 'pointer' : 'default'
+                                }"
+                                @click="marcarLeida(n)"
+                                :title="!n.not_leida ? 'Clic para marcar como leída' : ''"
                             >
                                 <div class="d-flex align-items-start gap-2">
                                     <div
@@ -213,8 +225,8 @@
                                                 : 'background:transparent'
                                         "
                                     ></div>
-                                    <div>
-                                        <div style="font-size: 0.84rem">
+                                    <div class="flex-grow-1">
+                                        <div style="font-size: 0.84rem" :class="{ 'fw-bold': !n.not_leida }">
                                             {{ n.not_mensaje }}
                                         </div>
                                         <div
@@ -621,6 +633,38 @@ const ejecutarLogout = () => {
     router.post("/logout");
 };
 const mostrarNotif = ref(false);
+const listaNotificaciones = ref([...(props.notificaciones || [])]);
+const notifNoLeidas = ref(props.stats?.notificaciones || page.props.notificacionesNoLeidas || 0);
+
+const cargarNotificaciones = async () => {
+    try {
+        const res = await window.axios.get("/notificaciones/lista");
+        listaNotificaciones.value = res.data;
+        notifNoLeidas.value = (res.data || []).filter((n) => !n.not_leida).length;
+    } catch (e) {}
+};
+
+const marcarTodasLeidas = async () => {
+    try {
+        await window.axios.post("/notificaciones/leer-todas");
+        listaNotificaciones.value.forEach((n) => (n.not_leida = true));
+        notifNoLeidas.value = 0;
+    } catch (e) {}
+};
+
+const marcarLeida = async (n) => {
+    if (n.not_leida) return;
+    try {
+        await window.axios.post(`/notificaciones/${n.not_id}/leer`);
+        n.not_leida = true;
+        notifNoLeidas.value = Math.max(0, notifNoLeidas.value - 1);
+    } catch (e) {}
+};
+
+onMounted(() => {
+    cargarNotificaciones();
+});
+
 const paginaActual = ref(1);
 const equiposPorPagina = 5;
 

@@ -1,5 +1,15 @@
 <template>
-    <div :data-bs-theme="theme">
+    <div
+        :data-bs-theme="theme"
+        :data-theme="theme"
+        class="home-wrapper"
+        style="
+            min-height: 100vh;
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        "
+    >
         <!-- Botón Flotante Modo Oscuro -->
         <button
             class="btn btn-dark theme-toggle-btn"
@@ -327,16 +337,18 @@
                         </a>
                     </div>
                     <div class="col-12 col-md-6 text-center">
-                        <img
-                            :src="'/images/centro.jpg'"
-                            class="img-fluid rounded-4 shadow-sm"
-                            style="
-                                max-height: 380px;
-                                object-fit: cover;
-                                width: 100%;
-                            "
-                            alt="Centro tecnológico"
-                        />
+                        <div class="hero-img-box d-inline-block">
+                            <img
+                                :src="'/images/centro.jpg'"
+                                class="img-fluid rounded-4 shadow-sm"
+                                style="
+                                    max-height: 380px;
+                                    object-fit: cover;
+                                    width: 100%;
+                                "
+                                alt="Centro tecnológico"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -662,103 +674,102 @@
         </section>
 
         <!-- Cómo funciona -->
-        <div
-            class="container mt-5 pt-4 text-center"
-            id="sistema-funcionamiento"
-        >
-            <h2 class="fw-bold display-6">
-                ¿Cómo <span class="text-danger">funciona</span> el sistema?
-            </h2>
-            <p class="text-muted fs-5">
-                Sigue estos tres sencillos pasos para formalizar tu proyecto
-                académico.
-            </p>
-        </div>
-        <div class="container my-5">
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div
-                        class="card h-100 border shadow-sm text-center p-3 bg-body"
-                    >
+        <section class="py-5 bg-body-secondary" id="sistema-funcionamiento">
+            <div class="container text-center mb-5">
+                <h2 class="fw-bold display-6">
+                    ¿Cómo <span class="text-danger">funciona</span> el sistema?
+                </h2>
+                <p class="text-muted fs-5">
+                    Sigue estos tres sencillos pasos para formalizar tu proyecto
+                    académico.
+                </p>
+            </div>
+            <div class="container">
+                <div class="row g-4">
+                    <div class="col-md-4">
                         <div
-                            class="d-flex align-items-center justify-content-center"
-                            style="height: 180px"
+                            class="card h-100 border shadow-sm text-center p-3 bg-body"
                         >
-                            <img
-                                :src="'/images/registro.jpg'"
-                                class="img-fluid rounded-3"
-                                style="max-height: 150px"
-                                alt="Registrar"
-                            />
-                        </div>
-                        <div class="card-body">
-                            <h4 class="card-title fw-bold">
-                                1. Registrar Grupo
-                            </h4>
-                            <p class="card-text text-muted fs-6 text-justify">
-                                Ingresa de forma estructurada los datos de
-                                identificación de los autores integrantes y el
-                                tutor académico asignado.
-                            </p>
+                            <div
+                                class="d-flex align-items-center justify-content-center"
+                                style="height: 180px"
+                            >
+                                <img
+                                    :src="'/images/registro.jpg'"
+                                    class="img-fluid rounded-3"
+                                    style="max-height: 150px"
+                                    alt="Registrar"
+                                />
+                            </div>
+                            <div class="card-body">
+                                <h4 class="card-title fw-bold">
+                                    1. Registrar Grupo
+                                </h4>
+                                <p class="card-text text-muted fs-6 text-justify">
+                                    Ingresa de forma estructurada los datos de
+                                    identificación de los autores integrantes y el
+                                    tutor académico asignado.
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div
-                        class="card h-100 border shadow-sm text-center p-3 bg-body"
-                    >
+                    <div class="col-md-4">
                         <div
-                            class="d-flex align-items-center justify-content-center"
-                            style="height: 180px"
+                            class="card h-100 border shadow-sm text-center p-3 bg-body"
                         >
-                            <img
-                                :src="'/images/archivo.png'"
-                                class="img-fluid rounded-3"
-                                style="max-height: 150px"
-                                alt="Subir"
-                            />
-                        </div>
-                        <div class="card-body">
-                            <h4 class="card-title fw-bold">
-                                2. Subir la Propuesta
-                            </h4>
-                            <p class="card-text text-muted fs-6 text-justify">
-                                Adjunta los documentos requeridos en la
-                                plataforma para un almacenamiento digital seguro
-                                y centralizado.
-                            </p>
+                            <div
+                                class="d-flex align-items-center justify-content-center"
+                                style="height: 180px"
+                            >
+                                <img
+                                    :src="'/images/archivo.png'"
+                                    class="img-fluid rounded-3"
+                                    style="max-height: 150px"
+                                    alt="Subir"
+                                />
+                            </div>
+                            <div class="card-body">
+                                <h4 class="card-title fw-bold">
+                                    2. Subir la Propuesta
+                                </h4>
+                                <p class="card-text text-muted fs-6 text-justify">
+                                    Adjunta los documentos requeridos en la
+                                    plataforma para un almacenamiento digital seguro
+                                    y centralizado.
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div
-                        class="card h-100 border shadow-sm text-center p-3 bg-body"
-                    >
+                    <div class="col-md-4">
                         <div
-                            class="d-flex align-items-center justify-content-center"
-                            style="height: 180px"
+                            class="card h-100 border shadow-sm text-center p-3 bg-body"
                         >
-                            <img
-                                :src="'/images/mano.png'"
-                                class="img-fluid rounded-3"
-                                style="max-height: 150px"
-                                alt="Esperar"
-                            />
-                        </div>
-                        <div class="card-body">
-                            <h4 class="card-title fw-bold">
-                                3. Esperar Confirmación
-                            </h4>
-                            <p class="card-text text-muted fs-6 text-justify">
-                                La coordinación del PNF evalúa la propuesta
-                                recibida y notifica los resultados directamente
-                                a través del portal.
-                            </p>
+                            <div
+                                class="d-flex align-items-center justify-content-center"
+                                style="height: 180px"
+                            >
+                                <img
+                                    :src="'/images/mano.png'"
+                                    class="img-fluid rounded-3"
+                                    style="max-height: 150px"
+                                    alt="Esperar"
+                                />
+                            </div>
+                            <div class="card-body">
+                                <h4 class="card-title fw-bold">
+                                    3. Esperar Confirmación
+                                </h4>
+                                <p class="card-text text-muted fs-6 text-justify">
+                                    La coordinación del PNF evalúa la propuesta
+                                    recibida y notifica los resultados directamente
+                                    a través del portal.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Carrusel de Instalaciones -->
         <section
@@ -1490,23 +1501,45 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
 const theme = ref("light");
 const themeIcon = ref("bi bi-moon-stars-fill");
 
-const toggleTheme = () => {
-    if (theme.value === "light") {
-        theme.value = "dark";
-        themeIcon.value = "bi bi-sun-fill";
+const aplicarTema = (nuevoTema) => {
+    theme.value = nuevoTema;
+    themeIcon.value = nuevoTema === "dark" ? "bi bi-sun-fill" : "bi bi-moon-stars-fill";
+    localStorage.setItem("home-theme", nuevoTema);
+    document.documentElement.setAttribute("data-bs-theme", nuevoTema);
+    document.documentElement.setAttribute("data-theme", nuevoTema);
+    document.body.setAttribute("data-bs-theme", nuevoTema);
+    document.body.setAttribute("data-theme", nuevoTema);
+    if (nuevoTema === "dark") {
+        document.body.style.backgroundColor = "#121418";
     } else {
-        theme.value = "light";
-        themeIcon.value = "bi bi-moon-stars-fill";
+        document.body.style.backgroundColor = "#ffffff";
     }
 };
+
+const toggleTheme = () => {
+    aplicarTema(theme.value === "light" ? "dark" : "light");
+};
+
+onMounted(() => {
+    const saved = localStorage.getItem("home-theme") || "light";
+    aplicarTema(saved);
+});
+
+onBeforeUnmount(() => {
+    document.body.style.backgroundColor = "";
+});
 </script>
 
 <style scoped>
+.home-wrapper {
+    overflow-x: hidden;
+}
+
 .punto-rojo {
     display: inline-block;
     width: 12px;
@@ -1515,6 +1548,7 @@ const toggleTheme = () => {
     border-radius: 50%;
     flex-shrink: 0;
 }
+
 .theme-toggle-btn {
     position: fixed;
     bottom: 25px;
@@ -1526,17 +1560,66 @@ const toggleTheme = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
     cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
+
+.theme-toggle-btn:hover {
+    transform: scale(1.08);
+}
+
+/* ── HERO SECTION THEME ── */
 .hero {
-    background-color: var(--bg-hero, #ffffff);
-    color: var(--text-hero, #212529);
+    background-color: var(--bs-body-bg, #ffffff);
+    color: var(--bs-body-color, #212529);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+[data-bs-theme="dark"] .hero,
+[data-theme="dark"] .hero {
+    background-color: #121418 !important;
+    color: #f1f3f5 !important;
+}
+
+[data-bs-theme="light"] .hero,
+[data-theme="light"] .hero {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+}
+
+.hero-img-box {
+    border-radius: 20px;
+    overflow: hidden;
+    display: inline-block;
+    max-width: 100%;
+    transition: transform 0.25s, box-shadow 0.25s;
+}
+
+[data-bs-theme="dark"] .hero-img-box {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ── CÓMO FUNCIONA ── */
+#sistema-funcionamiento {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-bs-theme="dark"] #sistema-funcionamiento {
+    background-color: #181b22 !important;
+}
+
+[data-bs-theme="light"] #sistema-funcionamiento {
+    background-color: #f8f9fa !important;
+}
+
 .card:hover {
     transform: translateY(-5px);
     box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15) !important;
 }
+
 section,
 footer,
 div[id] {

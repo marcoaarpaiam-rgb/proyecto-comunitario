@@ -6,7 +6,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: &quot;Segoe UI&quot;, system-ui, sans-serif;
             padding: 2rem;
         "
     >

@@ -5,7 +5,6 @@
             min-height: 100vh;
             background: var(--bg-body);
             color: var(--text-main);
-            font-family: &quot;Segoe UI&quot;, system-ui, sans-serif;
         "
     >
         <div
@@ -464,7 +463,7 @@
                                             @click="verIntegrantes(equ)"
                                         >
                                             <i class="bi bi-people me-1"></i
-                                            >{{ equ.integrantes?.length || 0 }}
+                                            >{{ (equ.integrantes || []).filter(i => i.ein_status !== false).length }}
                                         </button>
                                     </td>
                                     <td
@@ -705,9 +704,9 @@
                                             "
                                         />
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-semibold"
-                                            >N° de equipo
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small"
+                                            >N° Equipo
                                             <span class="text-danger"
                                                 >*</span
                                             ></label
@@ -731,13 +730,65 @@
                                             {{ errores.equ_numero_grupo }}
                                         </div>
                                     </div>
-                                    <div class="col-md-8">
-                                        <label class="form-label fw-semibold"
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-semibold small"
+                                            >Semestre
+                                            <span class="text-danger"
+                                                >*</span
+                                            ></label
+                                        >
+                                        <input
+                                            type="number"
+                                            class="form-control"
+                                            v-model="formNuevo.equ_semestre"
+                                            min="1"
+                                            max="9"
+                                            @keypress="
+                                                (e) =>
+                                                    !/[0-9]/.test(e.key) &&
+                                                    e.preventDefault()
+                                            "
+                                        />
+                                        <div
+                                            v-if="errores.equ_semestre"
+                                            class="text-danger small mt-1"
+                                        >
+                                            {{ errores.equ_semestre }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-semibold small"
+                                            >Total Equipos Sección
+                                            <span class="text-danger"
+                                                >*</span
+                                            ></label
+                                        >
+                                        <input
+                                            type="number"
+                                            class="form-control"
+                                            v-model="formNuevo.equ_total_seccion"
+                                            :min="formNuevo.equ_numero_grupo || 1"
+                                            max="99"
+                                            @keypress="
+                                                (e) =>
+                                                    !/[0-9]/.test(e.key) &&
+                                                    e.preventDefault()
+                                            "
+                                        />
+                                        <div
+                                            v-if="errores.equ_total_seccion"
+                                            class="text-danger small mt-1"
+                                        >
+                                            {{ errores.equ_total_seccion }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-semibold small"
                                             >Código generado (automático)</label
                                         >
                                         <input
                                             type="text"
-                                            class="form-control fw-bold"
+                                            class="form-control fw-bold text-center"
                                             :value="codigoPreview"
                                             readonly
                                             style="
@@ -745,6 +796,7 @@
                                                     --bg-th
                                                 ) !important;
                                                 color: var(--rojo) !important;
+                                                letter-spacing: 0.5px;
                                             "
                                         />
                                     </div>
@@ -813,24 +865,19 @@
                                 >
                                     {{ errores.integrantes }}
                                 </div>
-                                <!-- INFO: una sola vez, fuera del v-for -->
+                                <!-- INFO: Una sola vez, destacando el rol del líder -->
                                 <div
                                     class="py-2 px-3 mb-2 small rounded"
                                     style="
-                                        background: rgba(13, 110, 253, 0.06);
-                                        border: 1px solid
-                                            rgba(13, 110, 253, 0.15);
-                                        color: var(--text-muted);
+                                        background: rgba(220, 53, 69, 0.08);
+                                        border-left: 3px solid #dc3545;
+                                        color: var(--text-main);
                                     "
                                 >
                                     <i
-                                        class="bi bi-info-circle me-1"
-                                        style="color: #0d6efd"
+                                        class="bi bi-star-fill text-warning me-1"
                                     ></i>
-                                    El primer estudiante agregado será el líder
-                                    por defecto. Puedes cambiarlo con el radio.
-                                    El líder recibirá acceso con su cédula como
-                                    usuario y contraseña.
+                                    <strong>Líder de Equipo:</strong> El primer estudiante de la lista es asignado automáticamente como líder del equipo. Recibirá credenciales de acceso con su cédula.
                                 </div>
                                 <!-- Barra de búsqueda de estudiantes -->
                                 <div class="mb-2">
@@ -846,22 +893,23 @@
                                     class="row mb-1 small fw-bold"
                                     style="color: var(--text-muted)"
                                 >
-                                    <div class="col-7">Estudiante</div>
-                                    <div class="col-3 text-center">Líder</div>
-                                    <div class="col-2"></div>
+                                    <div class="col-8">Estudiante</div>
+                                    <div class="col-3 text-center">Rol en el Equipo</div>
+                                    <div class="col-1 text-center"></div>
                                 </div>
                                 <div
                                     v-for="(item, idx) in formNuevo.integrantes"
                                     :key="idx"
                                     class="row g-2 mb-2 align-items-center"
                                 >
-                                    <div class="col-7">
+                                    <div class="col-8">
                                         <select
                                             v-model="item.usu_id"
                                             class="form-select form-select-sm"
+                                            :class="{ 'border-danger': idx === 0 }"
                                         >
                                             <option value="">
-                                                Seleccionar estudiante...
+                                                {{ !formNuevo.equ_id_sec ? 'Seleccione primero una sección...' : (idx === 0 ? 'Seleccionar estudiante (Líder)...' : 'Seleccionar estudiante...') }}
                                             </option>
                                             <option
                                                 v-for="est in estudiantesDisponibles(
@@ -876,35 +924,39 @@
                                             </option>
                                         </select>
                                     </div>
-                                    <div class="col-3">
-                                        <div class="form-check ms-2">
-                                            <input
-                                                type="radio"
-                                                class="form-check-input"
-                                                name="lider"
-                                                :value="idx"
-                                                v-model="liderIndex"
-                                                @change="actualizarLider"
-                                            />
-                                            <label
-                                                class="form-check-label small fw-bold"
-                                                style="color: var(--rojo)"
-                                                >Líder</label
-                                            >
-                                        </div>
+                                    <div class="col-3 text-center">
+                                        <span
+                                            v-if="idx === 0"
+                                            class="badge bg-danger py-2 px-2 shadow-sm d-inline-flex align-items-center justify-content-center w-100"
+                                            style="font-size: 0.78rem; letter-spacing: 0.2px;"
+                                        >
+                                            <i class="bi bi-star-fill text-warning me-1"></i> Líder de Equipo
+                                        </span>
+                                        <span
+                                            v-else
+                                            class="badge bg-secondary py-2 px-2 text-white d-inline-flex align-items-center justify-content-center w-100"
+                                            style="font-size: 0.78rem;"
+                                        >
+                                            <i class="bi bi-person me-1"></i> Integrante
+                                        </span>
                                     </div>
-                                    <div class="col-2">
+                                    <div class="col-1 text-center">
                                         <button
+                                            v-if="idx > 0"
                                             type="button"
-                                            class="btn btn-sm btn-outline-danger w-100"
+                                            class="btn btn-sm btn-outline-danger p-1 w-100"
                                             @click="quitarIntegrante(idx)"
-                                            :disabled="
-                                                formNuevo.integrantes.length ===
-                                                1
-                                            "
+                                            title="Quitar integrante"
                                         >
                                             <i class="bi bi-trash"></i>
                                         </button>
+                                        <span
+                                            v-else
+                                            class="text-muted d-inline-block pt-1"
+                                            title="El líder es obligatorio y no puede eliminarse"
+                                        >
+                                            <i class="bi bi-lock-fill"></i>
+                                        </span>
                                     </div>
                                 </div>
 
@@ -965,9 +1017,8 @@
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div
-                                            class="d-flex gap-2 align-items-center mb-2"
-                                        >
+                                        <label class="form-label fw-semibold">Comunidad</label>
+                                        <div class="d-flex gap-2 align-items-center">
                                             <select
                                                 class="form-select form-select-sm"
                                                 v-model="
@@ -987,166 +1038,41 @@
                                             </select>
                                             <button
                                                 type="button"
-                                                class="btn btn-sm btn-outline-danger flex-shrink-0"
-                                                @click="
-                                                    mostrarNuevaComunidad =
-                                                        !mostrarNuevaComunidad
-                                                "
+                                                class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
+                                                @click="abrirModalNuevaComunidad('crear')"
+                                                title="Registrar nueva comunidad"
                                             >
-                                                <i
-                                                    class="bi bi-plus-circle"
-                                                ></i>
+                                                <i class="bi bi-plus-lg me-1"></i>Nueva
                                             </button>
                                         </div>
-
-                                        <div
-                                            v-if="mostrarNuevaComunidad"
-                                            class="mt-2 p-3 rounded"
-                                            style="
-                                                background: var(--bg-card);
-                                                border: 1px dashed #dc3545;
-                                            "
-                                        >
-                                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                                <span class="small fw-bold" style="color: var(--text-main)">
-                                                    <i class="bi bi-plus-circle me-1 text-danger"></i>Registrar Nueva Comunidad
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-sm text-muted p-0"
-                                                    @click="mostrarNuevaComunidad = false"
-                                                >
-                                                    <i class="bi bi-x-lg"></i>
-                                                </button>
-                                            </div>
-                                            <div
-                                                v-if="erroresNuevaComunidad.com_nombre"
-                                                class="text-danger small mb-1"
-                                            >
-                                                {{ erroresNuevaComunidad.com_nombre }}
-                                            </div>
-                                            <input
-                                                type="text"
-                                                class="form-control form-control-sm mb-2"
-                                                v-model="
-                                                    nuevaComunidad.com_nombre
-                                                "
-                                                placeholder="Nombre de la comunidad *"
-                                            />
-                                            <input
-                                                type="text"
-                                                class="form-control form-control-sm mb-2"
-                                                v-model="
-                                                    nuevaComunidad.com_ubicacion
-                                                "
-                                                placeholder="Ubicación (opcional)"
-                                            />
-                                            <div
-                                                v-if="erroresNuevaComunidad.com_id_tor"
-                                                class="text-danger small mb-1"
-                                            >
-                                                {{ erroresNuevaComunidad.com_id_tor }}
-                                            </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Tipo de Proyecto</label>
+                                        <div class="d-flex gap-2 align-items-center">
                                             <select
-                                                class="form-select form-select-sm mb-2"
-                                                v-model="
-                                                    nuevaComunidad.com_id_tor
-                                                "
+                                                class="form-select form-select-sm"
+                                                v-model="formProyecto.pco_id_tpr"
                                             >
                                                 <option value="">
-                                                    Seleccione tipo de organización *
+                                                    Seleccionar tipo...
                                                 </option>
                                                 <option
-                                                    v-for="t in tiposOrganizacion"
-                                                    :key="t.tor_id"
-                                                    :value="t.tor_id"
+                                                    v-for="t in tiposProyecto"
+                                                    :key="t.tpr_id"
+                                                    :value="t.tpr_id"
                                                 >
-                                                    {{ t.tor_nombre }}
+                                                    {{ t.tpr_nombre }}
                                                 </option>
                                             </select>
-                                            <div class="d-flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-sm btn-danger fw-bold flex-fill"
-                                                    :disabled="guardandoComunidad"
-                                                    @click="
-                                                        guardarNuevaComunidad
-                                                    "
-                                                >
-                                                    <span
-                                                        v-if="guardandoComunidad"
-                                                        class="spinner-border spinner-border-sm me-1"
-                                                    ></span>
-                                                    <i v-else class="bi bi-check2 me-1"></i>
-                                                    Guardar Comunidad
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-sm btn-outline-secondary"
-                                                    @click="
-                                                        mostrarNuevaComunidad = false
-                                                    "
-                                                >
-                                                    Cancelar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div
-                                        class="d-flex gap-2 align-items-center mb-2"
-                                    >
-                                        <select
-                                            class="form-select form-select-sm"
-                                            v-model="formProyecto.pco_id_tpr"
-                                        >
-                                            <option value="">
-                                                Seleccionar tipo...
-                                            </option>
-                                            <option
-                                                v-for="t in tiposProyecto"
-                                                :key="t.tpr_id"
-                                                :value="t.tpr_id"
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
+                                                @click="abrirModalNuevoTipo('crear')"
+                                                title="Registrar nuevo tipo de proyecto"
                                             >
-                                                {{ t.tpr_nombre }}
-                                            </option>
-                                        </select>
-                                        <button
-                                            type="button"
-                                            class="btn btn-sm btn-outline-danger flex-shrink-0"
-                                            @click="
-                                                mostrarNuevoTipo =
-                                                    !mostrarNuevoTipo
-                                            "
-                                        >
-                                            <i class="bi bi-plus-circle"></i>
-                                        </button>
-                                    </div>
-
-                                    <div
-                                        v-if="mostrarNuevoTipo"
-                                        class="p-2 mb-2 rounded"
-                                        style="
-                                            background: var(--bg-th);
-                                            border: 1px solid var(--border);
-                                        "
-                                    >
-                                        <p class="small fw-bold mb-2">
-                                            Agregar nuevo tipo de proyecto
-                                        </p>
-                                        <input
-                                            type="text"
-                                            class="form-control form-control-sm mb-1"
-                                            v-model="nuevoTipo.tpr_nombre"
-                                            placeholder="Nombre del tipo"
-                                        />
-                                        <button
-                                            type="button"
-                                            class="btn btn-sm btn-danger w-100"
-                                            @click="guardarNuevoTipo"
-                                        >
-                                            <i class="bi bi-check2"></i> Guardar
-                                            tipo
-                                        </button>
+                                                <i class="bi bi-plus-lg me-1"></i>Nuevo
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold"
@@ -1328,6 +1254,19 @@
                                 </button>
                                 <button
                                     v-if="paso === 1"
+                                    type="button"
+                                    class="btn btn-outline-danger fw-bold"
+                                    :disabled="loading"
+                                    @click="guardarSinProyecto"
+                                >
+                                    <span
+                                        v-if="loading"
+                                        class="spinner-border spinner-border-sm me-1"
+                                    ></span>
+                                    <i v-else class="bi bi-check-lg me-1"></i>Guardar sin Comunidad
+                                </button>
+                                <button
+                                    v-if="paso === 1"
                                     type="submit"
                                     class="btn btn-danger fw-bold"
                                 >
@@ -1428,46 +1367,66 @@
                                 <span v-if="!equipoSeleccionado?.proyecto_comunidad" class="badge bg-secondary ms-1">Sin asignar</span>
                             </p>
 
-                            <div class="mb-2">
+                            <div class="mb-3">
                                 <label class="form-label small fw-bold"
                                     >Comunidad</label
                                 >
-                                <select
-                                    class="form-select form-select-sm"
-                                    v-model="formEditar.pco_id_com"
-                                >
-                                    <option value="">
-                                        Seleccionar comunidad...
-                                    </option>
-                                    <option
-                                        v-for="c in comunidades"
-                                        :key="c.com_id"
-                                        :value="c.com_id"
+                                <div class="d-flex gap-2 align-items-center">
+                                    <select
+                                        class="form-select form-select-sm"
+                                        v-model="formEditar.pco_id_com"
                                     >
-                                        {{ c.com_nombre }}
-                                    </option>
-                                </select>
+                                        <option value="">
+                                            Seleccionar comunidad...
+                                        </option>
+                                        <option
+                                            v-for="c in comunidades"
+                                            :key="c.com_id"
+                                            :value="c.com_id"
+                                        >
+                                            {{ c.com_nombre }}
+                                        </option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
+                                        @click="abrirModalNuevaComunidad('editar')"
+                                        title="Registrar nueva comunidad"
+                                    >
+                                        <i class="bi bi-plus-lg me-1"></i>Nueva
+                                    </button>
+                                </div>
                             </div>
 
-                            <div class="mb-2">
+                            <div class="mb-3">
                                 <label class="form-label small fw-bold"
                                     >Tipo de Proyecto</label
                                 >
-                                <select
-                                    class="form-select form-select-sm"
-                                    v-model="formEditar.pco_id_tpr"
-                                >
-                                    <option value="">
-                                        Seleccionar tipo...
-                                    </option>
-                                    <option
-                                        v-for="t in tiposProyecto"
-                                        :key="t.tpr_id"
-                                        :value="t.tpr_id"
+                                <div class="d-flex gap-2 align-items-center">
+                                    <select
+                                        class="form-select form-select-sm"
+                                        v-model="formEditar.pco_id_tpr"
                                     >
-                                        {{ t.tpr_nombre }}
-                                    </option>
-                                </select>
+                                        <option value="">
+                                            Seleccionar tipo...
+                                        </option>
+                                        <option
+                                            v-for="t in tiposProyecto"
+                                            :key="t.tpr_id"
+                                            :value="t.tpr_id"
+                                        >
+                                            {{ t.tpr_nombre }}
+                                        </option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
+                                        @click="abrirModalNuevoTipo('editar')"
+                                        title="Registrar nuevo tipo de proyecto"
+                                    >
+                                        <i class="bi bi-plus-lg me-1"></i>Nuevo
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="mb-2">
@@ -1662,16 +1621,15 @@
                                     </button>
                                 </div>
                             </div>
-                            <ul class="list-group list-group-flush">
+                            <ul v-if="integrantesActivosSeleccionados.length > 0" class="list-group list-group-flush">
                                 <li
-                                    v-for="int in equipoSeleccionado?.integrantes"
+                                    v-for="int in integrantesActivosSeleccionados"
                                     :key="int.ein_id"
                                     class="list-group-item d-flex align-items-center gap-3 px-1 py-2"
                                     style="
                                         background: transparent;
                                         border-color: var(--border);
                                     "
-                                    :class="!int.ein_status ? 'opacity-50' : ''"
                                 >
                                     <div
                                         class="cdot"
@@ -1727,10 +1685,7 @@
                                             }}</span
                                         >
                                         <button
-                                            v-if="
-                                                int.ein_status &&
-                                                !int.ein_es_lider
-                                            "
+                                            v-if="!int.ein_es_lider"
                                             class="btn btn-sm btn-outline-primary"
                                             @click="abrirTraslado(int)"
                                             title="Trasladar a otro equipo"
@@ -1738,10 +1693,7 @@
                                             <i class="bi bi-arrow-left-right"></i>
                                         </button>
                                         <button
-                                            v-if="
-                                                int.ein_status &&
-                                                !int.ein_es_lider
-                                            "
+                                            v-if="!int.ein_es_lider"
                                             class="btn btn-sm btn-outline-danger"
                                             @click="removerIntegrante(int)"
                                             title="Remover"
@@ -1751,6 +1703,9 @@
                                     </div>
                                 </li>
                             </ul>
+                            <div v-else class="text-center py-4 text-muted small">
+                                <i class="bi bi-people me-1"></i>No hay integrantes activos en este equipo.
+                            </div>
                         </div>
 
                         <div v-if="tabActivo === 'hist'" class="p-3">
@@ -2272,6 +2227,127 @@
             </div>
         </div>
 
+        <!-- Modal Nueva Comunidad (Submodal con diseño Rojo, Negro y Blanco) -->
+        <div class="modal fade" id="mModalNuevaComunidad" tabindex="-1" aria-labelledby="mModalNuevaComunidadLabel" aria-hidden="true" style="z-index: 1070;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden; background: var(--bg-card);">
+                    <div class="mh" style="background: #1a1d23; border-bottom: 2px solid #dc3545; color: #fff; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                        <h5 class="mb-0 fw-bold fs-6 text-white d-flex align-items-center">
+                            <i class="bi bi-geo-alt-fill text-danger me-2"></i>Registrar Nueva Comunidad
+                        </h5>
+                        <button type="button" class="btn btn-sm text-white p-0 fs-5" @click="cerrarModalNuevaComunidad">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <form @submit.prevent="guardarNuevaComunidad">
+                        <div class="modal-body p-4" style="color: var(--text-main);">
+                            <div class="alert py-2 px-3 small mb-3 rounded" style="background: rgba(220, 53, 69, 0.08); border-left: 3px solid #dc3545; color: var(--text-main);">
+                                <i class="bi bi-info-circle-fill me-1 text-danger"></i>
+                                Registra la comunidad para asociarla directamente al proyecto.
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nombre de la Comunidad <span class="text-danger">*</span></label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': erroresNuevaComunidad.com_nombre }"
+                                    v-model="nuevaComunidad.com_nombre"
+                                    placeholder="Ej: Comunidad Brisas del Este"
+                                />
+                                <div v-if="erroresNuevaComunidad.com_nombre" class="invalid-feedback">
+                                    {{ erroresNuevaComunidad.com_nombre }}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Tipo de Organización <span class="text-danger">*</span></label>
+                                <select
+                                    class="form-select"
+                                    :class="{ 'is-invalid': erroresNuevaComunidad.com_id_tor }"
+                                    v-model="nuevaComunidad.com_id_tor"
+                                >
+                                    <option value="">Seleccione tipo de organización...</option>
+                                    <option v-for="t in tiposOrganizacion" :key="t.tor_id" :value="t.tor_id">
+                                        {{ t.tor_nombre }}
+                                    </option>
+                                </select>
+                                <div v-if="erroresNuevaComunidad.com_id_tor" class="invalid-feedback">
+                                    {{ erroresNuevaComunidad.com_id_tor }}
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">Ubicación / Dirección <span class="text-muted fw-normal">(opcional)</span></label>
+                                <textarea
+                                    class="form-control"
+                                    v-model="nuevaComunidad.com_ubicacion"
+                                    rows="2"
+                                    placeholder="Ej: Av. Principal c/calle 5, Sector Centro..."
+                                ></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 p-3" style="background: var(--bg-th); border-top: 1px solid var(--border) !important;">
+                            <button type="button" class="btn btn-secondary btn-sm px-3" @click="cerrarModalNuevaComunidad">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold" :disabled="guardandoComunidad">
+                                <span v-if="guardandoComunidad" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-check2 me-1"></i>Guardar Comunidad
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Nuevo Tipo de Proyecto (Submodal con diseño Rojo, Negro y Blanco) -->
+        <div class="modal fade" id="mModalNuevoTipo" tabindex="-1" aria-labelledby="mModalNuevoTipoLabel" aria-hidden="true" style="z-index: 1070;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden; background: var(--bg-card);">
+                    <div class="mh" style="background: #1a1d23; border-bottom: 2px solid #dc3545; color: #fff; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                        <h5 class="mb-0 fw-bold fs-6 text-white d-flex align-items-center">
+                            <i class="bi bi-tag-fill text-danger me-2"></i>Registrar Nuevo Tipo de Proyecto
+                        </h5>
+                        <button type="button" class="btn btn-sm text-white p-0 fs-5" @click="cerrarModalNuevoTipo">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <form @submit.prevent="guardarNuevoTipo">
+                        <div class="modal-body p-4" style="color: var(--text-main);">
+                            <div class="alert py-2 px-3 small mb-3 rounded" style="background: rgba(220, 53, 69, 0.08); border-left: 3px solid #dc3545; color: var(--text-main);">
+                                <i class="bi bi-info-circle-fill me-1 text-danger"></i>
+                                Ingresa el nombre del tipo de proyecto. Quedará seleccionado automáticamente en el formulario.
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">Nombre del Tipo de Proyecto <span class="text-danger">*</span></label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': erroresNuevoTipo.tpr_nombre }"
+                                    v-model="nuevoTipo.tpr_nombre"
+                                    placeholder="Ej: Desarrollo de Software, Redes, Capacitación..."
+                                />
+                                <div v-if="erroresNuevoTipo.tpr_nombre" class="invalid-feedback">
+                                    {{ erroresNuevoTipo.tpr_nombre }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 p-3" style="background: var(--bg-th); border-top: 1px solid var(--border) !important;">
+                            <button type="button" class="btn btn-secondary btn-sm px-3" @click="cerrarModalNuevoTipo">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold" :disabled="guardandoTipo">
+                                <span v-if="guardandoTipo" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-check2 me-1"></i>Guardar Tipo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Confirmación Cerrar Sesión -->
         <ModalConfirmar
             ref="modalLogout"
@@ -2392,11 +2468,11 @@ const erroresEditar = ref({});
 const formNuevo = ref({
     equ_id_sec: "",
     equ_numero_grupo: "",
+    equ_semestre: 1,
+    equ_total_seccion: 7,
     equ_titulo: "",
     integrantes: [{ usu_id: "", es_lider: true }],
     justificacion_integrantes: "",
-    equ_total_seccion: "",
-    equ_semestre: "",
 });
 const formEditar = ref({
     equ_titulo: "",
@@ -2471,18 +2547,33 @@ const trayectoSeleccionado = computed(
 const siguienteNumeroEquipo = computed(() => {
     const secId = formNuevo.value.equ_id_sec;
     if (!secId) return 1;
-    const equiposSec = (props.equipos || []).filter((e) => e.equ_id_sec == secId);
+    const todos = [...(props.equipos || []), ...(props.equiposDisueltos || [])];
+    const equiposSec = todos.filter((e) => e.equ_id_sec == secId);
     let maxN = 0;
     equiposSec.forEach((e) => {
-        const m = e.equ_codigo ? e.equ_codigo.match(/G(\d+)/i) : null;
-        if (m) {
-            maxN = Math.max(maxN, parseInt(m[1]));
+        const mSlash = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/(\d+)$/) : null;
+        if (mSlash) {
+            maxN = Math.max(maxN, parseInt(mSlash[1]));
         } else {
-            const mAlt = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/\d+$/) : null;
-            if (mAlt) maxN = Math.max(maxN, parseInt(mAlt[1]));
+            const mG = e.equ_codigo ? e.equ_codigo.match(/G(\d+)/i) : null;
+            if (mG) maxN = Math.max(maxN, parseInt(mG[1]));
         }
     });
     return maxN + 1;
+});
+
+const totalEquiposSeccion = computed(() => {
+    const secId = formNuevo.value.equ_id_sec;
+    if (!secId) return 7;
+    const todos = [...(props.equipos || [])];
+    const equiposSec = todos.filter((e) => e.equ_id_sec == secId);
+    for (const e of equiposSec) {
+        const mSlash = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/(\d+)$/) : null;
+        if (mSlash && parseInt(mSlash[2])) {
+            return parseInt(mSlash[2]);
+        }
+    }
+    return 7;
 });
 
 const codigoPreview = computed(() => {
@@ -2490,24 +2581,52 @@ const codigoPreview = computed(() => {
     const f = formNuevo.value;
     if (!sec || !f.equ_numero_grupo) return "—";
     const pnf = (sec.trayecto?.pnf?.pnf_siglas || "PNFI").toUpperCase();
-    const tra = sec.trayecto?.tra_numero ?? "";
-    return `${pnf}-${sec.sec_codigo}-G${f.equ_numero_grupo}-T${tra}`;
+    const sede = (props.sede || "ACA").toUpperCase();
+    const tra = sec.trayecto?.tra_numero ?? 1;
+    const sem = f.equ_semestre || 1;
+    const num = f.equ_numero_grupo;
+    const tot = f.equ_total_seccion || num;
+    return `${pnf}-${sede}${tra}${sem}-${sec.sec_codigo}-${num}/${tot}`;
 });
 
 const onSeccionChange = () => {
-    formNuevo.value.equ_numero_grupo = String(siguienteNumeroEquipo.value);
+    const sigNum = siguienteNumeroEquipo.value;
+    const totSec = Math.max(totalEquiposSeccion.value, sigNum);
+    formNuevo.value.equ_numero_grupo = String(sigNum);
+    formNuevo.value.equ_total_seccion = totSec;
+    formNuevo.value.equ_semestre = 1;
+
+    const secId = formNuevo.value.equ_id_sec;
+    formNuevo.value.integrantes.forEach((item) => {
+        if (!item.usu_id) return;
+        const est = props.estudiantes?.find((e) => e.usu_id === item.usu_id);
+        if (est && est.sec_id && String(est.sec_id) !== String(secId)) {
+            item.usu_id = "";
+        }
+    });
 };
+
+watch(() => formNuevo.value.equ_numero_grupo, (newVal) => {
+    const n = parseInt(newVal);
+    if (!isNaN(n) && n > formNuevo.value.equ_total_seccion) {
+        formNuevo.value.equ_total_seccion = n;
+    }
+});
 const busquedaEstudiante = ref("");
 
 const estudiantesDisponibles = (idActual) => {
     const sel = formNuevo.value.integrantes
         .map((i) => i.usu_id)
         .filter((id) => id && id !== idActual);
+    const secId = formNuevo.value.equ_id_sec;
 
     return (
         props.estudiantes?.filter((e) => {
             if (sel.includes(e.usu_id)) return false;
             if (e.usu_id === idActual) return true;
+            if (secId && e.sec_id && String(e.sec_id) !== String(secId)) {
+                return false;
+            }
             if (busquedaEstudiante.value.trim()) {
                 const q = busquedaEstudiante.value.toLowerCase().trim();
                 return (
@@ -2522,24 +2641,20 @@ const estudiantesDisponibles = (idActual) => {
 };
 const actualizarLider = () => {
     formNuevo.value.integrantes.forEach((item, idx) => {
-        item.es_lider = idx === liderIndex.value;
+        item.es_lider = idx === 0;
     });
 };
 const agregarIntegrante = () => {
-    const esElPrimero = formNuevo.value.integrantes.length === 0;
+    if (formNuevo.value.integrantes.length >= 6) return;
     formNuevo.value.integrantes.push({
         usu_id: "",
-        es_lider: esElPrimero, // el primero es líder automáticamente
+        es_lider: false,
     });
-    if (esElPrimero) {
-        liderIndex.value = 0;
-    }
+    actualizarLider();
 };
 const quitarIntegrante = (idx) => {
+    if (idx === 0) return; // El líder no se puede eliminar
     formNuevo.value.integrantes.splice(idx, 1);
-    if (liderIndex.value >= formNuevo.value.integrantes.length) {
-        liderIndex.value = 0;
-    }
     actualizarLider();
 };
 const agregarBeneficiario = () => {
@@ -2558,22 +2673,28 @@ const integrantesNoLider = computed(() =>
 const abrirModalCrear = () => {
     paso.value = 1;
     formNuevo.value = {
-        equ_id_sec: "",
+        equ_id_sec: props.seccion?.sec_id ? props.seccion.sec_id : "",
         equ_numero_grupo: "",
+        equ_semestre: 1,
+        equ_total_seccion: 7,
         equ_titulo: "",
         integrantes: [{ usu_id: "", es_lider: true }],
-        equ_total_seccion: "",
-        equ_semestre: "",
+        justificacion_integrantes: "",
     };
+    if (formNuevo.value.equ_id_sec) {
+        onSeccionChange();
+    }
     formProyecto.value = {
         pco_id_com: "",
         pco_id_tpr: "",
         pco_id_mpr: "",
+        pco_id_pco_previo: "",
         pco_fecha_limite: "",
         pco_resumen: "",
         beneficiarios: [],
     };
     liderIndex.value = 0;
+    busquedaEstudiante.value = "";
     errores.value = {};
     mCrear = mCrear || new Modal(document.getElementById("mCrear"));
     mCrear.show();
@@ -2613,42 +2734,31 @@ const abrirDisolver = (equ) => {
     mDisolver.show();
 };
 
-const irPaso2 = () => {
+const validarPaso1 = () => {
     errores.value = {};
     if (!formNuevo.value.equ_id_sec) {
         errores.value.equ_id_sec = "La sección es obligatoria.";
-        return;
+        return false;
     }
     if (!formNuevo.value.equ_numero_grupo) {
         errores.value.equ_numero_grupo = "El número de grupo es obligatorio.";
-        return;
+        return false;
     }
-    if (!formNuevo.value.equ_total_seccion) {
-        errores.value.equ_total_seccion =
-            "Indica cuántos equipos tiene la sección.";
-        return;
-    }
-    if (
-        Number(formNuevo.value.equ_total_seccion) <
-        Number(formNuevo.value.equ_numero_grupo)
-    ) {
-        errores.value.equ_total_seccion =
-            "El total no puede ser menor que el N° de equipo.";
-        return;
-    }
-    if (!formNuevo.value.equ_semestre) {
-        errores.value.equ_semestre = "El semestre es obligatorio.";
-        return;
+    const numG = Number(formNuevo.value.equ_numero_grupo);
+    const totS = Number(formNuevo.value.equ_total_seccion || numG);
+    if (totS < numG) {
+        errores.value.equ_total_seccion = `La cantidad total de equipos (${totS}) no puede ser menor al número de equipo (${numG}).`;
+        return false;
     }
     if (!formNuevo.value.equ_titulo?.trim()) {
         errores.value.equ_titulo = "El título es obligatorio.";
-        return;
+        return false;
     }
     const intsValidos = formNuevo.value.integrantes.filter((i) => i.usu_id);
     if (intsValidos.length === 0) {
         errores.value.integrantes =
             "Debes seleccionar al menos un integrante para el equipo.";
-        return;
+        return false;
     }
     formNuevo.value.integrantes = intsValidos;
     actualizarLider();
@@ -2657,23 +2767,58 @@ const irPaso2 = () => {
         if (!formNuevo.value.justificacion_integrantes?.trim()) {
             errores.value.justificacion_integrantes =
                 "Debes justificar la creación del equipo con menos de 3 integrantes.";
-            return;
+            return false;
         }
     }
 
     errores.value = {};
+    return true;
+};
+
+const irPaso2 = () => {
+    if (!validarPaso1()) return;
     paso.value = 2;
+};
+
+const guardarSinProyecto = () => {
+    if (!validarPaso1()) return;
+    formProyecto.value.pco_id_com = "";
+    guardarNuevo();
 };
 
 const guardarNuevo = () => {
     actualizarLider();
     loading.value = true;
+
+    // Preparar proyecto limpio solo si se eligió comunidad y tipo
+    let proyectoLimpio = null;
+    if (formProyecto.value.pco_id_com) {
+        proyectoLimpio = {
+            pco_id_com: formProyecto.value.pco_id_com,
+            pco_id_tpr: formProyecto.value.pco_id_tpr || null,
+            pco_id_mpr: formProyecto.value.pco_id_mpr || null,
+            pco_id_pco_previo: formProyecto.value.pco_id_pco_previo || null,
+            pco_fecha_limite: formProyecto.value.pco_fecha_limite || null,
+            pco_resumen: formProyecto.value.pco_resumen || "",
+            beneficiarios: (formProyecto.value.beneficiarios || [])
+                .filter((b) => b.tbe_id && Number(b.cantidad) > 0)
+                .map((b) => ({ tbe_id: b.tbe_id, cantidad: Number(b.cantidad) })),
+        };
+    }
+
     const payload = {
-        ...formNuevo.value,
+        equ_id_sec: formNuevo.value.equ_id_sec,
+        equ_numero_grupo: formNuevo.value.equ_numero_grupo,
+        equ_semestre: formNuevo.value.equ_semestre || 1,
+        equ_total_seccion: formNuevo.value.equ_total_seccion || formNuevo.value.equ_numero_grupo,
+        equ_codigo: codigoPreview.value !== "—" ? codigoPreview.value : "",
+        equ_titulo: formNuevo.value.equ_titulo,
+        integrantes: formNuevo.value.integrantes,
         justificacion_integrantes:
             formNuevo.value.justificacion_integrantes ?? "",
-        proyecto: formProyecto.value.pco_id_com ? formProyecto.value : null,
+        proyecto: proyectoLimpio,
     };
+
     router.post(`${base.value}/equipos`, payload, {
         onError: (e) => {
             errores.value = e;
@@ -2726,6 +2871,17 @@ const removerIntegrante = (int) => {
         return;
     router.delete(
         `${base.value}/equipos/${equipoSeleccionado.value.equ_id}/integrantes/${int.ein_id}`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                const act = (props.equipos || []).find(
+                    (e) => e.equ_id === equipoSeleccionado.value.equ_id,
+                );
+                if (act) {
+                    equipoSeleccionado.value = act;
+                }
+            },
+        },
     );
 };
 const confirmarCambioLider = () => {
@@ -2749,22 +2905,35 @@ const confirmarCambioLider = () => {
         },
     );
 };
+
+const integrantesActivosSeleccionados = computed(() =>
+    (equipoSeleccionado.value?.integrantes || []).filter(
+        (i) => i.ein_status !== false,
+    ),
+);
+
 const cargarHistorial = async () => {
     tabActivo.value = "hist";
     if (!equipoSeleccionado.value) return;
     cargandoHistorial.value = true;
-    const res = await fetch(
-        `${base.value}/equipos/${equipoSeleccionado.value.equ_id}/historial`,
-    );
-    historialEquipo.value = await res.json();
-    cargandoHistorial.value = false;
+    try {
+        const res = await window.axios.get(
+            `${base.value}/equipos/${equipoSeleccionado.value.equ_id}/historial`,
+        );
+        historialEquipo.value = res.data || [];
+    } catch (e) {
+        historialEquipo.value = [];
+    } finally {
+        cargandoHistorial.value = false;
+    }
 };
 
 const colorEvt = (n) => {
     const m = {
         Disuelto: "background:#f8d7da;color:#842029",
         "Líder Cambiado": "background:#fff3cd;color:#664d03",
-        "Integrante Removido": "background:#ffe5d0;color:#984c0c",
+        "Integrante Removido": "background:rgba(220,53,69,0.12);color:#dc3545",
+        Modificado: "background:rgba(13,110,253,0.12);color:#0d6efd",
         Reactivado: "background:#d1e7dd;color:#0f5132",
     };
     return m[n] || "background:#e2e3e5;color:#41464b";
@@ -2772,7 +2941,8 @@ const colorEvt = (n) => {
 const iconEvt = (n) => {
     if (n === "Disuelto") return "bi-x-circle";
     if (n === "Líder Cambiado") return "bi-arrow-repeat";
-    if (n === "Integrante Removido") return "bi-person-dash";
+    if (n === "Integrante Removido") return "bi-arrow-left-right";
+    if (n === "Modificado") return "bi-person-plus";
     if (n === "Reactivado") return "bi-arrow-counterclockwise";
     return "bi-circle";
 };
@@ -2797,7 +2967,8 @@ const fechaMaxima = computed(() => {
     d.setFullYear(d.getFullYear() + 1);
     return d.toISOString().split("T")[0];
 });
-const mostrarNuevaComunidad = ref(false);
+const origenComunidad = ref("crear");
+const origenTipo = ref("crear");
 const guardandoComunidad = ref(false);
 const erroresNuevaComunidad = ref({});
 const nuevaComunidad = ref({
@@ -2805,6 +2976,31 @@ const nuevaComunidad = ref({
     com_ubicacion: "",
     com_id_tor: "",
 });
+let modalSubComunidad = null;
+
+const abrirModalNuevaComunidad = (origen = "crear") => {
+    origenComunidad.value = origen;
+    erroresNuevaComunidad.value = {};
+    nuevaComunidad.value = {
+        com_nombre: "",
+        com_ubicacion: "",
+        com_id_tor: "",
+    };
+    const el = document.getElementById("mModalNuevaComunidad");
+    if (el) {
+        modalSubComunidad = Modal.getInstance(el) || new Modal(el, { backdrop: "static" });
+        modalSubComunidad.show();
+    }
+};
+
+const cerrarModalNuevaComunidad = () => {
+    modalSubComunidad?.hide();
+    setTimeout(() => {
+        if (document.querySelector(".modal.show")) {
+            document.body.classList.add("modal-open");
+        }
+    }, 300);
+};
 
 const guardarNuevaComunidad = async () => {
     erroresNuevaComunidad.value = {};
@@ -2822,19 +3018,17 @@ const guardarNuevaComunidad = async () => {
     try {
         const response = await window.axios.post(ruta, nuevaComunidad.value);
         guardandoComunidad.value = false;
-        mostrarNuevaComunidad.value = false;
 
         const creada = response.data?.comunidad;
         if (creada) {
             props.comunidades.push(creada);
-            formProyecto.value.pco_id_com = creada.com_id;
+            if (origenComunidad.value === "crear") {
+                formProyecto.value.pco_id_com = creada.com_id;
+            } else {
+                formEditar.value.pco_id_com = creada.com_id;
+            }
         }
-
-        nuevaComunidad.value = {
-            com_nombre: "",
-            com_ubicacion: "",
-            com_id_tor: "",
-        };
+        cerrarModalNuevaComunidad();
     } catch (error) {
         guardandoComunidad.value = false;
         if (error.response?.data?.errors) {
@@ -2848,18 +3042,67 @@ const guardarNuevaComunidad = async () => {
         }
     }
 };
-const mostrarNuevoTipo = ref(false);
-const nuevoTipo = ref({ tpr_nombre: "" });
 
-const guardarNuevoTipo = () => {
-    if (!nuevoTipo.value.tpr_nombre.trim()) return;
-    router.post(`${base.value}/tipos-proyecto`, nuevoTipo.value, {
-        preserveScroll: true,
-        onSuccess: () => {
-            mostrarNuevoTipo.value = false;
-            nuevoTipo.value = { tpr_nombre: "" };
-        },
-    });
+const guardandoTipo = ref(false);
+const erroresNuevoTipo = ref({});
+const nuevoTipo = ref({ tpr_nombre: "" });
+let modalSubTipo = null;
+
+const abrirModalNuevoTipo = (origen = "crear") => {
+    origenTipo.value = origen;
+    erroresNuevoTipo.value = {};
+    nuevoTipo.value = { tpr_nombre: "" };
+    const el = document.getElementById("mModalNuevoTipo");
+    if (el) {
+        modalSubTipo = Modal.getInstance(el) || new Modal(el, { backdrop: "static" });
+        modalSubTipo.show();
+    }
+};
+
+const cerrarModalNuevoTipo = () => {
+    modalSubTipo?.hide();
+    setTimeout(() => {
+        if (document.querySelector(".modal.show")) {
+            document.body.classList.add("modal-open");
+        }
+    }, 300);
+};
+
+const guardarNuevoTipo = async () => {
+    erroresNuevoTipo.value = {};
+    if (!nuevoTipo.value.tpr_nombre.trim()) {
+        erroresNuevoTipo.value.tpr_nombre = "El nombre es obligatorio.";
+        return;
+    }
+    guardandoTipo.value = true;
+    const ruta = `${base.value}/tipos-proyecto`;
+
+    try {
+        const response = await window.axios.post(ruta, nuevoTipo.value);
+        guardandoTipo.value = false;
+
+        const creado = response.data?.tipoProyecto;
+        if (creado) {
+            props.tiposProyecto.push(creado);
+            if (origenTipo.value === "crear") {
+                formProyecto.value.pco_id_tpr = creado.tpr_id;
+            } else {
+                formEditar.value.pco_id_tpr = creado.tpr_id;
+            }
+        }
+        cerrarModalNuevoTipo();
+    } catch (error) {
+        guardandoTipo.value = false;
+        if (error.response?.data?.errors) {
+            erroresNuevoTipo.value = Object.fromEntries(
+                Object.entries(error.response.data.errors).map(([k, v]) => [k, v[0]])
+            );
+        } else if (error.response?.data?.message) {
+            erroresNuevoTipo.value.tpr_nombre = error.response.data.message;
+        } else {
+            erroresNuevoTipo.value.tpr_nombre = "Error al registrar el tipo de proyecto.";
+        }
+    }
 };
 
 const requiereProyectoPrevio = computed(() => {

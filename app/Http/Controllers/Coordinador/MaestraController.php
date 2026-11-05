@@ -25,11 +25,19 @@ class MaestraController extends Controller
             'tpr_nombre.unique'   => 'Ya existe un tipo de proyecto con ese nombre.',
         ]);
 
-        TipoProyecto::create([
+        $tipo = TipoProyecto::create([
             'tpr_nombre'        => $request->tpr_nombre,
             'tpr_status'        => true,
             'tpr_id_usu_created' => auth()->id(),
         ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success'      => true,
+                'message'      => 'Tipo de proyecto creado correctamente.',
+                'tipoProyecto' => $tipo,
+            ]);
+        }
 
         return back()->with('success', 'Tipo de proyecto creado correctamente.');
     }

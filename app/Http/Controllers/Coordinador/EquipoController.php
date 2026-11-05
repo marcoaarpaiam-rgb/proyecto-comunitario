@@ -95,14 +95,12 @@ class EquipoController extends Controller
         }
 
         // ── Estudiantes filtrados por sección del profesor ────────────
-        // Coordinador: ve todos los disponibles
+        // Coordinador: ve todos los disponibles con sección activa y sec_id asociado
         // Profesor: ve solo los de sus secciones que no están en equipo activo
         if ($esProfesor && $seccionesIds && $seccionesIds->isNotEmpty()) {
-            $estudiantesIds = EstudianteSeccion::whereIn('ese_id_sec', $seccionesIds)
-                ->where('ese_status', true)
-                ->pluck('ese_id_usu');
-
-            $estudiantes = Usuario::whereIn('usu_id', $estudiantesIds)
+            $estudiantes = Usuario::whereHas('seccionesEstudiante', fn($q) =>
+                    $q->whereIn('ese_id_sec', $seccionesIds)->where('ese_status', true)
+                )
                 ->where('usu_status', true)
                 ->whereDoesntHave('equiposIntegrante', fn($q) =>
                     $q->where('ein_status', true)
@@ -110,11 +108,21 @@ class EquipoController extends Controller
                           $q2->where('equ_status', true)
                       )
                 )
-                ->get(['usu_id','usu_cedula','usu_primer_nombre',
-                       'usu_primer_apellido','usu_tiene_acceso']);
+                ->with(['seccionesEstudiante' => fn($q) =>
+                    $q->whereIn('ese_id_sec', $seccionesIds)->where('ese_status', true)
+                ])
+                ->get(['usu_id','usu_cedula','usu_primer_nombre','usu_primer_apellido','usu_tiene_acceso'])
+                ->map(function ($u) {
+                    $u->sec_id = $u->seccionesEstudiante->first()?->ese_id_sec;
+                    unset($u->seccionesEstudiante);
+                    return $u;
+                });
         } else {
-            // Coordinador: todos los disponibles sin equipo activo
-            $estudiantes = Usuario::where('usu_status', true)
+            // Coordinador: todos los disponibles con sección activa
+            $estudiantes = Usuario::whereHas('seccionesEstudiante', fn($q) =>
+                    $q->where('ese_status', true)
+                )
+                ->where('usu_status', true)
                 ->where(function ($q) {
                     $q->where('usu_tiene_acceso', false)
                       ->orWhereHas('usuarioRoles', fn($r) =>
@@ -130,8 +138,15 @@ class EquipoController extends Controller
                           $q2->where('equ_status', true)
                       )
                 )
-                ->get(['usu_id','usu_cedula','usu_primer_nombre',
-                       'usu_primer_apellido','usu_tiene_acceso']);
+                ->with(['seccionesEstudiante' => fn($q) =>
+                    $q->where('ese_status', true)
+                ])
+                ->get(['usu_id','usu_cedula','usu_primer_nombre','usu_primer_apellido','usu_tiene_acceso'])
+                ->map(function ($u) {
+                    $u->sec_id = $u->seccionesEstudiante->first()?->ese_id_sec;
+                    unset($u->seccionesEstudiante);
+                    return $u;
+                });
         }
 
         return Inertia::render('Shared/Equipos', [
@@ -228,15 +243,24 @@ class EquipoController extends Controller
             ]);
         }
 
-        // Generación estándar y limpia del código del equipo
+        // Generación estándar institucional del código del equipo:
+        // PNFI-ACARIGUATRAYECTOSEMESTRE-SECCIÓN-NºDEEQUIPO/CANTDEEQUIPOSENLASECCIÓN (ej: PNFI-ACA11-131-1/7)
         $trayecto = $seccion->trayecto;
         $numero   = (int) $request->equ_numero_grupo;
+        $totalSec = (int) ($request->equ_total_seccion ?: $numero);
+        $semestre = (int) ($request->equ_semestre ?: 1);
+        $sede     = strtoupper(config('siscon.sede', 'ACA'));
         $pnf      = strtoupper($trayecto->pnf?->pnf_siglas ?? 'PNFI');
+        $traNum   = $trayecto->tra_numero ?? 1;
+
+        if ($totalSec < $numero) {
+            return back()->withErrors(['equ_total_seccion' => "La cantidad total de equipos ({$totalSec}) no puede ser menor al número del equipo ({$numero})."]);
+        }
 
         if (!empty($request->equ_codigo) && trim($request->equ_codigo) !== '') {
             $codigo = trim($request->equ_codigo);
         } else {
-            $codigo = "{$pnf}-{$seccion->sec_codigo}-G{$numero}-T{$trayecto->tra_numero}";
+            $codigo = "{$pnf}-{$sede}{$traNum}{$semestre}-{$seccion->sec_codigo}-{$numero}/{$totalSec}";
         }
 
         // Validar que el código no esté duplicado
@@ -462,13 +486,35 @@ class EquipoController extends Controller
             'ein_fecha_salida'   => now()->toDateString(),
             'ein_id_usu_updated' => auth()->id(),
         ]);
+        $nombre = $integrante->usuario?->usu_primer_nombre . ' ' . $integrante->usuario?->usu_primer_apellido;
         \App\Models\HistorialEquipo::create([
             'heq_id_equ'         => $equipoId,
             'heq_id_tee'         => \App\Models\TipoEventoEquipo::where('tee_nombre','Integrante Removido')->first()?->tee_id,
-            'heq_motivo'         => 'Integrante '.$integrante->usuario?->usu_primer_nombre.' '.$integrante->usuario?->usu_primer_apellido.' removido del equipo.',
+            'heq_motivo'         => 'Integrante '.$nombre.' removido del equipo.',
             'heq_fecha_evento'   => now()->toDateString(),
             'heq_id_usu_created' => auth()->id(),
         ]);
+
+        // Notificación al líder del equipo
+        $lider = EquipoIntegrante::where('ein_id_equ', $equipoId)
+            ->where('ein_es_lider', true)
+            ->where('ein_status', true)
+            ->first();
+
+        if ($lider) {
+            $equipo = Equipo::find($equipoId);
+            Notificacion::create([
+                'not_id_usu'           => $lider->ein_id_usu,
+                'not_id_tno'           => TipoNotificacion::first()?->tno_id ?? 1,
+                'not_id_equ'           => $equipoId,
+                'not_mensaje'          => "El integrante {$nombre} fue retirado de tu equipo ({$equipo?->equ_codigo}).",
+                'not_leida'            => false,
+                'not_fecha_generacion' => now(),
+                'not_status'           => true,
+                'not_id_usu_created'   => auth()->id(),
+            ]);
+        }
+
         return back()->with('success', 'Integrante removido correctamente.');
     }
 
@@ -542,6 +588,44 @@ class EquipoController extends Controller
                 'heq_fecha_evento'   => now()->toDateString(),
                 'heq_id_usu_created' => auth()->id(),
             ]);
+
+            // Notificación al líder del equipo de origen
+            $liderOrigen = EquipoIntegrante::where('ein_id_equ', $equipoOrigen->equ_id)
+                ->where('ein_es_lider', true)
+                ->where('ein_status', true)
+                ->first();
+
+            if ($liderOrigen) {
+                Notificacion::create([
+                    'not_id_usu'           => $liderOrigen->ein_id_usu,
+                    'not_id_tno'           => TipoNotificacion::first()?->tno_id ?? 1,
+                    'not_id_equ'           => $equipoOrigen->equ_id,
+                    'not_mensaje'          => "El integrante {$nombre} fue trasladado de tu equipo ({$equipoOrigen->equ_codigo}) al equipo {$equipoDestino->equ_codigo}.",
+                    'not_leida'            => false,
+                    'not_fecha_generacion' => now(),
+                    'not_status'           => true,
+                    'not_id_usu_created'   => auth()->id(),
+                ]);
+            }
+
+            // Notificación al líder del equipo de destino
+            $liderDestino = EquipoIntegrante::where('ein_id_equ', $equipoDestino->equ_id)
+                ->where('ein_es_lider', true)
+                ->where('ein_status', true)
+                ->first();
+
+            if ($liderDestino) {
+                Notificacion::create([
+                    'not_id_usu'           => $liderDestino->ein_id_usu,
+                    'not_id_tno'           => TipoNotificacion::first()?->tno_id ?? 1,
+                    'not_id_equ'           => $equipoDestino->equ_id,
+                    'not_mensaje'          => "El estudiante {$nombre} fue incorporado a tu equipo ({$equipoDestino->equ_codigo}) por traslado desde el equipo {$equipoOrigen->equ_codigo}.",
+                    'not_leida'            => false,
+                    'not_fecha_generacion' => now(),
+                    'not_status'           => true,
+                    'not_id_usu_created'   => auth()->id(),
+                ]);
+            }
         });
 
         return back()->with('success', "Integrante trasladado correctamente al equipo {$equipoDestino->equ_codigo}.");

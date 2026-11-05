@@ -39,6 +39,11 @@ class Equipo extends Model
 
     public function integrantes()
     {
+        return $this->hasMany(EquipoIntegrante::class, 'ein_id_equ', 'equ_id')->where('ein_status', true);
+    }
+
+    public function todosIntegrantes()
+    {
         return $this->hasMany(EquipoIntegrante::class, 'ein_id_equ', 'equ_id');
     }
 

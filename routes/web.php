@@ -36,7 +36,11 @@ Route::get('/home', fn() => Inertia::render('Home'))->name('home');
 
 Route::middleware('auth')->group(function () {
     Route::get('/notificaciones/lista', function () {
-        $userId = auth()->id();
+        $user = auth()->user();
+        if (!$user) return response()->json([]);
+        $userId = $user->usu_id;
+
+        // 1. Líder: puntos de control cercanos
         $liderEquipos = \App\Models\EquipoIntegrante::where('ein_id_usu', $userId)
             ->where('ein_es_lider', true)
             ->where('ein_status', true)
@@ -69,9 +73,48 @@ Route::middleware('auth')->group(function () {
             }
         }
 
+        // 2. Profesor: puntos de control por vencer en sus secciones
+        if ($user->esProfesor()) {
+            $seccionesIds = $user->seccionesProfesor()
+                ->where('pse_status', true)
+                ->pluck('pse_id_sec');
+
+            if ($seccionesIds->isNotEmpty()) {
+                $equiposProf = \App\Models\Equipo::whereIn('equ_id_sec', $seccionesIds)
+                    ->where('equ_status', true)
+                    ->get();
+
+                $puntosProf = \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposProf->pluck('equ_id'))
+                    ->where('puc_status', true)
+                    ->where('puc_fecha_limite', '>=', now()->toDateString())
+                    ->where('puc_fecha_limite', '<=', now()->addDays(7)->toDateString())
+                    ->with('equipo')
+                    ->get();
+
+                foreach ($puntosProf as $punto) {
+                    $yaNotificado = \App\Models\Notificacion::where('not_id_usu', $userId)
+                        ->where('not_id_puc', $punto->puc_id)
+                        ->where('not_mensaje', 'like', '%próximo a vencer%')
+                        ->exists();
+
+                    if (!$yaNotificado) {
+                        \App\Models\Notificacion::create([
+                            'not_id_usu'           => $userId,
+                            'not_id_tno'           => \App\Models\TipoNotificacion::first()?->tno_id,
+                            'not_id_equ'           => $punto->puc_id_equ,
+                            'not_id_puc'           => $punto->puc_id,
+                            'not_mensaje'          => "El punto de control \"{$punto->puc_nombre}\" del equipo {$punto->equipo?->equ_codigo} está próximo a vencer el {$punto->puc_fecha_limite}.",
+                            'not_leida'            => false,
+                            'not_fecha_generacion' => now(),
+                        ]);
+                    }
+                }
+            }
+        }
+
         return \App\Models\Notificacion::where('not_id_usu', $userId)
             ->orderBy('not_fecha_generacion', 'desc')
-            ->take(15)->get();
+            ->take(20)->get();
     });
 
     Route::post('/notificaciones/{id}/leer', function ($id) {
@@ -86,7 +129,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/notificaciones/leer-todas', function () {
         \App\Models\Notificacion::where('not_id_usu', auth()->id())
-            ->where('not_leida', false)
             ->update([
                 'not_leida'        => true,
                 'not_fecha_lectura'=> now(),

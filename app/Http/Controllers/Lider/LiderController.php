@@ -171,6 +171,27 @@ class LiderController extends Controller
             'entr_id_usu_created'  => auth()->id(),
         ]);
 
+        // Notificar al profesor(es) de la sección
+        if ($equipo->equ_id_sec) {
+            $profesoresIds = \App\Models\ProfesorSeccion::where('pse_id_sec', $equipo->equ_id_sec)
+                ->where('pse_status', true)
+                ->pluck('pse_id_usu');
+
+            $tipoNotif = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%Entregable%')->value('tno_id')
+                ?? \App\Models\TipoNotificacion::first()?->tno_id;
+
+            foreach ($profesoresIds as $profId) {
+                \App\Models\Notificacion::create([
+                    'not_id_usu'           => $profId,
+                    'not_id_tno'           => $tipoNotif,
+                    'not_id_equ'           => $equipo->equ_id,
+                    'not_mensaje'          => "El equipo {$equipo->equ_codigo} ha subido el entregable: \"{$request->entr_nombre_archivo}\".",
+                    'not_leida'            => false,
+                    'not_fecha_generacion' => now(),
+                ]);
+            }
+        }
+
         return back()->with('success', 'Entregable subido. El profesor lo revisará pronto.');
     }
 

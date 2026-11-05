@@ -21,6 +21,10 @@ class Notificacion extends Model
         'not_id_puc',
     ];
 
+    protected $casts = [
+        'not_leida' => 'boolean',
+    ];
+
     public function usuario()
     {
         return $this->belongsTo(Usuario::class, 'not_id_usu', 'usu_id');

@@ -5,7 +5,6 @@
             min-height: 100vh;
             background: var(--bg-body);
             color: var(--text-main);
-            font-family: 'Segoe UI', system-ui, sans-serif;
         "
     >
         <div

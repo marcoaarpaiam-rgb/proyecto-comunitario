@@ -59,6 +59,11 @@ class HandleInertiaRequests extends Middleware
         'errors' => fn() => $request->session()->get('errors')
             ? $request->session()->get('errors')->getBag('default')->getMessages()
             : (object)[],
+        'notificacionesNoLeidas' => fn() => $request->user()
+            ? \App\Models\Notificacion::where('not_id_usu', $request->user()->usu_id)
+                ->where('not_leida', false)
+                ->count()
+            : 0,
     ];
 }
 }
