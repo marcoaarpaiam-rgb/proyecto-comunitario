@@ -78,10 +78,6 @@
         <main class="login-wrapper">
             <div class="login-card-container">
                 <div class="login-card">
-                    <!-- Barra de progreso fluida cuando se envía el formulario -->
-                    <div v-if="loading" class="login-progress-bar"></div>
-                    <div v-else style="height: 3px; background: transparent;"></div>
-
                     <div class="card-body-content">
                         <!-- Logo & Universidad -->
                         <div class="logo-area">

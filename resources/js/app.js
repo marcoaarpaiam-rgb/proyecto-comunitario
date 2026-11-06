@@ -13,7 +13,12 @@ import { router } from "@inertiajs/vue3";
 
 NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
 
-router.on("start", () => NProgress.start());
+router.on("start", (event) => {
+    if (window.location.pathname === "/login" || event?.detail?.visit?.url?.pathname === "/login") {
+        return;
+    }
+    NProgress.start();
+});
 router.on("finish", () => NProgress.done());
 
 createInertiaApp({
