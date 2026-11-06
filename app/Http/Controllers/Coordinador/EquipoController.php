@@ -283,7 +283,7 @@ class EquipoController extends Controller
         $beneficiarios = collect($proy['beneficiarios'] ?? [])
             ->filter(fn($b) => !empty($b['tbe_id']) && (int) ($b['cantidad'] ?? 0) > 0)->values();
 
-        DB::transaction(function () use ($request, $seccion, $trayecto, $codigo, $integrantes, $total, $crearProyecto, $proy, $beneficiarios) {
+        DB::transaction(function () use ($request, $seccion, $trayecto, $codigo, $integrantes, $total, $crearProyecto, $proy, $beneficiarios, $totalSec) {
             $equipo = Equipo::create([
                 'equ_codigo'         => $codigo,
                 'equ_titulo'         => $request->equ_titulo,
@@ -292,6 +292,26 @@ class EquipoController extends Controller
                 'equ_status'         => true,
                 'equ_id_usu_created' => auth()->id(),
             ]);
+
+            // Si se estableció o modificó el total de equipos de la sección,
+            // sincronizar el denominador en los códigos de todos los demás equipos de esta sección
+            if ($totalSec > 0) {
+                $otrosEquipos = Equipo::where('equ_id_sec', $seccion->sec_id)
+                    ->where('equ_id', '!=', $equipo->equ_id)
+                    ->get();
+
+                foreach ($otrosEquipos as $otro) {
+                    if (preg_match('/^(.*-\d+)\/\d+$/', $otro->equ_codigo, $match)) {
+                        $nuevoCodigo = $match[1] . '/' . $totalSec;
+                        if ($nuevoCodigo !== $otro->equ_codigo) {
+                            $otro->update([
+                                'equ_codigo'         => $nuevoCodigo,
+                                'equ_id_usu_updated' => auth()->id(),
+                            ]);
+                        }
+                    }
+                }
+            }
 
             HistorialEquipo::create([
                 'heq_id_equ'         => $equipo->equ_id,

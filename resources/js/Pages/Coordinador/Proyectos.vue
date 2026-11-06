@@ -489,22 +489,13 @@
                                             >*</span
                                         ></label
                                     >
-                                    <select
+                                    <SelectBuscableComunidad
                                         v-model="form.pco_id_com"
-                                        class="form-select"
-                                        :class="{
-                                            'is-invalid': errores.pco_id_com,
-                                        }"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option
-                                            v-for="com in comunidades"
-                                            :key="com.com_id"
-                                            :value="com.com_id"
-                                        >
-                                            {{ com.com_nombre }}
-                                        </option>
-                                    </select>
+                                        :comunidades="comunidades"
+                                        :has-error="!!errores.pco_id_com"
+                                        size="md"
+                                        placeholder="🔍 Escribe para buscar comunidad..."
+                                    />
                                     <div
                                         v-if="errores.pco_id_com"
                                         class="invalid-feedback"
@@ -705,6 +696,7 @@ import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
+import SelectBuscableComunidad from "@/Components/SelectBuscableComunidad.vue";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);

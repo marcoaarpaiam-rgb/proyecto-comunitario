@@ -704,19 +704,53 @@
                                             "
                                         />
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label fw-semibold small"
-                                            >N° Equipo
-                                            <span class="text-danger"
-                                                >*</span
-                                            ></label
+                                    <!-- Banner informativo según sea primer equipo o segundo en adelante -->
+                                    <div class="col-12" v-if="formNuevo.equ_id_sec && esAutoCompletado">
+                                        <div
+                                            class="py-2 px-3 rounded small d-flex align-items-center justify-content-between"
+                                            style="background: rgba(13, 110, 253, 0.08); border-left: 3px solid #0d6efd; color: var(--text-main);"
                                         >
+                                            <div>
+                                                <i class="bi bi-magic text-primary me-1"></i>
+                                                <strong>Datos auto-completados:</strong> Semestre ({{ formNuevo.equ_semestre }}) y Total de Equipos ({{ formNuevo.equ_total_seccion }}) configurados según el equipo previo de este trayecto. Solo debes indicar el <strong>N° de Equipo</strong>.
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold text-primary ms-2 flex-shrink-0"
+                                                @click="editarParametrosManual = !editarParametrosManual"
+                                            >
+                                                <i class="bi bi-pencil-square me-1"></i>{{ editarParametrosManual ? 'Bloquear' : 'Modificar' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-12" v-else-if="formNuevo.equ_id_sec">
+                                        <div
+                                            class="py-2 px-3 rounded small"
+                                            style="background: rgba(255, 193, 7, 0.12); border-left: 3px solid #ffc107; color: var(--text-main);"
+                                        >
+                                            <i class="bi bi-flag-fill text-warning me-1"></i>
+                                            <strong>Primer equipo de este trayecto:</strong> Define el Semestre y Total de Equipos para la sección. A partir del 2do equipo, estos datos se auto-completarán solos.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <div class="d-flex align-items-end mb-1" style="min-height: 22px;">
+                                            <label class="form-label fw-semibold small mb-0" :class="{ 'text-danger': esAutoCompletado }">
+                                                N° Equipo
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                        </div>
                                         <input
                                             type="number"
                                             class="form-control"
+                                            :class="{
+                                                'border-danger fw-bold shadow-sm': esAutoCompletado,
+                                                'is-invalid': errores.equ_numero_grupo
+                                            }"
                                             v-model="formNuevo.equ_numero_grupo"
                                             min="1"
-                                            max="99"
+                                            :max="formNuevo.equ_total_seccion || 99"
+                                            @input="validarNumeroVsTotal"
                                             @keypress="
                                                 (e) =>
                                                     !/[0-9]/.test(e.key) &&
@@ -731,18 +765,21 @@
                                         </div>
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label fw-semibold small"
-                                            >Semestre
-                                            <span class="text-danger"
-                                                >*</span
-                                            ></label
-                                        >
+                                        <div class="d-flex align-items-end justify-content-between mb-1" style="min-height: 22px;">
+                                            <label class="form-label fw-semibold small mb-0">
+                                                Semestre
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            <i v-if="esAutoCompletado && !editarParametrosManual" class="bi bi-lock-fill text-muted small" title="Auto-completado"></i>
+                                        </div>
                                         <input
                                             type="number"
                                             class="form-control"
                                             v-model="formNuevo.equ_semestre"
                                             min="1"
                                             max="9"
+                                            :readonly="esAutoCompletado && !editarParametrosManual"
+                                            :style="(esAutoCompletado && !editarParametrosManual) ? 'background: var(--bg-th) !important;' : ''"
                                             @keypress="
                                                 (e) =>
                                                     !/[0-9]/.test(e.key) &&
@@ -757,18 +794,36 @@
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label fw-semibold small"
-                                            >Total Equipos Sección
-                                            <span class="text-danger"
-                                                >*</span
-                                            ></label
-                                        >
+                                        <div class="d-flex align-items-end justify-content-between mb-1" style="min-height: 22px;">
+                                            <label class="form-label fw-semibold small mb-0 text-truncate">
+                                                Total Equipos
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            <button
+                                                v-if="esAutoCompletado"
+                                                type="button"
+                                                class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold"
+                                                style="font-size: 0.75rem;"
+                                                @click="editarParametrosManual = !editarParametrosManual"
+                                                :title="editarParametrosManual ? 'Fijar total' : 'Modificar total de equipos de la sección'"
+                                            >
+                                                <i class="bi" :class="editarParametrosManual ? 'bi-lock-fill text-success' : 'bi-pencil-square text-primary'"></i>
+                                                {{ editarParametrosManual ? 'Fijar' : 'Modificar' }}
+                                            </button>
+                                        </div>
                                         <input
                                             type="number"
                                             class="form-control"
+                                            :class="{
+                                                'border-primary fw-bold': editarParametrosManual,
+                                                'is-invalid': errores.equ_total_seccion
+                                            }"
                                             v-model="formNuevo.equ_total_seccion"
-                                            :min="formNuevo.equ_numero_grupo || 1"
+                                            min="1"
                                             max="99"
+                                            :readonly="esAutoCompletado && !editarParametrosManual"
+                                            :style="(esAutoCompletado && !editarParametrosManual) ? 'background: var(--bg-th) !important;' : ''"
+                                            @input="onTotalSeccionInput"
                                             @keypress="
                                                 (e) =>
                                                     !/[0-9]/.test(e.key) &&
@@ -782,10 +837,12 @@
                                             {{ errores.equ_total_seccion }}
                                         </div>
                                     </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label fw-semibold small"
-                                            >Código generado (automático)</label
-                                        >
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-end mb-1" style="min-height: 22px;">
+                                            <label class="form-label fw-semibold small mb-0 text-truncate">
+                                                Código generado
+                                            </label>
+                                        </div>
                                         <input
                                             type="text"
                                             class="form-control fw-bold text-center"
@@ -799,6 +856,19 @@
                                                 letter-spacing: 0.5px;
                                             "
                                         />
+                                    </div>
+
+                                    <!-- Aviso de sincronización cuando se modifica el Total de Equipos -->
+                                    <div class="col-12" v-if="totalModificado">
+                                        <div
+                                            class="py-2 px-3 rounded small d-flex align-items-center gap-2"
+                                            style="background: rgba(25, 135, 84, 0.08); border-left: 3px solid #198754; color: var(--text-main);"
+                                        >
+                                            <i class="bi bi-arrow-repeat text-success fs-6 flex-shrink-0"></i>
+                                            <span>
+                                                <strong>Actualización automática de códigos:</strong> El total de la sección cambiará de <strong>{{ totalOriginalSeccion }}</strong> a <strong>{{ formNuevo.equ_total_seccion }}</strong>. Al guardar este equipo, los códigos de todos los equipos de esta sección se actualizarán automáticamente al nuevo total (ej: <strong>/{{ formNuevo.equ_total_seccion }}</strong>).
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label fw-semibold"
@@ -879,15 +949,6 @@
                                     ></i>
                                     <strong>Líder de Equipo:</strong> El primer estudiante de la lista es asignado automáticamente como líder del equipo. Recibirá credenciales de acceso con su cédula.
                                 </div>
-                                <!-- Barra de búsqueda de estudiantes -->
-                                <div class="mb-2">
-                                    <input
-                                        type="text"
-                                        v-model="busquedaEstudiante"
-                                        class="form-control form-control-sm"
-                                        placeholder="🔍 Buscar por nombre o cédula..."
-                                    />
-                                </div>
                                 <!-- Encabezado de columnas ANTES del v-for -->
                                 <div
                                     class="row mb-1 small fw-bold"
@@ -903,26 +964,14 @@
                                     class="row g-2 mb-2 align-items-center"
                                 >
                                     <div class="col-8">
-                                        <select
+                                        <SelectBuscableEstudiante
                                             v-model="item.usu_id"
-                                            class="form-select form-select-sm"
-                                            :class="{ 'border-danger': idx === 0 }"
-                                        >
-                                            <option value="">
-                                                {{ !formNuevo.equ_id_sec ? 'Seleccione primero una sección...' : (idx === 0 ? 'Seleccionar estudiante (Líder)...' : 'Seleccionar estudiante...') }}
-                                            </option>
-                                            <option
-                                                v-for="est in estudiantesDisponibles(
-                                                    item.usu_id,
-                                                )"
-                                                :key="est.usu_id"
-                                                :value="est.usu_id"
-                                            >
-                                                {{ est.usu_primer_nombre }}
-                                                {{ est.usu_primer_apellido }}
-                                                ({{ est.usu_cedula }})
-                                            </option>
-                                        </select>
+                                            :estudiantes="estudiantesDisponibles(item.usu_id)"
+                                            :todos-estudiantes="props.estudiantes"
+                                            :is-lider="idx === 0"
+                                            :disabled="!formNuevo.equ_id_sec"
+                                            :placeholder="!formNuevo.equ_id_sec ? 'Seleccione primero una sección...' : (idx === 0 ? 'Escribe para buscar Líder...' : 'Escribe para buscar estudiante...')"
+                                        />
                                     </div>
                                     <div class="col-3 text-center">
                                         <span
@@ -1018,27 +1067,17 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Comunidad</label>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <select
-                                                class="form-select form-select-sm"
-                                                v-model="
-                                                    formProyecto.pco_id_com
-                                                "
-                                            >
-                                                <option value="">
-                                                    Seleccionar comunidad...
-                                                </option>
-                                                <option
-                                                    v-for="c in comunidades"
-                                                    :key="c.com_id"
-                                                    :value="c.com_id"
-                                                >
-                                                    {{ c.com_nombre }}
-                                                </option>
-                                            </select>
+                                        <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
+                                            <SelectBuscableComunidad
+                                                v-model="formProyecto.pco_id_com"
+                                                :comunidades="comunidades"
+                                                size="sm"
+                                                placeholder="Escribe para buscar comunidad..."
+                                            />
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
+                                                style="white-space: nowrap;"
                                                 @click="abrirModalNuevaComunidad('crear')"
                                                 title="Registrar nueva comunidad"
                                             >
@@ -1048,9 +1087,10 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Tipo de Proyecto</label>
-                                        <div class="d-flex gap-2 align-items-center">
+                                        <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
                                             <select
-                                                class="form-select form-select-sm"
+                                                class="form-select form-select-sm flex-grow-1"
+                                                style="min-width: 0;"
                                                 v-model="formProyecto.pco_id_tpr"
                                             >
                                                 <option value="">
@@ -1067,6 +1107,7 @@
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
+                                                style="white-space: nowrap;"
                                                 @click="abrirModalNuevoTipo('crear')"
                                                 title="Registrar nuevo tipo de proyecto"
                                             >
@@ -1371,25 +1412,17 @@
                                 <label class="form-label small fw-bold"
                                     >Comunidad</label
                                 >
-                                <div class="d-flex gap-2 align-items-center">
-                                    <select
-                                        class="form-select form-select-sm"
+                                <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
+                                    <SelectBuscableComunidad
                                         v-model="formEditar.pco_id_com"
-                                    >
-                                        <option value="">
-                                            Seleccionar comunidad...
-                                        </option>
-                                        <option
-                                            v-for="c in comunidades"
-                                            :key="c.com_id"
-                                            :value="c.com_id"
-                                        >
-                                            {{ c.com_nombre }}
-                                        </option>
-                                    </select>
+                                        :comunidades="comunidades"
+                                        size="sm"
+                                        placeholder="Escribe para buscar comunidad..."
+                                    />
                                     <button
                                         type="button"
                                         class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
+                                        style="white-space: nowrap;"
                                         @click="abrirModalNuevaComunidad('editar')"
                                         title="Registrar nueva comunidad"
                                     >
@@ -1402,9 +1435,10 @@
                                 <label class="form-label small fw-bold"
                                     >Tipo de Proyecto</label
                                 >
-                                <div class="d-flex gap-2 align-items-center">
+                                <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
                                     <select
-                                        class="form-select form-select-sm"
+                                        class="form-select form-select-sm flex-grow-1"
+                                        style="min-width: 0;"
                                         v-model="formEditar.pco_id_tpr"
                                     >
                                         <option value="">
@@ -2367,6 +2401,8 @@ import { ref, computed, watch } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import SelectBuscableEstudiante from "@/Components/SelectBuscableEstudiante.vue";
+import SelectBuscableComunidad from "@/Components/SelectBuscableComunidad.vue";
 
 const props = defineProps({
     equipos: Array,
@@ -2544,19 +2580,55 @@ const seccionSeleccionada = computed(() =>
 const trayectoSeleccionado = computed(
     () => seccionSeleccionada.value?.trayecto?.tra_nombre || "",
 );
+const parsearCodigoEquipo = (codigo) => {
+    if (!codigo) return null;
+    // Formato estándar institucional: PNFI-ACA33-331-2/5 o PNFI-ACA11-131-1/7
+    // Partes: [PNF]-[SEDE][TRAYECTO][SEMESTRE]-[SECCION]-[NUM]/[TOTAL]
+    const m = String(codigo).match(/^[A-Z]+-[A-Z]+(\d)(\d)-([^-]+)-(\d+)\/(\d+)$/i);
+    if (m) {
+        return {
+            trayecto: parseInt(m[1]),
+            semestre: parseInt(m[2]),
+            seccionCodigo: m[3],
+            numero: parseInt(m[4]),
+            totalSeccion: parseInt(m[5]),
+        };
+    }
+    // Formato con slash sin sede: ...-1/5
+    const mSlash = String(codigo).match(/-(\d+)\/(\d+)$/);
+    if (mSlash) {
+        return {
+            trayecto: null,
+            semestre: null,
+            seccionCodigo: null,
+            numero: parseInt(mSlash[1]),
+            totalSeccion: parseInt(mSlash[2]),
+        };
+    }
+    return null;
+};
+
+const esAutoCompletado = ref(false);
+const editarParametrosManual = ref(false);
+
 const siguienteNumeroEquipo = computed(() => {
     const secId = formNuevo.value.equ_id_sec;
     if (!secId) return 1;
     const todos = [...(props.equipos || []), ...(props.equiposDisueltos || [])];
-    const equiposSec = todos.filter((e) => e.equ_id_sec == secId);
+    const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
     let maxN = 0;
     equiposSec.forEach((e) => {
-        const mSlash = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/(\d+)$/) : null;
-        if (mSlash) {
-            maxN = Math.max(maxN, parseInt(mSlash[1]));
+        const parsed = parsearCodigoEquipo(e.equ_codigo);
+        if (parsed?.numero) {
+            maxN = Math.max(maxN, parsed.numero);
         } else {
-            const mG = e.equ_codigo ? e.equ_codigo.match(/G(\d+)/i) : null;
-            if (mG) maxN = Math.max(maxN, parseInt(mG[1]));
+            const mSlash = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/(\d+)$/) : null;
+            if (mSlash) {
+                maxN = Math.max(maxN, parseInt(mSlash[1]));
+            } else {
+                const mG = e.equ_codigo ? e.equ_codigo.match(/G(\d+)/i) : null;
+                if (mG) maxN = Math.max(maxN, parseInt(mG[1]));
+            }
         }
     });
     return maxN + 1;
@@ -2566,8 +2638,10 @@ const totalEquiposSeccion = computed(() => {
     const secId = formNuevo.value.equ_id_sec;
     if (!secId) return 7;
     const todos = [...(props.equipos || [])];
-    const equiposSec = todos.filter((e) => e.equ_id_sec == secId);
+    const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
     for (const e of equiposSec) {
+        const parsed = parsearCodigoEquipo(e.equ_codigo);
+        if (parsed?.totalSeccion) return parsed.totalSeccion;
         const mSlash = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/(\d+)$/) : null;
         if (mSlash && parseInt(mSlash[2])) {
             return parseInt(mSlash[2]);
@@ -2590,30 +2664,124 @@ const codigoPreview = computed(() => {
 });
 
 const onSeccionChange = () => {
-    const sigNum = siguienteNumeroEquipo.value;
-    const totSec = Math.max(totalEquiposSeccion.value, sigNum);
-    formNuevo.value.equ_numero_grupo = String(sigNum);
-    formNuevo.value.equ_total_seccion = totSec;
-    formNuevo.value.equ_semestre = 1;
-
     const secId = formNuevo.value.equ_id_sec;
+    if (!secId) {
+        esAutoCompletado.value = false;
+        editarParametrosManual.value = false;
+        return;
+    }
+
+    const sec = props.secciones?.find((s) => String(s.sec_id) === String(secId));
+    const traId = sec?.sec_id_tra || sec?.trayecto?.tra_id;
+    const todos = [...(props.equipos || []), ...(props.equiposDisueltos || [])];
+
+    // Equipos existentes de la sección
+    const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
+
+    // Equipos existentes en el mismo trayecto (cualquier sección de este trayecto)
+    const equiposTra = todos.filter((e) => {
+        const s = props.secciones?.find((item) => String(item.sec_id) === String(e.equ_id_sec));
+        const t = e.equ_id_tra || s?.sec_id_tra || s?.trayecto?.tra_id;
+        return traId && String(t) === String(traId);
+    });
+
+    const sigNum = siguienteNumeroEquipo.value;
+
+    let semestreHeredado = null;
+    let totalSecHeredado = null;
+
+    // 1. Buscar primero en equipos de la sección
+    if (equiposSec.length > 0) {
+        for (let i = equiposSec.length - 1; i >= 0; i--) {
+            const parsed = parsearCodigoEquipo(equiposSec[i].equ_codigo);
+            if (parsed) {
+                if (parsed.semestre && !semestreHeredado) semestreHeredado = parsed.semestre;
+                if (parsed.totalSeccion && !totalSecHeredado) totalSecHeredado = parsed.totalSeccion;
+            }
+        }
+    }
+
+    // 2. Si no hay en la sección, buscar en otros equipos del mismo trayecto
+    if (!semestreHeredado && equiposTra.length > 0) {
+        for (let i = equiposTra.length - 1; i >= 0; i--) {
+            const parsed = parsearCodigoEquipo(equiposTra[i].equ_codigo);
+            if (parsed && parsed.semestre) {
+                semestreHeredado = parsed.semestre;
+                break;
+            }
+        }
+    }
+
+    totalOriginalSeccion.value = totalSecHeredado || null;
+
+    // Si ya existe al menos un equipo en la sección o en el trayecto: AUTO-COMPLETAR
+    if (equiposSec.length > 0 || equiposTra.length > 0) {
+        esAutoCompletado.value = true;
+        formNuevo.value.equ_semestre = semestreHeredado || (sec?.trayecto?.tra_numero || 1);
+        const totFijado = totalSecHeredado || totalEquiposSeccion.value || 7;
+        formNuevo.value.equ_total_seccion = totFijado;
+
+        if (sigNum > totFijado) {
+            // Ya se alcanzó el total establecido para la sección
+            editarParametrosManual.value = true;
+            formNuevo.value.equ_numero_grupo = String(sigNum);
+            errores.value.equ_numero_grupo = `El N° de equipo (${sigNum}) supera el total actual de la sección (${totFijado}). Modifica el Total de Equipos a ${sigNum} o más para continuar.`;
+        } else {
+            editarParametrosManual.value = false;
+            formNuevo.value.equ_numero_grupo = String(sigNum);
+            if (errores.value.equ_numero_grupo?.includes("supera el total") || errores.value.equ_numero_grupo?.includes("no puede sobrepasar")) {
+                delete errores.value.equ_numero_grupo;
+            }
+        }
+    } else {
+        // Es el PRIMER equipo de este trayecto y sección: pedir datos iniciales
+        totalOriginalSeccion.value = null;
+        esAutoCompletado.value = false;
+        editarParametrosManual.value = true;
+        formNuevo.value.equ_numero_grupo = "1";
+        formNuevo.value.equ_semestre = sec?.trayecto?.tra_numero || 1;
+        formNuevo.value.equ_total_seccion = 7;
+    }
+
+    // Limpiar integrantes que no pertenezcan a la sección elegida
     formNuevo.value.integrantes.forEach((item) => {
         if (!item.usu_id) return;
-        const est = props.estudiantes?.find((e) => e.usu_id === item.usu_id);
+        const est = props.estudiantes?.find((e) => String(e.usu_id) === String(item.usu_id));
         if (est && est.sec_id && String(est.sec_id) !== String(secId)) {
             item.usu_id = "";
         }
     });
 };
 
-watch(() => formNuevo.value.equ_numero_grupo, (newVal) => {
-    const n = parseInt(newVal);
-    if (!isNaN(n) && n > formNuevo.value.equ_total_seccion) {
-        formNuevo.value.equ_total_seccion = n;
-    }
+const totalOriginalSeccion = ref(null);
+const totalModificado = computed(() => {
+    return (
+        totalOriginalSeccion.value !== null &&
+        formNuevo.value.equ_total_seccion &&
+        Number(formNuevo.value.equ_total_seccion) !== Number(totalOriginalSeccion.value)
+    );
 });
-const busquedaEstudiante = ref("");
 
+const validarNumeroVsTotal = () => {
+    const num = parseInt(formNuevo.value.equ_numero_grupo);
+    const tot = parseInt(formNuevo.value.equ_total_seccion);
+    if (!isNaN(num) && !isNaN(tot)) {
+        if (num > tot) {
+            errores.value.equ_numero_grupo = `El N° de equipo (${num}) no puede sobrepasar el Total de Equipos (${tot}). Modifica el Total de Equipos si deseas agregar más.`;
+        } else {
+            if (
+                errores.value.equ_numero_grupo?.includes("no puede sobrepasar") ||
+                errores.value.equ_numero_grupo?.includes("supera el total")
+            ) {
+                delete errores.value.equ_numero_grupo;
+            }
+        }
+    }
+};
+
+const onTotalSeccionInput = () => {
+    validarNumeroVsTotal();
+};
 const estudiantesDisponibles = (idActual) => {
     const sel = formNuevo.value.integrantes
         .map((i) => i.usu_id)
@@ -2626,14 +2794,6 @@ const estudiantesDisponibles = (idActual) => {
             if (e.usu_id === idActual) return true;
             if (secId && e.sec_id && String(e.sec_id) !== String(secId)) {
                 return false;
-            }
-            if (busquedaEstudiante.value.trim()) {
-                const q = busquedaEstudiante.value.toLowerCase().trim();
-                return (
-                    e.usu_primer_nombre?.toLowerCase().includes(q) ||
-                    e.usu_primer_apellido?.toLowerCase().includes(q) ||
-                    e.usu_cedula?.includes(q)
-                );
             }
             return true;
         }) || []
@@ -2672,6 +2832,7 @@ const integrantesNoLider = computed(() =>
 
 const abrirModalCrear = () => {
     paso.value = 1;
+    editarParametrosManual.value = false;
     formNuevo.value = {
         equ_id_sec: props.seccion?.sec_id ? props.seccion.sec_id : "",
         equ_numero_grupo: "",
@@ -2694,7 +2855,6 @@ const abrirModalCrear = () => {
         beneficiarios: [],
     };
     liderIndex.value = 0;
-    busquedaEstudiante.value = "";
     errores.value = {};
     mCrear = mCrear || new Modal(document.getElementById("mCrear"));
     mCrear.show();
@@ -2747,7 +2907,7 @@ const validarPaso1 = () => {
     const numG = Number(formNuevo.value.equ_numero_grupo);
     const totS = Number(formNuevo.value.equ_total_seccion || numG);
     if (totS < numG) {
-        errores.value.equ_total_seccion = `La cantidad total de equipos (${totS}) no puede ser menor al número de equipo (${numG}).`;
+        errores.value.equ_numero_grupo = `El N° de equipo (${numG}) no puede sobrepasar el Total de Equipos (${totS}). Modifica el Total de Equipos primero.`;
         return false;
     }
     if (!formNuevo.value.equ_titulo?.trim()) {
