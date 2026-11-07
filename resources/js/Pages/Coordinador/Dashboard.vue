@@ -210,17 +210,6 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span
-                        class="badge rounded-pill px-3 py-2 d-none d-md-inline-block"
-                        style="
-                            background: #6f42c1;
-                            color: #fff;
-                            font-weight: 700;
-                            cursor: pointer;
-                        "
-                    >
-                        <i class="bi bi-arrow-repeat me-1"></i>Sincronizar SOGAC
-                    </span>
                     <button class="topbar-btn" @click="toggleTema">
                         <i
                             class="bi"
@@ -466,17 +455,11 @@
                                             </td>
                                             <td>
                                                 <span
-                                                    :class="
-                                                        'badge badge-' +
-                                                        badgeTurno(
-                                                            sec.turno
-                                                                ?.tur_nombre,
-                                                        )
-                                                    "
-                                                    >{{
-                                                        sec.turno?.tur_nombre
-                                                    }}</span
+                                                    class="badge-turno"
+                                                    :class="badgeTurno(sec.turno?.tur_nombre)"
                                                 >
+                                                    {{ sec.turno?.tur_nombre || 'Sin turno' }}
+                                                </span>
                                             </td>
                                             <td class="fw-semibold">
                                                 {{ sec.total_equipos }}
@@ -513,10 +496,10 @@
                                                 <span
                                                     class="badge-status"
                                                     :class="
-                                                        badgeSeccion(sec.avance)
+                                                        badgeSeccion(sec.avance, sec.total_equipos)
                                                     "
                                                     >{{
-                                                        labelSeccion(sec.avance)
+                                                        labelSeccion(sec.avance, sec.total_equipos)
                                                     }}</span
                                                 >
                                             </td>
@@ -533,28 +516,78 @@
                             <div class="section-header">
                                 <h6>
                                     <i class="bi bi-bell me-2 text-danger"></i
-                                    >Alertas
+                                    >Alertas y Avisos
                                 </h6>
                                 <span
-                                    v-if="notificaciones.length > 0"
+                                    v-if="notificacionesNoLeidas > 0 || (stats?.cartasPendientes > 0)"
                                     class="badge bg-danger rounded-pill px-2 py-1 fw-bold"
                                 >
-                                    {{
-                                        notificaciones.filter(
-                                            (n) => !n.not_leida,
-                                        ).length
-                                    }}
-                                    nuevas
+                                    {{ notificacionesNoLeidas + ((stats?.cartasPendientes > 0) ? 1 : 0) }}
                                 </span>
                             </div>
+
+                            <!-- Alerta de Cartas de Presentación Pendientes -->
                             <div
-                                v-if="notificaciones.length === 0"
-                                class="p-3 text-center text-muted small py-4"
+                                v-if="stats?.cartasPendientes > 0"
+                                class="p-3 border-bottom"
+                                style="background: rgba(255, 193, 7, 0.08);"
                             >
-                                Sin alertas
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-file-earmark-text-fill text-warning fs-5 flex-shrink-0"></i>
+                                    <div class="flex-grow-1" style="font-size: 0.84rem;">
+                                        <div class="fw-bold">
+                                            {{ stats.cartasPendientes }} solicitud(es) de carta pendiente(s)
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            Hay líderes de equipo esperando la aprobación de su carta de presentación.
+                                        </div>
+                                        <Link
+                                            href="/coordinador/cartas"
+                                            class="btn btn-sm btn-outline-warning fw-bold mt-2"
+                                            style="font-size: 0.76rem;"
+                                        >
+                                            <i class="bi bi-arrow-right-circle me-1"></i>Revisar cartas
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Alerta de Proyectos Por Vencer -->
+                            <div
+                                v-if="stats?.porVencer > 0"
+                                class="p-3 border-bottom"
+                                style="background: rgba(220, 53, 69, 0.06);"
+                            >
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-hourglass-bottom text-danger fs-5 flex-shrink-0"></i>
+                                    <div class="flex-grow-1" style="font-size: 0.84rem;">
+                                        <div class="fw-bold text-danger">
+                                            {{ stats.porVencer }} proyecto(s) próximos a vencer
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            Proyectos con fecha límite en los próximos 30 días.
+                                        </div>
+                                        <Link
+                                            href="/coordinador/proyectos"
+                                            class="btn btn-sm btn-outline-danger fw-bold mt-2"
+                                            style="font-size: 0.76rem;"
+                                        >
+                                            <i class="bi bi-arrow-right-circle me-1"></i>Ver proyectos
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lista de Notificaciones -->
+                            <div
+                                v-if="(!notificaciones || notificaciones.length === 0) && (!stats?.cartasPendientes) && (!stats?.porVencer)"
+                                class="p-4 text-center text-muted small"
+                            >
+                                <i class="bi bi-check-circle fs-3 d-block mb-1 text-success"></i>
+                                Sin alertas pendientes en este momento
                             </div>
                             <div
-                                v-for="not in notificaciones.slice(0, 5)"
+                                v-for="not in (notificaciones || []).slice(0, 5)"
                                 :key="not.not_id"
                                 class="notif-item"
                             >
@@ -567,8 +600,8 @@
                                         :class="tipoIconClass(not.not_mensaje)"
                                     ></i>
                                 </div>
-                                <div>
-                                    <div class="notif-text">
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    <div class="notif-text text-truncate">
                                         {{ not.not_mensaje }}
                                     </div>
                                     <div class="notif-time">
@@ -579,16 +612,6 @@
                                         }}
                                     </div>
                                 </div>
-                            </div>
-                            <div
-                                v-if="notificaciones.length > 0"
-                                class="p-3 text-center"
-                            >
-                                <Link
-                                    href="/coordinador/bitacora"
-                                    class="btn btn-sm btn-outline-danger w-100 rounded-pill fw-bold"
-                                    >Ver bitácora</Link
-                                >
                             </div>
                         </div>
                     </div>
@@ -700,30 +723,32 @@ const acciones = [
 ];
 
 const badgeTurno = (t) => {
-    if (t === "Mañana") return "bg-warning text-dark";
-    if (t === "Tarde") return "bg-info text-dark";
-    if (t === "Noche") return "bg-dark text-white";
-    return "bg-secondary text-white";
+    if (t === "Mañana" || t === "Diurno") return "badge-diurno";
+    if (t === "Tarde") return "badge-tarde";
+    if (t === "Noche" || t === "Nocturno") return "badge-nocturno";
+    return "badge-default";
 };
 
 const colorBarra = (p) => {
     if (p >= 80) return "bg-success";
-    if (p >= 50) return "bg-warning";
-    if (p >= 20) return "bg-danger";
-    return "bg-secondary";
+    if (p >= 50) return "bg-info";
+    if (p >= 25) return "bg-warning";
+    return "bg-danger";
 };
 
-const badgeSeccion = (p) => {
-    if (p >= 100) return "badge-aprobado";
-    if (p >= 50) return "badge-proceso";
+const badgeSeccion = (p, total = 1) => {
+    if (total === 0) return "badge-vacio";
+    if (p >= 80) return "badge-aprobado";
+    if (p >= 45) return "badge-proceso";
     if (p >= 20) return "badge-pendiente";
     return "badge-critico";
 };
 
-const labelSeccion = (p) => {
-    if (p >= 100) return "Completado";
-    if (p >= 50) return "En Proceso";
-    if (p >= 20) return "Pendiente";
+const labelSeccion = (p, total = 1) => {
+    if (total === 0) return "Sin equipos";
+    if (p >= 80) return "Avanzado";
+    if (p >= 45) return "En Proceso";
+    if (p >= 20) return "Iniciando";
     return "Crítico";
 };
 
@@ -1103,6 +1128,13 @@ onMounted(() => {
     border-radius: 20px;
     font-size: 0.78rem;
     font-weight: 700;
+    white-space: nowrap;
+    display: inline-block;
+}
+.badge-vacio {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
 }
 .badge-aprobado {
     background: #d1e7dd;
@@ -1124,10 +1156,15 @@ onMounted(() => {
     color: #842029;
     border: 1px solid #f5c2c7;
 }
+[data-theme="dark"] .badge-vacio {
+    background: rgba(255, 255, 255, 0.08);
+    color: #adb5bd;
+    border-color: rgba(255, 255, 255, 0.15);
+}
 [data-theme="dark"] .badge-aprobado {
     background: rgba(25, 135, 84, 0.25);
     color: #a3cfbb;
-    border-color: rgba(25, 135, 84, 0.4);
+    border-color: rgba(255, 135, 84, 0.4);
 }
 [data-theme="dark"] .badge-proceso {
     background: rgba(13, 110, 253, 0.25);
@@ -1143,6 +1180,55 @@ onMounted(() => {
     background: rgba(220, 53, 69, 0.25);
     color: #f8d7da;
     border-color: rgba(220, 53, 69, 0.4);
+}
+
+.badge-turno {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-block;
+    white-space: nowrap;
+}
+.badge-diurno {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+.badge-tarde {
+    background: #cff4fc;
+    color: #055160;
+    border: 1px solid #b6effb;
+}
+.badge-nocturno {
+    background: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+.badge-default {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+[data-theme="dark"] .badge-diurno {
+    background: rgba(255, 193, 7, 0.18);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.35);
+}
+[data-theme="dark"] .badge-tarde {
+    background: rgba(13, 202, 240, 0.18);
+    color: #0dcaf0;
+    border: 1px solid rgba(13, 202, 240, 0.35);
+}
+[data-theme="dark"] .badge-nocturno {
+    background: rgba(108, 117, 125, 0.25);
+    color: #dee2e6;
+    border: 1px solid rgba(108, 117, 125, 0.35);
+}
+[data-theme="dark"] .badge-default {
+    background: rgba(255, 255, 255, 0.08);
+    color: #adb5bd;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 .notif-item {
     display: flex;

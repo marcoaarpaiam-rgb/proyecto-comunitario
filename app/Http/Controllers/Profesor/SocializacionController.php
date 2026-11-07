@@ -52,17 +52,18 @@ class SocializacionController extends Controller
         $request->validate([
             'soc_id_equ'  => 'required|exists:equipo,equ_id',
             'soc_id_tso'  => 'required|exists:tipo_socializacion,tso_id',
-            'soc_fecha'   => 'required|date',
+            'soc_fecha'   => 'required|date|after_or_equal:today',
             'soc_hora'    => 'required',
             'soc_lugar'   => 'required|string|max:150',
             'jurados'     => 'sometimes|array',
             'integrantes' => 'sometimes|array',
         ], [
-            'soc_id_equ.required' => 'El equipo es obligatorio.',
-            'soc_id_tso.required' => 'El tipo de socialización es obligatorio.',
-            'soc_fecha.required'  => 'La fecha es obligatoria.',
-            'soc_hora.required'   => 'La hora es obligatoria.',
-            'soc_lugar.required'  => 'El lugar es obligatorio.',
+            'soc_id_equ.required'       => 'El equipo es obligatorio.',
+            'soc_id_tso.required'       => 'El tipo de socialización es obligatorio.',
+            'soc_fecha.required'        => 'La fecha es obligatoria.',
+            'soc_fecha.after_or_equal'  => 'La fecha de la socialización no puede ser anterior a hoy.',
+            'soc_hora.required'         => 'La hora es obligatoria.',
+            'soc_lugar.required'        => 'El lugar es obligatorio.',
         ]);
         
         $this->autorizarEquipoId($request->soc_id_equ);
@@ -78,11 +79,19 @@ class SocializacionController extends Controller
             $preSocAprobada = Socializacion::where('soc_id_equ', $request->soc_id_equ)
                 ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 1))
                 ->where('soc_apto', true)
-                ->exists();
+                ->latest('soc_fecha')
+                ->first();
 
             if (!$preSocAprobada) {
                 return back()->withErrors([
                     'soc_id_tso' => 'No se puede registrar la Socialización Final sin una Pre-Socialización marcada como apta.'
+                ]);
+            }
+
+            if ($request->soc_fecha && $request->soc_fecha < $preSocAprobada->soc_fecha) {
+                $fechaPreSoc = \Carbon\Carbon::parse($preSocAprobada->soc_fecha)->format('d/m/Y');
+                return back()->withErrors([
+                    'soc_fecha' => "La fecha de la Socialización Final no puede ser anterior a la Pre-Socialización ({$fechaPreSoc})."
                 ]);
             }
         }
@@ -150,6 +159,14 @@ class SocializacionController extends Controller
         $soc = Socializacion::with(['tipoSocializacion', 'equipo'])->findOrFail($id);
 
         $this->autorizarEquipoId($soc->soc_id_equ);
+
+        // Bloquear si ya fue evaluada
+        $yaEvaluada = ($soc->tipoSocializacion?->tso_orden === 1 && $soc->soc_apto !== null)
+            || ($soc->tipoSocializacion?->tso_orden !== 1 && $soc->soc_aprobado !== null);
+
+        if ($yaEvaluada) {
+            return back()->withErrors(['error' => 'Esta socialización ya cuenta con un resultado registrado y no puede ser modificada.']);
+        }
         
         $soc->update([
             'soc_apto'                   => $request->soc_apto,
@@ -195,7 +212,7 @@ class SocializacionController extends Controller
             }
         }
 
-        // Notificar al líder del equipo
+        // Notificar al líder del equipo solo si se registró un resultado explícito
         $lider = \App\Models\EquipoIntegrante::where('ein_id_equ', $soc->soc_id_equ)
             ->where('ein_es_lider', true)
             ->where('ein_status', true)
@@ -204,13 +221,17 @@ class SocializacionController extends Controller
         if ($lider) {
             $msg = '';
             if ($soc->tipoSocializacion?->tso_orden === 1) {
-                $msg = $request->soc_apto 
-                    ? "Tu equipo fue calificado como APTO en la Pre-Socialización." 
-                    : "Tu equipo fue calificado como NO APTO en la Pre-Socialización.";
+                if ($request->soc_apto !== null) {
+                    $msg = $request->soc_apto 
+                        ? "Tu equipo fue calificado como APTO en la Pre-Socialización." 
+                        : "Tu equipo fue calificado como NO APTO en la Pre-Socialización.";
+                }
             } else {
-                $msg = $request->soc_aprobado 
-                    ? "¡Felicitaciones! El proyecto de tu equipo fue APROBADO en la Socialización Final." 
-                    : "El proyecto de tu equipo fue calificado como NO APROBADO en la Socialización Final.";
+                if ($request->soc_aprobado !== null) {
+                    $msg = $request->soc_aprobado 
+                        ? "¡Felicitaciones! El proyecto de tu equipo fue APROBADO en la Socialización Final." 
+                        : "El proyecto de tu equipo fue calificado como NO APROBADO en la Socialización Final.";
+                }
             }
 
             if ($msg) {

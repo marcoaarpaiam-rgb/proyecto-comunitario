@@ -296,9 +296,8 @@ watch(
 
 <style scoped>
 .searchable-comunidad-select {
-    flex: 1 1 auto;
+    width: 100% !important;
     min-width: 0;
-    width: 0;
 }
 
 .selected-box {

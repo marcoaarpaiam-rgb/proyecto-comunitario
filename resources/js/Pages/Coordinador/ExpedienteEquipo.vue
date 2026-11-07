@@ -208,11 +208,13 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <a
-                        href="/coordinador/equipos"
+                    <button
+                        type="button"
+                        @click="volver"
                         class="btn btn-sm btn-outline-secondary rounded-pill px-3"
-                        ><i class="bi bi-arrow-left me-1"></i>Equipos</a
                     >
+                        <i class="bi bi-arrow-left me-1"></i>Volver
+                    </button>
                     <a
                         v-if="equipo.resultado_proyecto"
                         :href="`${rutaBase}/equipos/${equipo.equ_id}/paquete-cierre`"
@@ -1047,6 +1049,13 @@ const toggleTema = () => {
     localStorage.setItem("coord-theme", tema.value);
 };
 const logout = () => router.post("/logout");
+const volver = () => {
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        router.visit(`${rutaBase.value}/equipos`);
+    }
+};
 const iniciales = computed(() => {
     const u = page.props.auth.user;
     return (

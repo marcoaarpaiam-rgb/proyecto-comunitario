@@ -228,8 +228,10 @@
             <div class="content">
                 <div class="sc mb-3">
                     <div class="sh">
-                        <i class="bi bi-person-badge me-2 text-danger"></i
-                        >Profesor de proyecto
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-badge me-2 text-danger"></i>
+                            <h6 class="mb-0">Profesor de proyecto</h6>
+                        </div>
                     </div>
                     <div class="p-3 d-flex flex-wrap align-items-center gap-2">
                         <div class="me-auto">
@@ -259,9 +261,10 @@
                         </select>
                         <button
                             class="btn btn-sm btn-danger fw-bold"
-                            :disabled="!profesorSel"
+                            :disabled="!profesorSel || loadingAsignar"
                             @click="asignarProfesor"
                         >
+                            <span v-if="loadingAsignar" class="spinner-border spinner-border-sm me-1"></span>
                             Asignar
                         </button>
                     </div>
@@ -319,7 +322,7 @@
                                     color: var(--rojo);
                                     font-size: 1rem;
                                 "
-                                >{{ equ.equ_codigo }}</span
+                                >{{ codigoLimpio(equ.equ_codigo) }}</span
                             >
                             <span
                                 style="
@@ -430,7 +433,7 @@ import { Link } from "@inertiajs/vue3";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
-defineProps({
+const props = defineProps({
     seccion: Object,
     equipos: Array,
     profesorActual: Object,
@@ -438,7 +441,10 @@ defineProps({
 });
 
 const profesorSel = ref("");
-const asignarProfesor = () =>
+const loadingAsignar = ref(false);
+const asignarProfesor = () => {
+    if (!profesorSel.value) return;
+    loadingAsignar.value = true;
     router.post(
         `/coordinador/secciones/${props.seccion.sec_id}/profesores`,
         { pse_id_usu: profesorSel.value },
@@ -446,9 +452,16 @@ const asignarProfesor = () =>
             preserveScroll: true,
             onSuccess: () => {
                 profesorSel.value = "";
+                loadingAsignar.value = false;
+            },
+            onError: (err) => {
+                loadingAsignar.value = false;
+                const msg = Object.values(err)[0] || 'Error al asignar profesor';
+                alert(msg);
             },
         },
     );
+};
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");
@@ -467,6 +480,10 @@ const colorRes = (n) => {
     if (n === "Aprobado") return "ba";
     if (n === "Aplazado") return "bw";
     return "bd";
+};
+const codigoLimpio = (codigo) => {
+    if (!codigo) return "";
+    return String(codigo).replace(/#DIS\d+$/, "");
 };
 </script>
 <style>

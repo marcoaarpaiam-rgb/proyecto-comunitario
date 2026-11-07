@@ -221,15 +221,16 @@
                                         {{ puc.puc_dias_aviso }} días
                                     </td>
                                     <td>
-                                        <span
-                                            v-if="
-                                                puc.seguimientos?.some(
-                                                    (s) => s.seq_cumplido,
-                                                )
-                                            "
-                                            class="bs ba"
-                                            >Cumplido</span
-                                        >
+                                        <template v-if="estaEvaluado(puc)">
+                                            <span
+                                                v-if="puc.seguimientos[0].seq_cumplido"
+                                                class="bs ba"
+                                                >Cumplido</span
+                                            >
+                                            <span v-else class="bs bd"
+                                                >No cumplido</span
+                                            >
+                                        </template>
                                         <span
                                             v-else-if="
                                                 estaVencido(
@@ -251,29 +252,49 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <button
-                                            class="btn btn-sm btn-outline-success me-1"
-                                            @click="abrirSeguimiento(puc)"
-                                            title="Registrar seguimiento"
-                                        >
-                                            <i
-                                                class="bi bi-clipboard-check"
-                                            ></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-sm btn-outline-warning rounded-pill"
-                                            @click="abrirReprogramar(puc)"
-                                            title="Reprogramar fecha"
-                                        >
-                                            <i class="bi bi-calendar-event"></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-sm btn-outline-danger"
-                                            @click="eliminar(puc)"
-                                            title="Eliminar"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <!-- Si ya fue evaluado: sólo ver y candado -->
+                                        <template v-if="estaEvaluado(puc)">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary me-1"
+                                                @click="abrirSeguimiento(puc, true)"
+                                                title="Ver evaluación registrada (Bloqueado)"
+                                            >
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <span
+                                                class="badge bg-light text-muted border px-2 py-1"
+                                                title="Punto de control evaluado - No modificable"
+                                                style="vertical-align: middle;"
+                                            >
+                                                <i class="bi bi-lock-fill text-secondary"></i>
+                                            </span>
+                                        </template>
+                                        <!-- Si no está evaluado: registrar, reprogramar, eliminar -->
+                                        <template v-else>
+                                            <button
+                                                class="btn btn-sm btn-outline-success me-1"
+                                                @click="abrirSeguimiento(puc, false)"
+                                                title="Registrar seguimiento"
+                                            >
+                                                <i
+                                                    class="bi bi-clipboard-check"
+                                                ></i>
+                                            </button>
+                                            <button
+                                                class="btn btn-sm btn-outline-warning rounded-pill me-1"
+                                                @click="abrirReprogramar(puc)"
+                                                title="Reprogramar fecha"
+                                            >
+                                                <i class="bi bi-calendar-event"></i>
+                                            </button>
+                                            <button
+                                                class="btn btn-sm btn-outline-danger"
+                                                @click="eliminar(puc)"
+                                                title="Eliminar"
+                                            >
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </template>
                                     </td>
                                 </tr>
                             </tbody>
@@ -298,62 +319,36 @@
                     </div>
                     <form @submit.prevent="guardar">
                         <div class="modal-body">
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Filtrar por Sección</label>
-                                    <select
-                                        v-model="seccionSeleccionadaModal"
-                                        class="form-select form-select-sm"
-                                        @change="onSeccionModalChange"
-                                    >
-                                        <option value="">Todas las secciones...</option>
-                                        <option
-                                            v-for="sec in secciones"
-                                            :key="sec.sec_id"
-                                            :value="sec.sec_id"
-                                        >
-                                            Sección {{ sec.sec_codigo }}
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Buscar Equipo</label>
-                                    <input
-                                        type="text"
-                                        v-model="busquedaEquipoModal"
-                                        class="form-control form-control-sm"
-                                        placeholder="🔍 Código o título..."
-                                    />
-                                </div>
-                            </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Equipo
-                                    <span class="text-danger">*</span></label
-                                >
+                                <label class="form-label fw-semibold">Sección</label>
                                 <select
-                                    v-model="form.puc_id_equ"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.puc_id_equ,
-                                    }"
+                                    v-model="seccionSeleccionadaModal"
+                                    class="form-select form-select-sm"
+                                    @change="onSeccionModalChange"
                                 >
-                                    <option value="">Seleccionar equipo...</option>
+                                    <option value="">Todas las secciones...</option>
                                     <option
-                                        v-for="equ in equiposModalFiltrados"
-                                        :key="equ.equ_id"
-                                        :value="equ.equ_id"
+                                        v-for="sec in secciones"
+                                        :key="sec.sec_id"
+                                        :value="sec.sec_id"
                                     >
-                                        {{ equ.equ_codigo }} —
-                                        {{ equ.equ_titulo }}
-                                        <template v-if="equ.seccion">
-                                            (Sec: {{ equ.seccion.sec_codigo }})
-                                        </template>
+                                        Sección {{ sec.sec_codigo }}
                                     </option>
                                 </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Equipo <span class="text-danger">*</span>
+                                </label>
+                                <SelectBuscableEquipo
+                                    v-model="form.puc_id_equ"
+                                    :equipos="equiposModalFiltrados"
+                                    :has-error="!!errores.puc_id_equ"
+                                    placeholder="🔍 Escribe código, título o sección del equipo..."
+                                />
                                 <div
                                     v-if="errores.puc_id_equ"
-                                    class="invalid-feedback"
+                                    class="text-danger small mt-1"
                                 >
                                     {{ errores.puc_id_equ }}
                                 </div>
@@ -390,6 +385,7 @@
                                     <input
                                         v-model="form.puc_fecha_limite"
                                         type="date"
+                                        :min="fechaHoy"
                                         class="form-control"
                                         :class="{
                                             'is-invalid':
@@ -464,7 +460,7 @@
                 <div class="modal-content border-0 shadow-lg">
                     <div class="mh">
                         <h5>
-                            Registrar Seguimiento —
+                            {{ modoSoloLecturaSeg ? 'Evaluación del Punto — ' : 'Registrar Seguimiento — ' }}
                             {{ puntoActual?.puc_nombre }}
                         </h5>
                         <button
@@ -476,6 +472,15 @@
                     </div>
                     <form @submit.prevent="guardarSeguimiento">
                         <div class="modal-body">
+                            <div v-if="modoSoloLecturaSeg" class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+                                <i class="bi bi-lock-fill fs-5 text-secondary"></i>
+                                <div>
+                                    <strong>Evaluación Registrada:</strong> Este punto de control ya fue evaluado como
+                                    <span class="badge" :class="formSeg.seq_cumplido ? 'bg-success' : 'bg-danger'">
+                                        {{ formSeg.seq_cumplido ? 'Cumplido' : 'No cumplido' }}
+                                    </span>. No es posible modificarlo ni volver a subir el resultado.
+                                </div>
+                            </div>
                             <div
                                 v-if="puntoActual?.seguimientos?.length"
                                 class="mt-2"
@@ -539,6 +544,7 @@
                                             class="form-check-input"
                                             v-model="formSeg.seq_cumplido"
                                             :value="true"
+                                            :disabled="modoSoloLecturaSeg"
                                             id="si"
                                         /><label
                                             class="form-check-label fw-semibold"
@@ -553,6 +559,7 @@
                                             class="form-check-input"
                                             v-model="formSeg.seq_cumplido"
                                             :value="false"
+                                            :disabled="modoSoloLecturaSeg"
                                             id="no"
                                         /><label
                                             class="form-check-label fw-semibold"
@@ -569,6 +576,7 @@
                                 >
                                 <textarea
                                     v-model="formSeg.seq_observaciones"
+                                    :disabled="modoSoloLecturaSeg"
                                     class="form-control"
                                     rows="3"
                                 ></textarea>
@@ -606,6 +614,7 @@
                                             type="checkbox"
                                             class="form-check-input"
                                             :id="'asist_' + int.ein_id"
+                                            :disabled="modoSoloLecturaSeg"
                                             v-model="
                                                 formSeg.asistencias[
                                                     int.ein_id_usu
@@ -627,9 +636,10 @@
                                 class="btn btn-secondary"
                                 data-bs-dismiss="modal"
                             >
-                                Cancelar
+                                {{ modoSoloLecturaSeg ? 'Cerrar' : 'Cancelar' }}
                             </button>
                             <button
+                                v-if="!modoSoloLecturaSeg"
                                 type="submit"
                                 class="btn btn-danger fw-bold"
                                 :disabled="loadingSeg"
@@ -668,6 +678,7 @@
                             <input
                                 v-model="formReprog.nueva_fecha"
                                 type="date"
+                                :min="fechaManana"
                                 class="form-control"
                             />
                             <label class="form-label fw-semibold mt-3"
@@ -745,6 +756,7 @@ import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
+import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
 
 const props = defineProps({
     puntosControl: Array,
@@ -767,7 +779,13 @@ const iniciales = computed(() => {
 });
 const busqueda = ref("");
 const seccionSeleccionadaModal = ref("");
-const busquedaEquipoModal = ref("");
+
+const fechaHoy = computed(() => new Date().toISOString().split("T")[0]);
+const fechaManana = computed(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+});
 
 const onSeccionModalChange = () => {
     if (seccionSeleccionadaModal.value && form.value.puc_id_equ) {
@@ -782,14 +800,6 @@ const equiposModalFiltrados = computed(() => {
     let list = props.equipos || [];
     if (seccionSeleccionadaModal.value) {
         list = list.filter((e) => e.equ_id_sec == seccionSeleccionadaModal.value);
-    }
-    if (busquedaEquipoModal.value.trim()) {
-        const q = busquedaEquipoModal.value.toLowerCase().trim();
-        list = list.filter(
-            (e) =>
-                e.equ_codigo?.toLowerCase().includes(q) ||
-                e.equ_titulo?.toLowerCase().includes(q),
-        );
     }
     return list;
 });
@@ -834,7 +844,6 @@ const filtrados = computed(() => {
 });
 const abrirModal = () => {
     seccionSeleccionadaModal.value = "";
-    busquedaEquipoModal.value = "";
     form.value = {
         puc_id_equ: "",
         puc_nombre: "",
@@ -859,8 +868,15 @@ const guardar = () => {
         },
     });
 };
-const abrirSeguimiento = (puc) => {
+const modoSoloLecturaSeg = ref(false);
+const estaEvaluado = (puc) => {
+    const seg = puc?.seguimientos?.[0];
+    return seg !== undefined && seg !== null && seg.seq_cumplido !== null && seg.seq_cumplido !== undefined;
+};
+
+const abrirSeguimiento = (puc, soloLectura = false) => {
     puntoActual.value = puc;
+    modoSoloLecturaSeg.value = soloLectura || estaEvaluado(puc);
     const initialAsist = {};
     const ints = puc.equipo?.integrantes || [];
     const prevSeg = puc.seguimientos?.[0];
@@ -888,6 +904,7 @@ const abrirSeguimiento = (puc) => {
     mSeg.show();
 };
 const guardarSeguimiento = () => {
+    if (modoSoloLecturaSeg.value || estaEvaluado(puntoActual.value)) return;
     loadingSeg.value = true;
     router.post(
         `/profesor/puntos-control/${puntoActual.value.puc_id}/seguimiento`,

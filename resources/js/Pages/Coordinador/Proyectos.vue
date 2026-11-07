@@ -326,7 +326,7 @@
                                             class="fw-bold"
                                             style="color: var(--rojo)"
                                         >
-                                            {{ pco.equipo?.equ_codigo }}
+                                            {{ codigoLimpio(pco.equipo?.equ_codigo) }}
                                         </div>
                                         <div
                                             style="
@@ -458,26 +458,15 @@
                                             >*</span
                                         ></label
                                     >
-                                    <select
+                                    <SelectBuscableEquipo
                                         v-model="form.pco_id_equ"
-                                        class="form-select"
-                                        :class="{
-                                            'is-invalid': errores.pco_id_equ,
-                                        }"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option
-                                            v-for="equ in equipos"
-                                            :key="equ.equ_id"
-                                            :value="equ.equ_id"
-                                        >
-                                            {{ equ.equ_codigo }} —
-                                            {{ equ.equ_titulo }}
-                                        </option>
-                                    </select>
+                                        :equipos="equipos"
+                                        :has-error="!!errores.pco_id_equ"
+                                        placeholder="🔍 Escribe código o título del equipo..."
+                                    />
                                     <div
                                         v-if="errores.pco_id_equ"
-                                        class="invalid-feedback"
+                                        class="text-danger small mt-1"
                                     >
                                         {{ errores.pco_id_equ }}
                                     </div>
@@ -573,6 +562,7 @@
                                     <input
                                         v-model="form.pco_fecha_limite"
                                         type="date"
+                                        :min="fechaManana"
                                         class="form-control"
                                         :class="{
                                             'is-invalid':
@@ -697,6 +687,7 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import SelectBuscableComunidad from "@/Components/SelectBuscableComunidad.vue";
+import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
@@ -741,6 +732,17 @@ const itemSeleccionado = ref(null);
 let modal = null;
 let modalAp = null;
 let modalDes = null;
+const codigoLimpio = (codigo) => {
+    if (!codigo) return "";
+    return String(codigo).replace(/#DIS\d+$/, "");
+};
+
+const fechaManana = computed(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+});
+
 watch([busqueda, filtroAprobacion], () => {
     pagina.value = 1;
 });
@@ -752,6 +754,7 @@ const proyectosFiltrados = computed(() => {
         r = r.filter(
             (p) =>
                 p.equipo?.equ_codigo?.toLowerCase().includes(q) ||
+                codigoLimpio(p.equipo?.equ_codigo).toLowerCase().includes(q) ||
                 p.equipo?.equ_titulo?.toLowerCase().includes(q) ||
                 p.comunidad?.com_nombre?.toLowerCase().includes(q),
         );
@@ -1024,6 +1027,8 @@ const confirmarDesactivar = () => {
     border-radius: 20px;
     font-size: 0.76rem;
     font-weight: 700;
+    white-space: nowrap;
+    display: inline-block;
 }
 .ba {
     background: #d1e7dd;

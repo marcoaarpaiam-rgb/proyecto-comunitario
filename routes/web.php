@@ -156,17 +156,63 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
             ],
             'secciones' => \App\Models\Seccion::with('turno')->where('sec_status', true)->orderBy('sec_codigo')->get()
                 ->map(function ($s) {
-                    $base  = \App\Models\Equipo::where('equ_id_sec', $s->sec_id)->where('equ_status', true);
-                    $total = (clone $base)->count();
-                    $cerr  = (clone $base)->whereHas('resultadoProyecto')->count();
+                    $equipos = \App\Models\Equipo::where('equ_id_sec', $s->sec_id)
+                        ->where('equ_status', true)
+                        ->with([
+                            'proyectoComunidad',
+                            'puntosControl.seguimientos',
+                            'entregables',
+                            'socializaciones.tipoSocializacion',
+                            'resultadoProyecto'
+                        ])
+                        ->get();
+
+                    $total = $equipos->count();
+                    $avance = 0;
+                    if ($total > 0) {
+                        $sumaAvances = 0;
+                        foreach ($equipos as $eq) {
+                            if ($eq->resultadoProyecto) {
+                                $sumaAvances += 100;
+                                continue;
+                            }
+                            $puntos = 10;
+                            if ($eq->proyectoComunidad) {
+                                $puntos += 25;
+                            }
+                            $pucActivos = $eq->puntosControl->where('puc_status', true);
+                            if ($pucActivos->isNotEmpty()) {
+                                $cumplidos = $pucActivos->filter(fn($p) => $p->seguimientos->where('seq_cumplido', true)->isNotEmpty())->count();
+                                $puntos += round(($cumplidos / $pucActivos->count()) * 25);
+                            }
+                            $entrActivos = $eq->entregables->where('entr_status', true);
+                            if ($entrActivos->isNotEmpty()) {
+                                $entrAprob = $entrActivos->where('entr_aprobado', true)->count();
+                                $puntos += round(($entrAprob / $entrActivos->count()) * 20);
+                            }
+                            $preSocApta = $eq->socializaciones
+                                ->filter(fn($soc) => $soc->tipoSocializacion?->tso_orden === 1 && $soc->soc_apto === true)
+                                ->isNotEmpty();
+                            if ($preSocApta) {
+                                $puntos += 20;
+                            }
+                            $sumaAvances += min(100, $puntos);
+                        }
+                        $avance = round($sumaAvances / $total);
+                    }
+
                     return [
                         'sec_id'        => $s->sec_id,
                         'sec_codigo'    => $s->sec_codigo,
                         'turno'         => $s->turno,
                         'total_equipos' => $total,
-                        'avance'        => $total ? round($cerr / $total * 100) : 0,
+                        'avance'        => $avance,
                     ];
                 }),
+            'notificaciones' => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+                ->latest('not_fecha_generacion')
+                ->take(10)
+                ->get(),
         ]);
     })->name('dashboard');
 
@@ -280,6 +326,9 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
         ->name('equipos.disolver');
 
+    Route::delete('equipos/{id}', [EquipoController::class, 'destroy'])
+        ->name('coordinador.equipos.destroy');
+
     Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
         [EquipoController::class, 'removerIntegrante'])
         ->name('equipos.integrantes.remover');
@@ -329,7 +378,15 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
         $equipos = \App\Models\Equipo::whereIn('equ_id', $equiposIds)
             ->with(['seccion','trayecto','integrantes.usuario'])
-            ->where('equ_status', true)->get();
+            ->where('equ_status', true)
+            ->orderBy('equ_codigo')
+            ->get();
+
+        $notificacionesBase = \App\Models\Notificacion::where('not_id_usu', auth()->id())
+            ->where(function ($q) {
+                $q->whereNull('not_id_equ')
+                  ->orWhereHas('equipo', fn($eq) => $eq->where('equ_status', true));
+            });
 
         return Inertia::render('Profesor/Dashboard', [
             'stats' => [
@@ -337,20 +394,23 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
                 'equipos'               => $equiposIds->count(),
                 'puntosVencer'          => \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposIds)
                     ->where('puc_status', true)
+                    ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
                     ->whereBetween('puc_fecha_limite', [now()->toDateString(), now()->addDays(7)->toDateString()])
                     ->count(),
                 'entregablesPendientes' => \App\Models\Entregable::whereIn('entr_id_equ', $equiposIds)
-                    ->where('entr_status', true)->whereNull('entr_aprobado')->count(),
-                'notificaciones'        => \App\Models\Notificacion::where('not_id_usu', auth()->id())
-                    ->where('not_leida', false)->count(),
+                    ->where('entr_status', true)
+                    ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+                    ->whereNull('entr_aprobado')->count(),
+                'notificaciones'        => (clone $notificacionesBase)->where('not_leida', false)->count(),
             ],
-            'notificaciones' => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+            'notificaciones' => (clone $notificacionesBase)
                 ->orderByDesc('not_fecha_generacion')->take(15)->get(),
-            'notificacionesSinLeer' => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+            'notificacionesSinLeer' => (clone $notificacionesBase)
                 ->where('not_leida', false)->count(),
             'equipos'               => $equipos,
             'proximosPuntos'        => \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposIds)
                 ->where('puc_status', true)
+                ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
                 ->where('puc_fecha_limite', '>=', now()->toDateString())
                 ->orderBy('puc_fecha_limite')->take(5)->with('equipo')->get()
                 ->map(fn($p) => [
@@ -361,6 +421,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
                     'urgente' => $p->puc_fecha_limite <= now()->addDays(3)->toDateString(),
                 ]),
             'entregablesPendientes' => \App\Models\Entregable::whereIn('entr_id_equ', $equiposIds)
+                ->where('entr_status', true)
+                ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
                 ->whereNull('entr_aprobado')->with('equipo')->take(5)->get()
                 ->map(fn($e) => [
                     'id'     => $e->entr_id,
@@ -427,6 +489,9 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
         ->name('equipos.disolver');
+
+    Route::delete('equipos/{id}', [EquipoController::class, 'destroy'])
+        ->name('coordinador.equipos.destroy');
 
     Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
         [EquipoController::class, 'removerIntegrante'])

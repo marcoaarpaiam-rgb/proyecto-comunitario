@@ -22,6 +22,10 @@ class Equipo extends Model
         'equ_id_usu_updated',
     ];
 
+    protected $casts = [
+        'equ_status' => 'boolean',
+    ];
+
     public function seccion()
     {
         return $this->belongsTo(Seccion::class, 'equ_id_sec', 'sec_id');

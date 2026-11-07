@@ -377,10 +377,11 @@
                                     }}</span>
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">Modalidad</span
-                                    ><span>{{
-                                        equipo.proyecto_comunidad.modalidad
-                                            ?.mpr_nombre
+                                    <span class="info-label">Modalidad</span>
+                                    <span>{{
+                                        equipo.proyecto_comunidad.modalidad?.mpr_nombre ||
+                                        equipo.proyecto_comunidad.modalidad_proyecto?.mpr_nombre ||
+                                        'No especificada'
                                     }}</span>
                                 </div>
                                 <div class="info-row">

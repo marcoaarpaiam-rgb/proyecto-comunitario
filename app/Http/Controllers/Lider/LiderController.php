@@ -37,6 +37,7 @@ class LiderController extends Controller
                 'integrantes.usuario',
                 'proyectoComunidad.comunidad',
                 'proyectoComunidad.tipoProyecto',
+                'proyectoComunidad.modalidad',
             ])
             ->first();
     }

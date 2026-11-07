@@ -17,17 +17,24 @@ class CartaController extends Controller
         return Inertia::render('Coordinador/Cartas', [
             'cartas' => \App\Models\CartaPresentacion::where('cpr_solicitada', true)
                 ->with([
+                    'proyectoComunidad.equipo.seccion',
+                    'proyectoComunidad.equipo.trayecto',
                     'proyectoComunidad.equipo.integrantes.usuario',
                     'proyectoComunidad.comunidad',
                 ])
                 ->orderBy('cpr_fecha_generacion', 'desc')
                 ->get(),
-            'proyectos' => ProyectoComunidad::with(['equipo','comunidad'])
+            'secciones' => \App\Models\Seccion::where('sec_status', true)
+                ->orderBy('sec_codigo')
+                ->get(['sec_id', 'sec_codigo']),
+            'proyectos' => ProyectoComunidad::with(['equipo.seccion','comunidad'])
                 ->whereNotNull('pco_fecha_aprobacion')
                 ->where('pco_status', true)
                 ->get(),
             'solicitudes' => CartaPresentacion::with([
-                'proyectoComunidad.equipo',
+                'proyectoComunidad.equipo.seccion',
+                'proyectoComunidad.equipo.trayecto',
+                'proyectoComunidad.equipo.integrantes.usuario',
                 'proyectoComunidad.comunidad',
             ])
             ->whereNull('cpr_fecha_aprobacion')
@@ -58,13 +65,34 @@ class CartaController extends Controller
         if ($carta) {            // fue invalidada por cambio de comunidad: se vuelve a solicitar
             $carta->update(['cpr_solicitada' => true, 'cpr_fecha_generacion' => now()]);
         } else {
-            CartaPresentacion::create([
+            $carta = CartaPresentacion::create([
                 'cpr_id_pco'           => $proyecto->pco_id,
                 'cpr_ruta_archivo'     => '',
                 'cpr_solicitada'       => true,
                 'cpr_sello'            => false,
                 'cpr_fecha_generacion' => now(),
                 'cpr_id_usu_created'   => auth()->id(),
+            ]);
+        }
+
+        // Notificar a todos los coordinadores sobre la solicitud de la carta
+        $equipo = $proyecto->equipo;
+        $codigoEquipo = $equipo ? preg_replace('/#DIS\d+$/', '', $equipo->equ_codigo) : 'Equipo';
+        $nombreLider = auth()->user()->usu_primer_nombre . ' ' . auth()->user()->usu_primer_apellido;
+        $tnoId = \App\Models\TipoNotificacion::first()?->tno_id;
+
+        $coordinadores = Usuario::where('usu_status', true)
+            ->whereHas('usuarioRoles', fn($q) => $q->where('uro_status', true)
+                ->whereHas('rol', fn($r) => $r->where('rol_nombre', 'coordinador')))->get();
+
+        foreach ($coordinadores as $coord) {
+            \App\Models\Notificacion::create([
+                'not_id_usu'           => $coord->usu_id,
+                'not_id_tno'           => $tnoId,
+                'not_id_equ'           => $proyecto->pco_id_equ,
+                'not_mensaje'          => "El líder {$nombreLider} del equipo {$codigoEquipo} ha solicitado la Carta de Presentación.",
+                'not_leida'            => false,
+                'not_fecha_generacion' => now(),
             ]);
         }
 

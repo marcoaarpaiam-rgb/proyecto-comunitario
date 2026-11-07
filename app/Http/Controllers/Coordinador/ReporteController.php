@@ -191,9 +191,14 @@ class ReporteController extends Controller
             ->with(['proyectosComunidad' => fn($q) =>
                 $q->whereHas('equipo', fn($q2) => $q2->where('equ_status', true))
                   ->with([
+                      'equipo.seccion.trayecto',
+                      'equipo.seccion.turno',
+                      'equipo.seccion.profesores' => fn($qp) => $qp->where('pse_status', true)->with('usuario'),
+                      'equipo.integrantes' => fn($qi) => $qi->where('ein_status', true)->with('usuario'),
                       'equipo.resultadoProyecto.estadoProyecto',
                       'tipoProyecto',
-                      'beneficiarios',
+                      'modalidad',
+                      'beneficiarios.tipoBeneficiario',
                   ])
             ])
             ->orderBy('com_nombre')
@@ -205,13 +210,53 @@ class ReporteController extends Controller
                 'com_nombre'   => $c->com_nombre,
                 'com_ubicacion'=> $c->com_ubicacion,
                 'total_equipos'=> $c->total_equipos,
-                'proyectos'    => $c->proyectosComunidad->map(fn($p) => [
-                    'codigo'         => $p->equipo?->equ_codigo,
-                    'titulo'         => $p->equipo?->equ_titulo,
-                    'tipo_proyecto'  => $p->tipoProyecto?->tpr_nombre,
-                    'resultado'      => $p->equipo?->resultadoProyecto?->estadoProyecto?->epr_nombre ?? 'En proceso',
-                    'total_beneficiarios' => $p->beneficiarios?->sum('pbe_cantidad') ?? 0,
-                ]),
+                'proyectos'    => $c->proyectosComunidad->map(function($p) use ($c) {
+                    $equipo = $p->equipo;
+                    $seccion = $equipo?->seccion;
+                    $profesorAsignado = $seccion?->profesores?->first()?->usuario;
+                    $profesorNombre = $profesorAsignado 
+                        ? trim("{$profesorAsignado->usu_primer_nombre} {$profesorAsignado->usu_primer_apellido}")
+                        : 'No asignado';
+
+                    $integrantes = $equipo?->integrantes?->map(function($i) {
+                        return [
+                            'ein_id'   => $i->ein_id,
+                            'es_lider' => (bool)$i->ein_es_lider,
+                            'nombre'   => trim(($i->usuario?->usu_primer_nombre ?? '') . ' ' . ($i->usuario?->usu_primer_apellido ?? '')),
+                            'cedula'   => $i->usuario?->usu_cedula ?? 'S/C',
+                            'email'    => $i->usuario?->usu_email ?? '',
+                        ];
+                    })->values() ?? [];
+
+                    $beneficiariosList = $p->beneficiarios?->map(function($b) {
+                        return [
+                            'tipo'     => $b->tipoBeneficiario?->tbe_nombre ?? 'General',
+                            'cantidad' => $b->pbe_cantidad,
+                        ];
+                    })->values() ?? [];
+
+                    return [
+                        'pco_id'              => $p->pco_id,
+                        'equ_id'              => $equipo?->equ_id,
+                        'codigo'              => $equipo?->equ_codigo ?? 'Sin código',
+                        'codigo_limpio'       => $equipo ? preg_replace('/#DIS\d+$/', '', $equipo->equ_codigo) : 'Sin código',
+                        'titulo'              => $equipo?->equ_titulo ?? 'Sin título',
+                        'resumen'             => $p->pco_resumen ?? 'Sin descripción',
+                        'fecha_limite'        => $p->pco_fecha_limite,
+                        'seccion'             => $seccion?->sec_codigo ?? 'Sin sección',
+                        'trayecto'            => $seccion?->trayecto?->tra_nombre ?? 'N/A',
+                        'turno'               => $seccion?->turno?->tur_nombre ?? 'N/A',
+                        'profesor'            => $profesorNombre,
+                        'tipo_proyecto'       => $p->tipoProyecto?->tpr_nombre ?? 'No especificado',
+                        'modalidad'           => $p->modalidad?->mpr_nombre ?? 'No especificada',
+                        'resultado'           => $equipo?->resultadoProyecto?->estadoProyecto?->epr_nombre ?? 'En proceso',
+                        'total_beneficiarios' => (int)($p->beneficiarios?->sum('pbe_cantidad') ?? 0),
+                        'beneficiarios'       => $beneficiariosList,
+                        'comunidad_nombre'    => $c->com_nombre,
+                        'comunidad_ubicacion' => $c->com_ubicacion,
+                        'integrantes'         => $integrantes,
+                    ];
+                }),
             ]),
         ]);
     }

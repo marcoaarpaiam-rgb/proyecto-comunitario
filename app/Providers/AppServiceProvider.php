@@ -18,6 +18,9 @@ class AppServiceProvider extends ServiceProvider
     
     public function boot(): void
     {
+        if (app()->isProduction()) {
+            \URL::forceScheme('https');
+        }
         $tempDir = storage_path('app/temp');
         if (is_dir($tempDir)) {
             foreach (glob($tempDir . '/*.zip') as $file) {

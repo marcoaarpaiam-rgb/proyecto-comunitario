@@ -430,7 +430,7 @@
                                         class="ps-4 fw-bold"
                                         style="color: var(--rojo)"
                                     >
-                                        {{ equ.equ_codigo }}
+                                        {{ codigoLimpio(equ.equ_codigo) }}
                                     </td>
                                     <td
                                         style="
@@ -522,11 +522,22 @@
                                             <button
                                                 class="btn btn-sm btn-outline-success"
                                                 @click="reactivar(equ)"
+                                                title="Reactivar equipo"
                                             >
                                                 <i
                                                     class="bi bi-arrow-counterclockwise me-1"
                                                 ></i
                                                 >Reactivar
+                                            </button>
+                                            <button
+                                                class="btn btn-sm btn-outline-danger ms-1"
+                                                @click="eliminarDefinitivamente(equ)"
+                                                title="Eliminar definitivamente"
+                                            >
+                                                <i
+                                                    class="bi bi-trash me-1"
+                                                ></i
+                                                >Eliminar
                                             </button>
                                         </template>
                                     </td>
@@ -1932,15 +1943,14 @@
                     <form @submit.prevent="confirmarDisolver">
                         <div class="modal-body">
                             <div class="alert alert-danger small py-2 mb-3">
-                                <i class="bi bi-exclamation-triangle me-1"></i
-                                >Esta acción desactivará el equipo y todos sus
-                                integrantes. No se puede deshacer.
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Selecciona si deseas disolver el equipo (desactivarlo para posible reactivación) o eliminarlo por completo si no se volverá a utilizar.
                             </div>
                             <div class="mb-3">
                                 <p style="color: var(--text-main)" class="mb-1">
                                     Equipo:
                                     <strong style="color: #dc3545">{{
-                                        equipoADisolver?.equ_codigo
+                                        codigoLimpio(equipoADisolver?.equ_codigo)
                                     }}</strong>
                                 </p>
                                 <p
@@ -1953,9 +1963,47 @@
                                     {{ equipoADisolver?.equ_titulo }}
                                 </p>
                             </div>
-                            <div>
+
+                            <!-- Opción de acción -->
+                            <div class="mb-3 p-3 rounded" style="background: var(--bg-th, rgba(0,0,0,0.03)); border: 1px solid var(--border)">
+                                <label class="form-label fw-bold mb-2">Acción a ejecutar:</label>
+                                <div class="form-check mb-2">
+                                    <input
+                                        class="form-check-input"
+                                        type="radio"
+                                        name="tipoAccionDisolver"
+                                        id="accionDisolver"
+                                        value="disolver"
+                                        v-model="tipoAccionDisolver"
+                                    />
+                                    <label class="form-check-label fw-semibold" for="accionDisolver">
+                                        Disolver equipo
+                                    </label>
+                                    <div class="small text-muted">
+                                        Desactiva el equipo y libera a los integrantes. Se conserva en "Ver Disueltos" y podrá ser reactivado posteriormente.
+                                    </div>
+                                </div>
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="radio"
+                                        name="tipoAccionDisolver"
+                                        id="accionEliminar"
+                                        value="eliminar"
+                                        v-model="tipoAccionDisolver"
+                                    />
+                                    <label class="form-check-label fw-semibold text-danger" for="accionEliminar">
+                                        Eliminar definitivamente
+                                    </label>
+                                    <div class="small text-muted">
+                                        Elimina por completo el equipo y sus registros si no se reactivará. Libera el código y a los integrantes de forma definitiva.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="tipoAccionDisolver === 'disolver'">
                                 <label class="form-label fw-semibold"
-                                    >Motivo
+                                    >Motivo de la disolución
                                     <span class="text-danger">*</span></label
                                 >
                                 <textarea
@@ -1976,6 +2024,10 @@
                                     El motivo es obligatorio.
                                 </div>
                             </div>
+                            <div v-else class="alert alert-warning small mb-0 py-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Se borrarán todos los registros, puntos y entregables de este equipo de forma permanente e irreversible.
+                            </div>
                         </div>
                         <div class="modal-footer border-0">
                             <button
@@ -1986,11 +2038,18 @@
                                 Cancelar
                             </button>
                             <button
+                                v-if="tipoAccionDisolver === 'disolver'"
                                 type="submit"
                                 class="btn btn-danger fw-bold"
                             >
-                                <i class="bi bi-x-circle me-2"></i>Disolver
-                                Equipo
+                                <i class="bi bi-x-circle me-2"></i>Disolver Equipo
+                            </button>
+                            <button
+                                v-else
+                                type="submit"
+                                class="btn btn-outline-danger fw-bold"
+                            >
+                                <i class="bi bi-trash me-2"></i>Eliminar Definitivamente
                             </button>
                         </div>
                     </form>
@@ -2494,6 +2553,8 @@ const equipoSeleccionado = ref(null);
 const equipoADisolver = ref(null);
 const motivoDisolucion = ref("");
 const intentoDisolver = ref(false);
+const tipoAccionDisolver = ref("disolver");
+const codigoLimpio = (cod) => (cod ? String(cod).replace(/#DIS\d+$/, "") : "");
 const tabActivo = ref("ints");
 const historialEquipo = ref([]);
 const cargandoHistorial = ref(false);
@@ -2614,7 +2675,7 @@ const editarParametrosManual = ref(false);
 const siguienteNumeroEquipo = computed(() => {
     const secId = formNuevo.value.equ_id_sec;
     if (!secId) return 1;
-    const todos = [...(props.equipos || []), ...(props.equiposDisueltos || [])];
+    const todos = [...(props.equipos || [])];
     const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
     let maxN = 0;
     equiposSec.forEach((e) => {
@@ -2673,7 +2734,7 @@ const onSeccionChange = () => {
 
     const sec = props.secciones?.find((s) => String(s.sec_id) === String(secId));
     const traId = sec?.sec_id_tra || sec?.trayecto?.tra_id;
-    const todos = [...(props.equipos || []), ...(props.equiposDisueltos || [])];
+    const todos = [...(props.equipos || [])];
 
     // Equipos existentes de la sección
     const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
@@ -2890,6 +2951,7 @@ const abrirDisolver = (equ) => {
     equipoADisolver.value = equ;
     motivoDisolucion.value = "";
     intentoDisolver.value = false;
+    tipoAccionDisolver.value = "disolver";
     mDisolver = mDisolver || new Modal(document.getElementById("mDisolver"));
     mDisolver.show();
 };
@@ -3014,17 +3076,46 @@ const guardarEdicion = () => {
 };
 
 const confirmarDisolver = () => {
+    if (tipoAccionDisolver.value === "eliminar") {
+        const cod = codigoLimpio(equipoADisolver.value?.equ_codigo);
+        if (!confirm(`¿Estás completamente seguro de eliminar de forma permanente el equipo ${cod}? Esta acción borrará todos sus datos y no se podrá deshacer.`)) {
+            return;
+        }
+        router.delete(`${base.value}/equipos/${equipoADisolver.value.equ_id}`, {
+            onSuccess: () => {
+                mDisolver?.hide();
+                equipoADisolver.value = null;
+            },
+        });
+        return;
+    }
+
     intentoDisolver.value = true;
     if (!motivoDisolucion.value.trim()) return;
     router.post(
         `${base.value}/equipos/${equipoADisolver.value.equ_id}/disolver`,
         { motivo: motivoDisolucion.value },
-        { onSuccess: () => mDisolver?.hide() },
+        {
+            onSuccess: () => {
+                mDisolver?.hide();
+                equipoADisolver.value = null;
+            },
+        },
     );
 };
+
 const reactivar = (equ) => {
-    if (!confirm(`¿Reactivar el equipo ${equ.equ_codigo}?`)) return;
+    const cod = codigoLimpio(equ.equ_codigo);
+    if (!confirm(`¿Reactivar el equipo ${cod}?`)) return;
     router.post(`${base.value}/equipos/${equ.equ_id}/reactivar`);
+};
+
+const eliminarDefinitivamente = (equ) => {
+    const cod = codigoLimpio(equ.equ_codigo);
+    if (!confirm(`¿Eliminar definitivamente el equipo ${cod}? Esta acción borrará el equipo y todos sus datos del sistema si no se reactivará.`)) {
+        return;
+    }
+    router.delete(`${base.value}/equipos/${equ.equ_id}`);
 };
 const removerIntegrante = (int) => {
     if (!confirm(`¿Remover a ${int.usuario?.usu_primer_nombre} del equipo?`))

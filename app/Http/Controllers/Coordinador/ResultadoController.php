@@ -15,19 +15,27 @@ class ResultadoController extends Controller
 {
     public function index()
     {
+        $secciones = \App\Models\Seccion::where('sec_status', true)
+            ->with(['trayecto', 'turno'])
+            ->orderBy('sec_codigo')
+            ->get();
+
         return Inertia::render('Coordinador/Resultados', [
             'resultados' => ResultadoProyecto::with([
-                'proyectoComunidad.equipo',
+                'proyectoComunidad.equipo.seccion.trayecto',
+                'proyectoComunidad.equipo.seccion.turno',
                 'proyectoComunidad.comunidad',
-                'equipo.seccion',
+                'equipo.seccion.trayecto',
+                'equipo.seccion.turno',
                 'trayecto',
                 'estadoProyecto',
-            ])->get(),
+            ])->orderBy('rpr_fecha_registro', 'desc')->get(),
             'proyectos' => ProyectoComunidad::with(['equipo','comunidad'])
                 ->where('pco_status', true)
                 ->get(),
             'estados'   => EstadoProyecto::where('epr_status', true)->get(),
             'trayectos' => Trayecto::where('tra_status', true)->get(),
+            'secciones' => $secciones,
         ]);
     }
 

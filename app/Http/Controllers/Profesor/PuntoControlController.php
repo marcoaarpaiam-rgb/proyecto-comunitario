@@ -48,12 +48,13 @@ class PuntoControlController extends Controller
             'puc_id_equ'      => 'required|exists:equipo,equ_id',
             'puc_nombre'      => 'required|string|max:150',
             'puc_descripcion' => 'nullable|string',
-            'puc_fecha_limite'=> 'required|date',
+            'puc_fecha_limite'=> 'required|date|after_or_equal:today',
             'puc_dias_aviso'  => 'required|integer|min:1|max:30',
         ], [
-            'puc_id_equ.required'       => 'El equipo es obligatorio.',
-            'puc_nombre.required'       => 'El nombre es obligatorio.',
-            'puc_fecha_limite.required' => 'La fecha límite es obligatoria.',
+            'puc_id_equ.required'            => 'El equipo es obligatorio.',
+            'puc_nombre.required'            => 'El nombre es obligatorio.',
+            'puc_fecha_limite.required'      => 'La fecha límite es obligatoria.',
+            'puc_fecha_limite.after_or_equal'=> 'La fecha límite no puede ser anterior a la fecha de hoy.',
         ]);
 
         $this->autorizarEquipoId($request->puc_id_equ);
@@ -113,6 +114,16 @@ class PuntoControlController extends Controller
         $punto = PuntoControl::findOrFail($id);
 
         $this->autorizarEquipoId($punto->puc_id_equ);
+
+        // Bloquear si ya fue evaluado
+        $seguimientoExistente = SeguimientoEquipo::where('seq_id_equ', $punto->puc_id_equ)
+            ->where('seq_id_puc', $punto->puc_id)
+            ->first();
+
+        if ($seguimientoExistente && $seguimientoExistente->seq_cumplido !== null) {
+            return back()->withErrors(['error' => 'Este punto de control ya ha sido evaluado y su resultado no puede ser modificado.']);
+        }
+
         $seq = SeguimientoEquipo::updateOrCreate(
             ['seq_id_equ' => $punto->puc_id_equ, 'seq_id_puc' => $punto->puc_id],
             [
@@ -173,6 +184,16 @@ class PuntoControlController extends Controller
 
         $this->autorizarEquipoId($punto->puc_id_equ);
 
+        // No reprogramar si ya fue evaluado
+        $seguimientoExistente = SeguimientoEquipo::where('seq_id_equ', $punto->puc_id_equ)
+            ->where('seq_id_puc', $punto->puc_id)
+            ->whereNotNull('seq_cumplido')
+            ->first();
+
+        if ($seguimientoExistente) {
+            return back()->withErrors(['error' => 'No se puede reprogramar un punto de control que ya ha sido evaluado.']);
+        }
+
         $punto->update([
             'puc_fecha_reprogramada'      => $request->nueva_fecha,
             'puc_motivo_reprogramacion'   => $request->motivo,
@@ -207,6 +228,17 @@ class PuntoControlController extends Controller
     {
         $punto = PuntoControl::findOrFail($id);
         $this->autorizarEquipoId($punto->puc_id_equ);
+
+        // No eliminar si ya fue evaluado
+        $seguimientoExistente = SeguimientoEquipo::where('seq_id_equ', $punto->puc_id_equ)
+            ->where('seq_id_puc', $punto->puc_id)
+            ->whereNotNull('seq_cumplido')
+            ->first();
+
+        if ($seguimientoExistente) {
+            return back()->withErrors(['error' => 'No se puede eliminar un punto de control que ya ha sido evaluado.']);
+        }
+
         $punto->update([
             'puc_status'         => false,
             'puc_id_usu_updated' => auth()->id(),

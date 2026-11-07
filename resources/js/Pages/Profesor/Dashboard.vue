@@ -331,7 +331,7 @@
                                 </Link>
                             </div>
                             <div
-                                v-if="equipos.length === 0"
+                                v-if="equiposActivos.length === 0"
                                 class="p-3 text-center text-muted small py-4"
                             >
                                 Sin equipos asignados
@@ -668,13 +668,19 @@ onMounted(() => {
 const paginaActual = ref(1);
 const equiposPorPagina = 5;
 
+const equiposActivos = computed(() => {
+    return (props.equipos || []).filter(
+        (e) => e && (e.equ_status === true || e.equ_status === 1 || e.equ_status === '1')
+    );
+});
+
 const equiposPaginados = computed(() => {
     const inicio = (paginaActual.value - 1) * equiposPorPagina;
-    return props.equipos.slice(inicio, inicio + equiposPorPagina);
+    return equiposActivos.value.slice(inicio, inicio + equiposPorPagina);
 });
 
 const totalPaginas = computed(() =>
-    Math.ceil(props.equipos.length / equiposPorPagina),
+    Math.max(1, Math.ceil(equiposActivos.value.length / equiposPorPagina)),
 );
 </script>
 <style>

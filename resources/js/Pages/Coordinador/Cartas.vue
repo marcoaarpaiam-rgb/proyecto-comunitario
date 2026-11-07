@@ -240,33 +240,54 @@
                     <!-- Solicitudes pendientes -->
                     <div class="col-12">
                         <div class="sc">
-                            <div class="sh">
+                            <div class="sh d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <h6>
                                     <i
                                         class="bi bi-hourglass-split me-2 text-warning"
                                     ></i
                                     >Solicitudes Pendientes<span
-                                        v-if="solicitudes.length > 0"
+                                        v-if="solicitudesFiltradas.length > 0"
                                         class="bs bw ms-2"
-                                        >{{ solicitudes.length }}</span
+                                        >{{ solicitudesFiltradas.length }}</span
                                     >
                                 </h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <label class="small text-muted mb-0 fw-semibold d-none d-sm-inline">
+                                        <i class="bi bi-funnel me-1"></i>Filtrar por Sección:
+                                    </label>
+                                    <select
+                                        v-model="filtroSeccion"
+                                        class="form-select form-select-sm"
+                                        style="width: 190px;"
+                                    >
+                                        <option value="">Todas las secciones</option>
+                                        <option
+                                            v-for="sec in secciones"
+                                            :key="sec.sec_id"
+                                            :value="sec.sec_id"
+                                        >
+                                            Sección {{ sec.sec_codigo }}
+                                        </option>
+                                    </select>
+                                </div>
                             </div>
                             <div
-                                v-if="solicitudes.length === 0"
+                                v-if="solicitudesFiltradas.length === 0"
                                 class="p-4 text-center"
                                 style="
                                     color: var(--text-muted);
                                     font-size: 0.9rem;
                                 "
                             >
-                                Sin solicitudes pendientes
+                                <span v-if="filtroSeccion">No hay solicitudes pendientes en esta sección</span>
+                                <span v-else>Sin solicitudes pendientes</span>
                             </div>
                             <div class="table-responsive" v-else>
                                 <table class="ct">
                                     <thead>
                                         <tr>
                                             <th class="ps-4">Equipo</th>
+                                            <th>Líder del Equipo</th>
                                             <th>Comunidad</th>
                                             <th>Solicitada</th>
                                             <th class="text-end pe-4">
@@ -276,17 +297,44 @@
                                     </thead>
                                     <tbody>
                                         <tr
-                                            v-for="sol in solicitudes"
+                                            v-for="sol in solicitudesFiltradas"
                                             :key="sol.cpr_id"
                                         >
-                                            <td
-                                                class="ps-4 fw-bold"
-                                                style="color: var(--rojo)"
-                                            >
-                                                {{
-                                                    sol.proyecto_comunidad
-                                                        ?.equipo?.equ_codigo
-                                                }}
+                                            <td class="ps-4">
+                                                <div class="fw-bold" style="color: var(--rojo)">
+                                                    {{ codigoLimpio(sol.proyecto_comunidad?.equipo?.equ_codigo) }}
+                                                    <span
+                                                        v-if="sol.proyecto_comunidad?.equipo?.seccion"
+                                                        class="badge bg-light text-dark border ms-1"
+                                                        style="font-size: 0.72rem;"
+                                                    >
+                                                        Sec: {{ sol.proyecto_comunidad.equipo.seccion.sec_codigo }}
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    v-if="sol.proyecto_comunidad?.equipo?.equ_titulo"
+                                                    class="text-muted small text-truncate"
+                                                    style="max-width: 170px; font-size: 0.78rem;"
+                                                >
+                                                    {{ sol.proyecto_comunidad.equipo.equ_titulo }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div v-if="obtenerLider(sol.proyecto_comunidad?.equipo)" class="d-flex align-items-center gap-2">
+                                                    <div class="avatar-circle-sm bg-danger text-white flex-shrink-0" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;">
+                                                        {{ inicialesLider(obtenerLider(sol.proyecto_comunidad?.equipo)) }}
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-semibold text-truncate" style="font-size: 0.88rem; max-width: 180px;">
+                                                            {{ obtenerLider(sol.proyecto_comunidad?.equipo).usuario?.usu_primer_nombre }}
+                                                            {{ obtenerLider(sol.proyecto_comunidad?.equipo).usuario?.usu_primer_apellido }}
+                                                        </div>
+                                                        <div class="text-muted small" style="font-size: 0.74rem;">
+                                                            C.I. {{ obtenerLider(sol.proyecto_comunidad?.equipo).usuario?.usu_cedula }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span v-else class="text-muted small">Sin líder asignado</span>
                                             </td>
                                             <td style="font-size: 0.88rem">
                                                 {{
@@ -301,11 +349,7 @@
                                                 "
                                             >
                                                 {{
-                                                    new Date(
-                                                        sol.cpr_fecha_generacion,
-                                                    ).toLocaleDateString(
-                                                        "es-VE",
-                                                    )
+                                                    formatFecha(sol.cpr_fecha_generacion)
                                                 }}
                                             </td>
                                             <td class="text-end pe-4">
@@ -427,27 +471,33 @@
                     <!-- Historial -->
                     <div class="col-md-7">
                         <div class="sc" style="height: 100%">
-                            <div class="sh">
+                            <div class="sh d-flex align-items-center justify-content-between">
                                 <h6>
                                     <i
                                         class="bi bi-archive me-2 text-primary"
                                     ></i
                                     >Cartas Generadas
                                 </h6>
+                                <span
+                                    v-if="cartasFiltradas.length > 0"
+                                    class="bs ba ms-auto"
+                                    >{{ cartasFiltradas.length }}</span
+                                >
                             </div>
                             <div
-                                v-if="cartas.length === 0"
+                                v-if="cartasFiltradas.length === 0"
                                 class="p-4 text-center"
                                 style="
                                     color: var(--text-muted);
                                     font-size: 0.9rem;
                                 "
                             >
-                                Sin cartas generadas
+                                <span v-if="filtroSeccion">No hay cartas generadas en esta sección</span>
+                                <span v-else>Sin cartas generadas</span>
                             </div>
                             <ul v-else class="list-group list-group-flush">
                                 <li
-                                    v-for="carta in cartas"
+                                    v-for="carta in cartasFiltradas"
                                     :key="carta.cpr_id"
                                     class="list-group-item d-flex align-items-center justify-content-between px-3 py-2"
                                     style="
@@ -457,24 +507,38 @@
                                 >
                                     <div>
                                         <div
-                                            class="fw-semibold"
+                                            class="fw-semibold d-flex align-items-center gap-1"
                                             style="
                                                 font-size: 0.9rem;
                                                 color: var(--text-main);
                                             "
                                         >
-                                            {{
-                                                carta.proyecto_comunidad?.equipo
-                                                    ?.equ_codigo
-                                            }}
+                                            <span style="color: var(--rojo)">{{
+                                                codigoLimpio(carta.proyecto_comunidad?.equipo?.equ_codigo)
+                                            }}</span>
+                                            <span
+                                                v-if="carta.proyecto_comunidad?.equipo?.seccion"
+                                                class="badge bg-light text-dark border"
+                                                style="font-size: 0.72rem;"
+                                            >
+                                                Sec: {{ carta.proyecto_comunidad.equipo.seccion.sec_codigo }}
+                                            </span>
+                                        </div>
+                                        <div
+                                            v-if="obtenerLider(carta.proyecto_comunidad?.equipo)"
+                                            class="small"
+                                            style="font-size: 0.78rem; color: var(--text-muted);"
+                                        >
+                                            <i class="bi bi-person-fill text-danger me-1"></i>
+                                            Líder: <strong>{{ obtenerLider(carta.proyecto_comunidad?.equipo).usuario?.usu_primer_nombre }} {{ obtenerLider(carta.proyecto_comunidad?.equipo).usuario?.usu_primer_apellido }}</strong>
                                         </div>
                                         <div
                                             style="
-                                                font-size: 0.78rem;
+                                                font-size: 0.76rem;
                                                 color: var(--text-muted);
                                             "
                                         >
-                                            {{
+                                            <i class="bi bi-building me-1"></i>{{
                                                 carta.proyecto_comunidad
                                                     ?.comunidad?.com_nombre
                                             }}
@@ -548,10 +612,11 @@ const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
 const props = defineProps({
-    cartas: Array,
-    solicitudes: Array,
-    proyectos: Array,
+    cartas: { type: Array, default: () => [] },
+    solicitudes: { type: Array, default: () => [] },
+    proyectos: { type: Array, default: () => [] },
     firma: String,
+    secciones: { type: Array, default: () => [] },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -567,10 +632,61 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
+const filtroSeccion = ref("");
 const firmaFile = ref(null);
 const loadingFirma = ref(false);
 const cartaSeleccionada = ref(null);
 let modalAp = null;
+
+const codigoLimpio = (codigo) => {
+    if (!codigo) return "";
+    return String(codigo).replace(/#DIS\d+$/, "");
+};
+
+const obtenerLider = (equipo) => {
+    if (!equipo || !equipo.integrantes) return null;
+    return (
+        equipo.integrantes.find((i) => i.ein_es_lider && (i.ein_status || i.ein_status === 1)) ||
+        equipo.integrantes.find((i) => i.ein_es_lider) ||
+        (equipo.integrantes.length > 0 ? equipo.integrantes[0] : null)
+    );
+};
+
+const inicialesLider = (lider) => {
+    if (!lider?.usuario) return "L";
+    const p1 = (lider.usuario.usu_primer_nombre || "")[0] || "";
+    const p2 = (lider.usuario.usu_primer_apellido || "")[0] || "";
+    return (p1 + p2).toUpperCase() || "L";
+};
+
+const formatFecha = (f) => {
+    if (!f) return "";
+    try {
+        return new Date(f).toLocaleDateString("es-VE");
+    } catch {
+        return f;
+    }
+};
+
+const solicitudesFiltradas = computed(() => {
+    let list = props.solicitudes || [];
+    if (filtroSeccion.value) {
+        list = list.filter(
+            (s) => s.proyecto_comunidad?.equipo?.equ_id_sec == filtroSeccion.value
+        );
+    }
+    return list;
+});
+
+const cartasFiltradas = computed(() => {
+    let list = props.cartas || [];
+    if (filtroSeccion.value) {
+        list = list.filter(
+            (c) => c.proyecto_comunidad?.equipo?.equ_id_sec == filtroSeccion.value
+        );
+    }
+    return list;
+});
 const aprobar = (carta) => {
     cartaSeleccionada.value = carta;
     modalAp = modalAp || new Modal(document.getElementById("mAprobar"));

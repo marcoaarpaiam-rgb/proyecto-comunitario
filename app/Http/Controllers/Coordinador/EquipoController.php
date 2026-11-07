@@ -149,14 +149,19 @@ class EquipoController extends Controller
                 });
         }
 
+        $equiposDisueltosQuery = Equipo::with([
+            'seccion', 'trayecto', 'integrantes.usuario'
+        ])->where('equ_status', false)->orderBy('equ_codigo');
+
+        if ($esProfesor && $seccionesIds) {
+            $equiposDisueltosQuery->whereIn('equ_id_sec', $seccionesIds);
+        }
+
         return Inertia::render('Shared/Equipos', [
             'equipos'          => $equiposQuery->get(),
             'secciones'        => $seccionesQuery->get(),
             'trayectos'        => Trayecto::where('tra_status', true)->get(),
-            'equiposDisueltos' => Equipo::with([
-                                    'seccion','trayecto','integrantes.usuario'
-                                  ])->where('equ_status', false)
-                                    ->orderBy('equ_codigo')->get(),
+            'equiposDisueltos' => $equiposDisueltosQuery->get(),
             'estudiantes'      => $estudiantes,
             'comunidades'      => \App\Models\Comunidad::where('com_status', true)
                                     ->with(['proyectos.equipo'])
@@ -263,9 +268,9 @@ class EquipoController extends Controller
             $codigo = "{$pnf}-{$sede}{$traNum}{$semestre}-{$seccion->sec_codigo}-{$numero}/{$totalSec}";
         }
 
-        // Validar que el código no esté duplicado
-        if (Equipo::where('equ_codigo', $codigo)->exists()) {
-            return back()->withErrors(['equ_numero_grupo' => "Ya existe un equipo con el código {$codigo}."]);
+        // Validar que el código no esté duplicado entre equipos activos
+        if (Equipo::where('equ_codigo', $codigo)->where('equ_status', true)->exists()) {
+            return back()->withErrors(['equ_numero_grupo' => "Ya existe un equipo activo con el código {$codigo}."]);
         }
 
         $ocupado = EquipoIntegrante::whereIn('ein_id_usu', $integrantes->pluck('usu_id'))
@@ -485,8 +490,84 @@ class EquipoController extends Controller
     {
         $this->autorizarEquipoId($id);
         $equipo = Equipo::findOrFail($id);
-        $equipo->update(['equ_status' => false, 'equ_id_usu_updated' => auth()->id()]);
-        return back()->with('success', 'Equipo desactivado.');
+
+        DB::transaction(function () use ($equipo) {
+            $equipoId = $equipo->equ_id;
+
+            // 1. Notificaciones
+            \App\Models\Notificacion::where('not_id_equ', $equipoId)->delete();
+
+            // 2. Seguimiento y Asistencia de Puntos de Control
+            $seqIds = \App\Models\SeguimientoEquipo::where('seq_id_equ', $equipoId)->pluck('seq_id');
+            if ($seqIds->isNotEmpty()) {
+                DB::table('asistencia_punto_control')->whereIn('apc_id_seq', $seqIds)->delete();
+                \App\Models\SeguimientoEquipo::whereIn('seq_id', $seqIds)->delete();
+            }
+
+            // 3. Entregables y archivos
+            $entregables = \App\Models\Entregable::where('entr_id_equ', $equipoId)->get();
+            foreach ($entregables as $entr) {
+                if ($entr->entr_ruta && \Illuminate\Support\Facades\Storage::disk('public')->exists($entr->entr_ruta)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($entr->entr_ruta);
+                }
+                $entr->delete();
+            }
+
+            // 4. Puntos de Control
+            $pucIds = \App\Models\PuntoControl::where('puc_id_equ', $equipoId)->pluck('puc_id');
+            if ($pucIds->isNotEmpty()) {
+                DB::table('notificacion')->whereIn('not_id_puc', $pucIds)->delete();
+                DB::table('punto_control_jurado')->whereIn('pcj_id_puc', $pucIds)->delete();
+                \App\Models\PuntoControl::whereIn('puc_id', $pucIds)->delete();
+            }
+
+            // 5. Socializaciones
+            $socIds = \App\Models\Socializacion::where('soc_id_equ', $equipoId)->pluck('soc_id');
+            if ($socIds->isNotEmpty()) {
+                DB::table('evidencia_socializacion')->whereIn('eso_id_soc', $socIds)->delete();
+                DB::table('integrante_socializacion')->whereIn('iso_id_soc', $socIds)->delete();
+                DB::table('jurado_socializacion')->whereIn('jso_id_soc', $socIds)->delete();
+                \App\Models\Socializacion::whereIn('soc_id', $socIds)->delete();
+            }
+
+            // 6. Resultado Proyecto
+            \App\Models\ResultadoProyecto::where('rpr_id_equ', $equipoId)->delete();
+
+            // 7. Tutor
+            DB::table('tutor')->where('tut_id_equ', $equipoId)->delete();
+
+            // 8. Proyecto Comunidad y sus dependientes
+            $pco = \App\Models\ProyectoComunidad::where('pco_id_equ', $equipoId)->first();
+            if ($pco) {
+                DB::table('carta_presentacion')->where('cpr_id_pco', $pco->pco_id)->delete();
+                DB::table('proyecto_beneficiario')->where('pbe_id_pco', $pco->pco_id)->delete();
+                DB::table('tutor_jurado')->where('tuj_id_pco', $pco->pco_id)->delete();
+                DB::table('proyecto_comunidad')->where('pco_id_pco_previo', $pco->pco_id)->update(['pco_id_pco_previo' => null]);
+                $pco->delete();
+            }
+
+            // 9. Envio Repositorio
+            DB::table('envio_repositorio')->where('enr_id_equ', $equipoId)->delete();
+
+            // 10. Historial Equipo
+            \App\Models\HistorialEquipo::where('heq_id_equ', $equipoId)->delete();
+
+            // 11. Líder
+            $liderId = $equipo->integrantes()->where('ein_es_lider', true)->value('ein_id_usu')
+                ?? $equipo->todosIntegrantes()->where('ein_es_lider', true)->value('ein_id_usu');
+
+            // 12. Integrantes
+            \App\Models\EquipoIntegrante::where('ein_id_equ', $equipoId)->delete();
+
+            if ($liderId) {
+                $this->revocarAccesoLider($liderId);
+            }
+
+            // 13. Eliminar Equipo definitivamente
+            $equipo->delete();
+        });
+
+        return back()->with('success', 'Equipo eliminado definitivamente.');
     }
 
     
@@ -946,7 +1027,23 @@ class EquipoController extends Controller
             $equipo->integrantes()->where('ein_status', true)->update([
                 'ein_status' => false, 'ein_fecha_salida' => now()->toDateString(), 'ein_id_usu_updated' => auth()->id(),
             ]);
-            $equipo->update(['equ_status' => false, 'equ_id_usu_updated' => auth()->id()]);
+
+            $codigoArchivado = str_contains($equipo->equ_codigo, '#DIS')
+                ? $equipo->equ_codigo
+                : ($equipo->equ_codigo . '#DIS' . $equipo->equ_id);
+
+            $equipo->update([
+                'equ_codigo'         => $codigoArchivado,
+                'equ_status'         => false,
+                'equ_id_usu_updated' => auth()->id()
+            ]);
+
+            // Desactivar puntos de control y entregables del equipo disuelto
+            $equipo->puntosControl()->update(['puc_status' => false]);
+            $equipo->entregables()->whereNull('entr_aprobado')->update(['entr_status' => false]);
+
+            // Desactivar o marcar notificaciones pendientes asociadas al equipo
+            \App\Models\Notificacion::where('not_id_equ', $equipo->equ_id)->update(['not_leida' => true]);
 
             if ($liderId) {
                 $this->revocarAccesoLider($liderId);
@@ -1002,6 +1099,12 @@ class EquipoController extends Controller
         $equipo = Equipo::where('equ_status', false)->findOrFail($id);
         $this->autorizarEquipoId($equipo->equ_id);
 
+        $codigoOriginal = preg_replace('/#DIS\d+$/', '', $equipo->equ_codigo);
+        $enUso = Equipo::where('equ_codigo', $codigoOriginal)->where('equ_status', true)->exists();
+        if ($enUso) {
+            return back()->withErrors(['equipo' => "No se puede reactivar: el código {$codigoOriginal} ya está siendo utilizado por otro equipo activo."]);
+        }
+
         $fechaDisolucion = HistorialEquipo::where('heq_id_equ', $equipo->equ_id)
             ->whereHas('tipoEvento', fn($q) => $q->where('tee_nombre', 'Disuelto'))
             ->latest('heq_id')->value('heq_fecha_evento');
@@ -1023,8 +1126,12 @@ class EquipoController extends Controller
             return back()->withErrors(['equipo' => 'Algún integrante ya pertenece a otro equipo activo.']);
         }
 
-        DB::transaction(function () use ($equipo, $porRestaurar, $request) {
-            $equipo->update(['equ_status' => true, 'equ_id_usu_updated' => auth()->id()]);
+        DB::transaction(function () use ($equipo, $porRestaurar, $request, $codigoOriginal) {
+            $equipo->update([
+                'equ_codigo'         => $codigoOriginal,
+                'equ_status'         => true,
+                'equ_id_usu_updated' => auth()->id()
+            ]);
 
             EquipoIntegrante::whereIn('ein_id', $porRestaurar->pluck('ein_id'))->update([
                 'ein_status' => true, 'ein_fecha_salida' => null, 'ein_id_usu_updated' => auth()->id(),
@@ -1044,7 +1151,7 @@ class EquipoController extends Controller
             ]);
         });
 
-        return back()->with('success', "Equipo {$equipo->equ_codigo} reactivado correctamente.");
+        return back()->with('success', "Equipo {$codigoOriginal} reactivado correctamente.");
     }
 
     public function historialAcademico($id)

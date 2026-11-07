@@ -773,36 +773,41 @@
                                         }}</span>
                                     </td>
                                     <td>
-                                        <div
-                                            v-for="p in c.proyectos"
-                                            :key="p.codigo"
-                                            class="small"
-                                            style="color: var(--text-muted)"
-                                        >
-                                            <span
-                                                class="fw-bold"
-                                                style="color: var(--text-main)"
-                                                >{{ p.codigo }}</span
-                                            >
-                                            — {{ p.titulo }}
-                                            <span
-                                                :class="
-                                                    p.resultado === 'Aprobado'
-                                                        ? 'ba'
-                                                        : 'bsec'
-                                                "
-                                                class="bs ms-1"
-                                            >
-                                                {{ p.resultado }}
-                                            </span>
-                                            <span
-                                                v-if="p.total_beneficiarios > 0"
-                                                class="ms-1"
-                                                style="font-size: 0.78rem"
-                                            >
-                                                ({{ p.total_beneficiarios }}
-                                                beneficiarios)
-                                            </span>
+                                        <div v-if="c.proyectos && c.proyectos.length">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <select
+                                                    class="form-select form-select-sm"
+                                                    v-model="equipoSeleccionadoPorComunidad[c.com_id]"
+                                                    @dblclick="abrirModalEquipo(equipoSeleccionadoPorComunidad[c.com_id])"
+                                                    title="Haz doble clic para ver la información del equipo"
+                                                    style="cursor: pointer; max-width: 420px;"
+                                                >
+                                                    <option
+                                                        v-for="p in c.proyectos"
+                                                        :key="p.pco_id || p.codigo"
+                                                        :value="p"
+                                                        @dblclick.stop="abrirModalEquipo(p)"
+                                                    >
+                                                        {{ p.codigo_limpio || p.codigo }} — {{ p.titulo }} ({{ p.resultado }})
+                                                    </option>
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                                                    title="Ver información del equipo seleccionado"
+                                                    @click="abrirModalEquipo(equipoSeleccionadoPorComunidad[c.com_id])"
+                                                    :disabled="!equipoSeleccionadoPorComunidad[c.com_id]"
+                                                >
+                                                    <i class="bi bi-eye-fill"></i>
+                                                    <span class="d-none d-sm-inline" style="font-size: 0.75rem;">Ver</span>
+                                                </button>
+                                            </div>
+                                            <div class="form-text mt-1" style="font-size: 0.73rem; color: var(--text-muted);">
+                                                <i class="bi bi-cursor me-1"></i>Doble clic en el equipo o clic en <strong>Ver</strong> para abrir sus datos
+                                            </div>
+                                        </div>
+                                        <div v-else class="text-muted small fst-italic">
+                                            Sin equipos asignados
                                         </div>
                                     </td>
                                 </tr>
@@ -1109,6 +1114,147 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Modal Información del Equipo -->
+                <div class="modal fade" id="mEquipoInfo" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content border-0 shadow-lg" style="background: var(--bg-card); color: var(--text-main); border-radius: 12px; overflow: hidden;">
+                            <div class="mh" style="background: #1a1d23; padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-people-fill text-danger fs-5"></i>
+                                    <div>
+                                        <h5 class="modal-title text-white mb-0 fs-6 fw-bold">
+                                            Información Detallada del Equipo
+                                        </h5>
+                                        <div class="text-white-50" style="font-size: 0.75rem;">
+                                            {{ equipoDetalle?.codigo_limpio || equipoDetalle?.codigo }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm text-white p-0 fs-5" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            <div class="modal-body p-4" v-if="equipoDetalle">
+                                <!-- Título y Estado -->
+                                <div class="p-3 mb-3 rounded-3" style="background: var(--bg-th); border: 1px solid var(--border);">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                        <span class="badge bg-danger px-3 py-2 fs-6 fw-bold">
+                                            {{ equipoDetalle.codigo_limpio }}
+                                        </span>
+                                        <div class="d-flex gap-1 flex-wrap">
+                                            <span class="badge bg-secondary">{{ equipoDetalle.trayecto }}</span>
+                                            <span class="badge bg-dark">Sec. {{ equipoDetalle.seccion }}</span>
+                                            <span class="badge bg-info text-dark">{{ equipoDetalle.turno }}</span>
+                                            <span :class="equipoDetalle.resultado === 'Aprobado' ? 'badge bg-success' : 'badge bg-warning text-dark'">
+                                                {{ equipoDetalle.resultado }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <h5 class="fw-bold mb-1" style="color: var(--text-main);">
+                                        {{ equipoDetalle.titulo }}
+                                    </h5>
+                                    <p class="mb-0 small" style="color: var(--text-muted);">
+                                        {{ equipoDetalle.resumen }}
+                                    </p>
+                                </div>
+
+                                <!-- Grid de Metadatos del Proyecto -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <div class="p-3 rounded-3 h-100" style="background: var(--bg-th); border: 1px solid var(--border);">
+                                            <div class="small fw-bold text-danger text-uppercase mb-2">
+                                                <i class="bi bi-geo-alt-fill me-1"></i>Comunidad Asignada
+                                            </div>
+                                            <div class="fw-bold fs-6">{{ equipoDetalle.comunidad_nombre }}</div>
+                                            <div class="small text-muted mb-2">{{ equipoDetalle.comunidad_ubicacion || 'Sin dirección registrada' }}</div>
+                                            <div class="mt-2 pt-2 border-top small" style="border-color: var(--border) !important;">
+                                                <strong>Beneficiarios:</strong>
+                                                <span class="ms-1 badge bg-light text-dark border">
+                                                    {{ equipoDetalle.total_beneficiarios }} personas
+                                                </span>
+                                                <div v-if="equipoDetalle.beneficiarios?.length" class="mt-1 d-flex flex-wrap gap-1">
+                                                    <span v-for="(b, idx) in equipoDetalle.beneficiarios" :key="idx" class="badge bg-secondary" style="font-size: 0.7rem;">
+                                                        {{ b.tipo }}: {{ b.cantidad }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="p-3 rounded-3 h-100" style="background: var(--bg-th); border: 1px solid var(--border);">
+                                            <div class="small fw-bold text-danger text-uppercase mb-2">
+                                                <i class="bi bi-info-circle-fill me-1"></i>Detalles Académicos
+                                            </div>
+                                            <div class="small mb-1">
+                                                <span class="text-muted">Profesor Asignado:</span>
+                                                <div class="fw-bold">{{ equipoDetalle.profesor }}</div>
+                                            </div>
+                                            <div class="small mb-1">
+                                                <span class="text-muted">Tipo de Proyecto:</span>
+                                                <div class="fw-semibold">{{ equipoDetalle.tipo_proyecto }}</div>
+                                            </div>
+                                            <div class="small mb-1">
+                                                <span class="text-muted">Modalidad:</span>
+                                                <div class="fw-semibold">{{ equipoDetalle.modalidad }}</div>
+                                            </div>
+                                            <div class="small" v-if="equipoDetalle.fecha_limite">
+                                                <span class="text-muted">Fecha Límite:</span>
+                                                <div class="fw-semibold text-danger">{{ equipoDetalle.fecha_limite }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Lista de Integrantes -->
+                                <div class="p-3 rounded-3" style="background: var(--bg-th); border: 1px solid var(--border);">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="small fw-bold text-danger text-uppercase">
+                                            <i class="bi bi-people-fill me-1"></i>Estudiantes Integrantes ({{ equipoDetalle.integrantes?.length || 0 }})
+                                        </div>
+                                    </div>
+
+                                    <div v-if="!equipoDetalle.integrantes?.length" class="text-center py-3 text-muted small">
+                                        No se encontraron estudiantes vinculados activamente a este equipo.
+                                    </div>
+
+                                    <div v-else class="row g-2">
+                                        <div v-for="est in equipoDetalle.integrantes" :key="est.ein_id || est.cedula" class="col-md-6">
+                                            <div class="d-flex align-items-center p-2 rounded-2" style="background: var(--bg-card); border: 1px solid var(--border);">
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2 flex-shrink-0"
+                                                     :style="{ width: '38px', height: '38px', background: est.es_lider ? '#dc3545' : '#495057', fontSize: '0.85rem' }">
+                                                    {{ est.nombre?.charAt(0) || 'E' }}
+                                                </div>
+                                                <div class="flex-grow-1 min-w-0">
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="fw-bold text-truncate" style="font-size: 0.85rem; max-width: 150px;">{{ est.nombre }}</span>
+                                                        <span v-if="est.es_lider" class="badge bg-danger" style="font-size: 0.65rem;">
+                                                            <i class="bi bi-star-fill me-0.5"></i> Líder
+                                                        </span>
+                                                    </div>
+                                                    <div class="small text-muted" style="font-size: 0.75rem;">
+                                                        C.I: {{ est.cedula }}
+                                                    </div>
+                                                    <div v-if="est.email" class="small text-muted text-truncate" style="font-size: 0.7rem; max-width: 190px;">
+                                                        {{ est.email }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer border-0 p-3" style="background: var(--bg-card);">
+                                <button type="button" class="btn btn-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1116,6 +1262,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { router, usePage, Link } from "@inertiajs/vue3";
+import { Modal } from "bootstrap";
 
 const menuMaestras = ref(false);
 const menuSistema = ref(false);
@@ -1217,6 +1364,19 @@ const limpiarFiltros = () => {
 // ── Por comunidad ────────────────────────────────────────────────────
 const reporteComunidades = ref([]);
 const cargandoComunidad = ref(false);
+const equipoSeleccionadoPorComunidad = ref({});
+const equipoDetalle = ref(null);
+let modalEquipo = null;
+
+const abrirModalEquipo = (equipo) => {
+    if (!equipo) return;
+    equipoDetalle.value = equipo;
+    if (!modalEquipo) {
+        const el = document.getElementById("mEquipoInfo");
+        if (el) modalEquipo = new Modal(el);
+    }
+    modalEquipo?.show();
+};
 
 const cargarReporteComunidad = async () => {
     cargandoComunidad.value = true;
@@ -1226,6 +1386,12 @@ const cargarReporteComunidad = async () => {
         });
         const data = await res.json();
         reporteComunidades.value = data.comunidades;
+        // Pre-seleccionar el primer equipo de cada comunidad si tiene proyectos
+        data.comunidades.forEach((c) => {
+            if (c.proyectos && c.proyectos.length > 0) {
+                equipoSeleccionadoPorComunidad.value[c.com_id] = c.proyectos[0];
+            }
+        });
         tabActiva.value = "comunidad";
     } catch (e) {
         console.error(e);

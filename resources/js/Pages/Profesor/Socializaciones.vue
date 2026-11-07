@@ -248,15 +248,35 @@
                                         </template>
                                     </td>
                                     <td class="text-end pe-4">
-                                        <button
-                                            class="btn btn-sm btn-outline-primary"
-                                            @click="abrirResultado(soc)"
-                                            title="Registrar resultado"
-                                        >
-                                            <i
-                                                class="bi bi-clipboard-check"
-                                            ></i>
-                                        </button>
+                                        <!-- Si ya tiene resultado: botón ver y candado -->
+                                        <template v-if="estaEvaluada(soc)">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary me-1"
+                                                @click="abrirResultado(soc, true)"
+                                                title="Ver resultado registrado (Bloqueado)"
+                                            >
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <span
+                                                class="badge bg-light text-muted border px-2 py-1"
+                                                title="Resultado registrado - No modificable"
+                                                style="vertical-align: middle;"
+                                            >
+                                                <i class="bi bi-lock-fill text-secondary"></i>
+                                            </span>
+                                        </template>
+                                        <!-- Si no tiene resultado: registrar resultado -->
+                                        <template v-else>
+                                            <button
+                                                class="btn btn-sm btn-outline-success"
+                                                @click="abrirResultado(soc, false)"
+                                                title="Registrar resultado"
+                                            >
+                                                <i
+                                                    class="bi bi-clipboard-check"
+                                                ></i>
+                                            </button>
+                                        </template>
                                     </td>
                                 </tr>
                             </tbody>
@@ -280,62 +300,36 @@
                     </div>
                     <form @submit.prevent="guardar">
                         <div class="modal-body">
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Filtrar por Sección</label>
-                                    <select
-                                        v-model="seccionSeleccionadaModal"
-                                        class="form-select form-select-sm"
-                                        @change="onSeccionModalChange"
-                                    >
-                                        <option value="">Todas las secciones...</option>
-                                        <option
-                                            v-for="sec in secciones"
-                                            :key="sec.sec_id"
-                                            :value="sec.sec_id"
-                                        >
-                                            Sección {{ sec.sec_codigo }}
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Buscar Equipo</label>
-                                    <input
-                                        type="text"
-                                        v-model="busquedaEquipoModal"
-                                        class="form-control form-control-sm"
-                                        placeholder="🔍 Código o título..."
-                                    />
-                                </div>
-                            </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Equipo
-                                    <span class="text-danger">*</span></label
-                                >
+                                <label class="form-label fw-semibold">Sección</label>
                                 <select
-                                    v-model="form.soc_id_equ"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.soc_id_equ,
-                                    }"
+                                    v-model="seccionSeleccionadaModal"
+                                    class="form-select form-select-sm"
+                                    @change="onSeccionModalChange"
                                 >
-                                    <option value="">Seleccionar equipo...</option>
+                                    <option value="">Todas las secciones...</option>
                                     <option
-                                        v-for="equ in equiposModalFiltrados"
-                                        :key="equ.equ_id"
-                                        :value="equ.equ_id"
+                                        v-for="sec in secciones"
+                                        :key="sec.sec_id"
+                                        :value="sec.sec_id"
                                     >
-                                        {{ equ.equ_codigo }} —
-                                        {{ equ.equ_titulo }}
-                                        <template v-if="equ.seccion">
-                                            (Sec: {{ equ.seccion.sec_codigo }})
-                                        </template>
+                                        Sección {{ sec.sec_codigo }}
                                     </option>
                                 </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Equipo <span class="text-danger">*</span>
+                                </label>
+                                <SelectBuscableEquipo
+                                    v-model="form.soc_id_equ"
+                                    :equipos="equiposModalFiltrados"
+                                    :has-error="!!errores.soc_id_equ"
+                                    placeholder="🔍 Escribe código, título o sección del equipo..."
+                                />
                                 <div
                                     v-if="errores.soc_id_equ"
-                                    class="invalid-feedback"
+                                    class="text-danger small mt-1"
                                 >
                                     {{ errores.soc_id_equ }}
                                 </div>
@@ -379,6 +373,7 @@
                                     <input
                                         v-model="form.soc_fecha"
                                         type="date"
+                                        :min="fechaMinima"
                                         class="form-control"
                                         :class="{
                                             'is-invalid': errores.soc_fecha,
@@ -454,7 +449,7 @@
                 <div class="modal-content border-0 shadow-lg">
                     <div class="mh">
                         <h5>
-                            Registrar Resultado —
+                            {{ modoSoloLecturaRes ? 'Resultado de Socialización — ' : 'Registrar Resultado — ' }}
                             {{ socActual?.equipo?.equ_codigo }}
                         </h5>
                         <button
@@ -466,6 +461,12 @@
                     </div>
                     <form @submit.prevent="guardarResultado">
                         <div class="modal-body">
+                            <div v-if="modoSoloLecturaRes" class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+                                <i class="bi bi-lock-fill fs-5 text-secondary"></i>
+                                <div>
+                                    <strong>Resultado Registrado:</strong> La calificación de esta socialización ya fue asentada y no puede ser modificada.
+                                </div>
+                            </div>
                             <div
                                 v-if="
                                     socActual?.tipo_socializacion?.tso_orden ===
@@ -484,6 +485,7 @@
                                             class="form-check-input"
                                             v-model="formRes.soc_apto"
                                             :value="true"
+                                            :disabled="modoSoloLecturaRes"
                                             id="apto"
                                         /><label
                                             class="form-check-label fw-semibold"
@@ -498,6 +500,7 @@
                                             class="form-check-input"
                                             v-model="formRes.soc_apto"
                                             :value="false"
+                                            :disabled="modoSoloLecturaRes"
                                             id="noApto"
                                         /><label
                                             class="form-check-label fw-semibold"
@@ -519,6 +522,7 @@
                                             class="form-check-input"
                                             v-model="formRes.soc_aprobado"
                                             :value="true"
+                                            :disabled="modoSoloLecturaRes"
                                             id="aprobado"
                                         /><label
                                             class="form-check-label fw-semibold"
@@ -533,6 +537,7 @@
                                             class="form-check-input"
                                             v-model="formRes.soc_aprobado"
                                             :value="false"
+                                            :disabled="modoSoloLecturaRes"
                                             id="noAprobado"
                                         /><label
                                             class="form-check-label fw-semibold"
@@ -549,6 +554,7 @@
                                 >
                                 <textarea
                                     v-model="formRes.soc_observaciones"
+                                    :disabled="modoSoloLecturaRes"
                                     class="form-control"
                                     rows="2"
                                 ></textarea>
@@ -560,12 +566,15 @@
                                 class="btn btn-secondary"
                                 data-bs-dismiss="modal"
                             >
-                                Cancelar
+                                {{ modoSoloLecturaRes ? 'Cerrar' : 'Cancelar' }}
                             </button>
                             <button
+                                v-if="!modoSoloLecturaRes"
                                 type="submit"
                                 class="btn btn-danger fw-bold"
+                                :disabled="loading || (socActual?.tipo_socializacion?.tso_orden === 1 ? (formRes.soc_apto === null || formRes.soc_apto === undefined) : (formRes.soc_aprobado === null || formRes.soc_aprobado === undefined))"
                             >
+                                <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
                                 Registrar Resultado
                             </button>
                         </div>
@@ -580,6 +589,7 @@ import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
+import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
 
 const props = defineProps({
     socializaciones: Array,
@@ -602,7 +612,27 @@ const iniciales = computed(() => {
     );
 });
 const seccionSeleccionadaModal = ref("");
-const busquedaEquipoModal = ref("");
+
+const fechaHoy = computed(() => new Date().toISOString().split("T")[0]);
+const fechaMinima = computed(() => {
+    const tipo = props.tiposSocializacion?.find(
+        (t) => t.tso_id == form.value.soc_id_tso
+    );
+    if (tipo && tipo.tso_orden === 2 && form.value.soc_id_equ) {
+        const preSoc = props.socializaciones?.find(
+            (s) =>
+                s.soc_id_equ == form.value.soc_id_equ &&
+                s.tipo_socializacion?.tso_orden === 1 &&
+                s.soc_apto
+        );
+        if (preSoc && preSoc.soc_fecha) {
+            return preSoc.soc_fecha > fechaHoy.value
+                ? preSoc.soc_fecha
+                : fechaHoy.value;
+        }
+    }
+    return fechaHoy.value;
+});
 
 const onSeccionModalChange = () => {
     if (seccionSeleccionadaModal.value && form.value.soc_id_equ) {
@@ -617,14 +647,6 @@ const equiposModalFiltrados = computed(() => {
     let list = props.equipos || [];
     if (seccionSeleccionadaModal.value) {
         list = list.filter((e) => e.equ_id_sec == seccionSeleccionadaModal.value);
-    }
-    if (busquedaEquipoModal.value.trim()) {
-        const q = busquedaEquipoModal.value.toLowerCase().trim();
-        list = list.filter(
-            (e) =>
-                e.equ_codigo?.toLowerCase().includes(q) ||
-                e.equ_titulo?.toLowerCase().includes(q),
-        );
     }
     return list;
 });
@@ -649,7 +671,6 @@ let mSoc = null;
 let mRes = null;
 const abrirModal = () => {
     seccionSeleccionadaModal.value = "";
-    busquedaEquipoModal.value = "";
     form.value = {
         soc_id_equ: "",
         soc_id_tso: "",
@@ -675,8 +696,19 @@ const guardar = () => {
         },
     });
 };
-const abrirResultado = (soc) => {
+const modoSoloLecturaRes = ref(false);
+
+const estaEvaluada = (soc) => {
+    if (!soc) return false;
+    if (soc.tipo_socializacion?.tso_orden === 1) {
+        return soc.soc_apto !== null && soc.soc_apto !== undefined;
+    }
+    return soc.soc_aprobado !== null && soc.soc_aprobado !== undefined;
+};
+
+const abrirResultado = (soc, soloLectura = false) => {
     socActual.value = soc;
+    modoSoloLecturaRes.value = soloLectura || estaEvaluada(soc);
     formRes.value = {
         soc_apto: soc.soc_apto,
         soc_aprobado: soc.soc_aprobado,
@@ -686,7 +718,15 @@ const abrirResultado = (soc) => {
     mRes.show();
 };
 const guardarResultado = () => {
-    if (!socActual.value) return;
+    if (!socActual.value || modoSoloLecturaRes.value || estaEvaluada(socActual.value)) return;
+    if (socActual.value?.tipo_socializacion?.tso_orden === 1 && (formRes.value.soc_apto === null || formRes.value.soc_apto === undefined)) {
+        alert("Debes indicar si el equipo es APTO o NO APTO antes de registrar el resultado.");
+        return;
+    }
+    if (socActual.value?.tipo_socializacion?.tso_orden !== 1 && (formRes.value.soc_aprobado === null || formRes.value.soc_aprobado === undefined)) {
+        alert("Debes indicar si el proyecto fue APROBADO o NO APROBADO antes de registrar el resultado.");
+        return;
+    }
     loading.value = true;
     router.post(
         `/profesor/socializaciones/${socActual.value.soc_id}/resultado`,
