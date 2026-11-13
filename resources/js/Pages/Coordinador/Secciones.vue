@@ -291,7 +291,9 @@
                                 <tr>
                                     <th class="ps-4">Código</th>
                                     <th>Trayecto</th>
+                                    <th>Semestre</th>
                                     <th>Turno</th>
+                                    <th>Profesor Asignado</th>
                                     <th>Estado</th>
                                     <th class="text-end pe-4">Acciones</th>
                                 </tr>
@@ -299,7 +301,7 @@
                             <tbody>
                                 <tr v-if="paginadas.length === 0">
                                     <td
-                                        colspan="5"
+                                        colspan="7"
                                         class="text-center py-5"
                                         style="color: var(--text-muted)"
                                     >
@@ -315,6 +317,11 @@
                                     </td>
                                     <td>{{ sec.trayecto?.tra_nombre }}</td>
                                     <td>
+                                        <span class="badge" :class="(sec.sec_semestre ?? 1) % 2 !== 0 ? 'bg-warning text-dark' : 'bg-primary'">
+                                            Semestre {{ sec.sec_semestre || (sec.sec_id_tra ? sec.sec_id_tra * 2 - 1 : '—') }}
+                                        </span>
+                                    </td>
+                                    <td>
                                         <span
                                             class="bs"
                                             :class="
@@ -322,8 +329,17 @@
                                                     sec.turno?.tur_nombre,
                                                 )
                                             "
-                                            >{{ sec.turno?.tur_nombre }}</span
+                                            >{{ sec.turno?.tur_nombre || 'N/A' }}</span
                                         >
+                                    </td>
+                                    <td>
+                                        <div v-if="sec.profesor_actual?.usuario" class="d-flex align-items-center gap-1">
+                                            <i class="bi bi-person-check-fill text-success"></i>
+                                            <span class="fw-semibold">{{ sec.profesor_actual.usuario.usu_primer_nombre }} {{ sec.profesor_actual.usuario.usu_primer_apellido }}</span>
+                                        </div>
+                                        <span v-else class="text-muted small">
+                                            <i class="bi bi-person-x text-danger me-1"></i>Sin asignar
+                                        </span>
                                     </td>
                                     <td>
                                         <span
@@ -338,22 +354,36 @@
                                             }}</span
                                         >
                                     </td>
-                                    <td class="text-end pe-4">
+                                    <td class="text-end pe-4 text-nowrap">
                                         <a
                                             :href="`/coordinador/secciones/${sec.sec_id}/detalle`"
                                             class="btn btn-sm btn-outline-info me-1"
-                                            title="Ver detalle"
+                                            title="Ver detalle y gestión de equipos"
                                             ><i class="bi bi-eye"></i
+                                        ></a>
+                                        <a
+                                            :href="`/coordinador/secciones/${sec.sec_id}/excel/vinculacion`"
+                                            class="btn btn-sm btn-outline-success me-1"
+                                            title="Descargar Planilla de Vinculación oficial (.xlsx)"
+                                            ><i class="bi bi-file-earmark-spreadsheet"></i
+                                        ></a>
+                                        <a
+                                            :href="`/coordinador/secciones/${sec.sec_id}/excel/inventario`"
+                                            class="btn btn-sm btn-outline-primary me-1"
+                                            title="Descargar Inventario PST (.xlsx)"
+                                            ><i class="bi bi-file-earmark-excel"></i
                                         ></a>
                                         <button
                                             class="btn btn-sm btn-outline-primary me-1"
                                             @click="abrirModal(sec)"
+                                            title="Editar sección y profesor"
                                         >
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <button
                                             class="btn btn-sm btn-outline-danger"
                                             @click="desactivar(sec)"
+                                            title="Desactivar sección"
                                         >
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -450,33 +480,64 @@
                                     {{ errores.sec_codigo }}
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Trayecto
-                                    <span class="text-danger">*</span></label
-                                >
-                                <select
-                                    v-model="form.sec_id_tra"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.sec_id_tra,
-                                    }"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="tra in trayectos"
-                                        :key="tra.tra_id"
-                                        :value="tra.tra_id"
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold"
+                                        >Trayecto
+                                        <span class="text-danger">*</span></label
                                     >
-                                        {{ tra.tra_nombre }}
+                                    <select
+                                        v-model="form.sec_id_tra"
+                                        class="form-select"
+                                        :class="{
+                                            'is-invalid': errores.sec_id_tra,
+                                        }"
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        <option
+                                            v-for="tra in trayectos"
+                                            :key="tra.tra_id"
+                                            :value="tra.tra_id"
+                                        >
+                                            {{ tra.tra_nombre }}
+                                        </option>
+                                    </select>
+                                    <div
+                                        v-if="errores.sec_id_tra"
+                                        class="invalid-feedback"
+                                    >
+                                        {{ errores.sec_id_tra }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold"
+                                        >Semestre</label
+                                    >
+                                    <select v-model="form.sec_semestre" class="form-select">
+                                        <option :value="1">Semestre I (Cualitativo)</option>
+                                        <option :value="2">Semestre II (Cuantitativo)</option>
+                                        <option :value="3">Semestre III (Cualitativo)</option>
+                                        <option :value="4">Semestre IV (Cuantitativo)</option>
+                                        <option :value="5">Semestre V (Cualitativo)</option>
+                                        <option :value="6">Semestre VI (Cuantitativo)</option>
+                                        <option :value="7">Semestre VII (Cualitativo)</option>
+                                        <option :value="8">Semestre VIII (Cuantitativo)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Profesor de Proyecto</label>
+                                <select v-model="form.pse_id_usu" class="form-select">
+                                    <option value="">Sin profesor asignado...</option>
+                                    <option
+                                        v-for="p in profesores"
+                                        :key="p.usu_id"
+                                        :value="p.usu_id"
+                                    >
+                                        {{ p.usu_primer_nombre }} {{ p.usu_primer_apellido }} (C.I. {{ p.usu_cedula }})
                                     </option>
                                 </select>
-                                <div
-                                    v-if="errores.sec_id_tra"
-                                    class="invalid-feedback"
-                                >
-                                    {{ errores.sec_id_tra }}
-                                </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
@@ -585,6 +646,7 @@ const props = defineProps({
     secciones: Array,
     trayectos: Array,
     turnos: Array,
+    profesores: { type: Array, default: () => [] },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -625,7 +687,9 @@ const filtradas = computed(() => {
         (s) =>
             s.sec_codigo.toLowerCase().includes(q) ||
             s.trayecto?.tra_nombre?.toLowerCase().includes(q) ||
-            s.turno?.tur_nombre?.toLowerCase().includes(q),
+            s.turno?.tur_nombre?.toLowerCase().includes(q) ||
+            s.profesor_actual?.usuario?.usu_primer_nombre?.toLowerCase().includes(q) ||
+            s.profesor_actual?.usuario?.usu_primer_apellido?.toLowerCase().includes(q),
     );
 });
 const totalPaginas = computed(() =>
@@ -650,7 +714,9 @@ const abrirModal = (sec = null) => {
     form.value = {
         sec_codigo: sec?.sec_codigo || "",
         sec_id_tra: sec?.sec_id_tra || "",
+        sec_semestre: sec?.sec_semestre || 1,
         sec_id_tur: sec?.sec_id_tur || "",
+        pse_id_usu: sec?.profesor_actual?.pse_id_usu || "",
     };
     errores.value = {};
     modal = modal || new Modal(document.getElementById("mSec"));

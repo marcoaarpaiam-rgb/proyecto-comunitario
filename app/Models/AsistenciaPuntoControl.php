@@ -14,6 +14,8 @@ class AsistenciaPuntoControl extends Model
         'apc_id_seq',
         'apc_id_usu',
         'apc_asistio',
+        'apc_justificado',
+        'apc_justificativo',
         'apc_observaciones',
         'apc_id_usu_created',
     ];

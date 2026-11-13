@@ -334,6 +334,12 @@
                                     {{ errores.soc_id_equ }}
                                 </div>
                             </div>
+
+                            <div v-if="esEquipoSemestreImpar" class="alert alert-warning py-2 px-3 small mb-3">
+                                <i class="bi bi-info-circle-fill me-1"></i>
+                                <strong>Semestre Impar (Evaluación Cualitativa):</strong> La sección de este equipo cursa semestre impar. Solo corresponde <strong>Pre-Socialización</strong>. La Socialización Final con jurados se evalúa en el semestre par.
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Tipo
@@ -351,8 +357,9 @@
                                         v-for="tipo in tiposSocializacion"
                                         :key="tipo.tso_id"
                                         :value="tipo.tso_id"
+                                        :disabled="esEquipoSemestreImpar && tipo.tso_orden === 2"
                                     >
-                                        {{ tipo.tso_nombre }}
+                                        {{ tipo.tso_nombre }} {{ esEquipoSemestreImpar && tipo.tso_orden === 2 ? '(No aplica en semestre impar)' : '' }}
                                     </option>
                                 </select>
                                 <div
@@ -548,9 +555,80 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Control de Asistencia y Avance Individual -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Control de Asistencia y Veredicto Individual</label>
+                                <p class="text-muted small mb-2">
+                                    Nota oficial UPTP: Si un estudiante no asiste a la evaluación reprueba automáticamente. Puede seleccionar quiénes avanzan individualmente.
+                                </p>
+                                <div v-if="!formRes.integrantes?.length" class="text-muted small">
+                                    Sin integrantes asociados
+                                </div>
+                                <div
+                                    v-for="(int, idx) in formRes.integrantes"
+                                    :key="int.usu_id"
+                                    class="p-2 mb-2 rounded border"
+                                    style="border-color: var(--border) !important; background: var(--bg-body);"
+                                >
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div>
+                                            <strong style="font-size: 0.92rem;">{{ int.nombre }}</strong>
+                                            <span class="badge bg-light text-dark border ms-2 small">C.I. {{ int.cedula }}</span>
+                                            <span v-if="int.es_lider" class="badge bg-danger ms-1 small">Líder</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <!-- Asistencia -->
+                                            <div class="form-check form-switch mb-0">
+                                                <input
+                                                    type="checkbox"
+                                                    class="form-check-input"
+                                                    :id="'soc_asist_' + int.usu_id"
+                                                    :disabled="modoSoloLecturaRes"
+                                                    v-model="int.asistio"
+                                                    @change="() => { if (!int.asistio) int.avanza = false; }"
+                                                />
+                                                <label class="form-check-label small fw-bold" :for="'soc_asist_' + int.usu_id">
+                                                    {{ int.asistio ? 'Asistió' : 'Inasistencia' }}
+                                                </label>
+                                            </div>
+
+                                            <!-- Avanza (solo si asistió) -->
+                                            <div class="form-check form-switch mb-0">
+                                                <input
+                                                    type="checkbox"
+                                                    class="form-check-input"
+                                                    :id="'soc_avanza_' + int.usu_id"
+                                                    :disabled="modoSoloLecturaRes || !int.asistio"
+                                                    v-model="int.avanza"
+                                                />
+                                                <label class="form-check-label small fw-bold" :class="int.avanza ? 'text-success' : 'text-danger'" :for="'soc_avanza_' + int.usu_id">
+                                                    {{ int.avanza ? 'Avanza' : 'No avanza' }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="!int.asistio" class="mt-1 small text-danger fw-bold">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Inasistencia registrada: el estudiante reprueba de acuerdo a la normativa académica.
+                                    </div>
+
+                                    <!-- Observación / justificación individual -->
+                                    <div class="mt-2">
+                                        <input
+                                            type="text"
+                                            v-model="int.justificacion"
+                                            :disabled="modoSoloLecturaRes"
+                                            class="form-control form-control-sm"
+                                            placeholder="Observaciones de desempeño o motivo de no avance..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <label class="form-label fw-semibold"
-                                    >Observaciones</label
+                                    >Observaciones Generales</label
                                 >
                                 <textarea
                                     v-model="formRes.soc_observaciones"
@@ -596,6 +674,17 @@ const props = defineProps({
     equipos: Array,
     secciones: { type: Array, default: () => [] },
     tiposSocializacion: Array,
+});
+
+const equipoSeleccionado = computed(() => {
+    return props.equipos?.find(e => e.equ_id == form.value.soc_id_equ) || null;
+});
+
+const esEquipoSemestreImpar = computed(() => {
+    const sec = equipoSeleccionado.value?.seccion;
+    if (!sec) return false;
+    const sem = sec.sec_semestre ?? (sec.sec_id_tra ? sec.sec_id_tra * 2 - 1 : 1);
+    return sem % 2 !== 0;
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -709,10 +798,31 @@ const estaEvaluada = (soc) => {
 const abrirResultado = (soc, soloLectura = false) => {
     socActual.value = soc;
     modoSoloLecturaRes.value = soloLectura || estaEvaluada(soc);
+
+    const ints = soc.equipo?.integrantes || [];
+    const prevInts = soc.integrantes || [];
+    const prevMap = {};
+    prevInts.forEach(pi => {
+        prevMap[pi.iso_id_usu] = {
+            asistio: pi.iso_asistio !== undefined && pi.iso_asistio !== null ? Boolean(pi.iso_asistio) : true,
+            avanza: Boolean(pi.iso_avanza),
+            justificacion: pi.iso_justificacion || ""
+        };
+    });
+
     formRes.value = {
         soc_apto: soc.soc_apto,
         soc_aprobado: soc.soc_aprobado,
         soc_observaciones: soc.soc_observaciones || "",
+        integrantes: ints.map(i => ({
+            usu_id: i.ein_id_usu,
+            nombre: `${i.usuario?.usu_primer_nombre || ''} ${i.usuario?.usu_primer_apellido || ''}`,
+            cedula: i.usuario?.usu_cedula || '',
+            es_lider: Boolean(i.ein_es_lider),
+            asistio: prevMap[i.ein_id_usu]?.asistio ?? true,
+            avanza: prevMap[i.ein_id_usu]?.avanza ?? true,
+            justificacion: prevMap[i.ein_id_usu]?.justificacion ?? "",
+        })),
     };
     mRes = mRes || new Modal(document.getElementById("mRes"));
     mRes.show();

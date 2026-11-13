@@ -302,7 +302,7 @@
                                 </div>
                             </div>
 
-                            <!-- Botón de Acción -->
+                            <!-- Botón de Acción y Descargas Oficiales -->
                             <Link
                                 :href="`/profesor/secciones/${sec.sec_id}/equipos`"
                                 class="btn-enter"
@@ -310,6 +310,15 @@
                                 <span>Ver Equipos y Proyectos</span>
                                 <i class="bi bi-arrow-right"></i>
                             </Link>
+
+                            <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top" style="border-color: var(--border) !important;">
+                                <a :href="`/profesor/secciones/${sec.sec_id}/excel/vinculacion`" class="btn btn-sm btn-outline-success w-50 py-1 small fw-bold" title="Descargar Planilla de Vinculación oficial UPTP">
+                                    <i class="bi bi-download me-1"></i> Vinculación (.xlsx)
+                                </a>
+                                <a :href="`/profesor/secciones/${sec.sec_id}/excel/inventario`" class="btn btn-sm btn-outline-primary w-50 py-1 small fw-bold" title="Descargar Inventario PST (Semanas 6, 10, 14, 18)">
+                                    <i class="bi bi-download me-1"></i> Inventario (.xlsx)
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

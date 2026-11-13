@@ -210,6 +210,12 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <button
+                        class="btn btn-sm btn-outline-danger rounded-pill px-3 d-none d-sm-inline-flex align-items-center gap-1"
+                        @click="modalBusquedaExpediente = true"
+                    >
+                        <i class="bi bi-person-badge"></i> Buscar Expediente
+                    </button>
                     <button class="topbar-btn" @click="toggleTema">
                         <i
                             class="bi"
@@ -629,6 +635,58 @@
             colorConfirmar="#dc3545"
             @confirmar="ejecutarLogout"
         />
+
+        <!-- Modal Buscar Expediente de Estudiante -->
+        <div v-if="modalBusquedaExpediente" class="modal-backdrop fade show" style="z-index: 1060;" @click="modalBusquedaExpediente = false"></div>
+        <div v-if="modalBusquedaExpediente" class="modal fade show d-block" tabindex="-1" style="z-index: 1065;" @click.self="modalBusquedaExpediente = false">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="background: var(--bg-card); color: var(--text-main); border-radius: 16px;">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2">
+                            <i class="bi bi-person-badge-fill"></i> Buscar Expediente del Estudiante
+                        </h5>
+                        <button type="button" class="btn-close" @click="modalBusquedaExpediente = false"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3">
+                            Ingresa la Cédula o Nombre del estudiante para consultar su historial de equipos, asistencias, justificaciones, observaciones y socializaciones.
+                        </p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text border-end-0 bg-transparent text-muted"><i class="bi bi-search"></i></span>
+                            <input
+                                v-model="queryEstudiante"
+                                type="text"
+                                class="form-control border-start-0"
+                                placeholder="Escribe C.I., Nombre o Apellido..."
+                                @input="buscarEstudiantesModal"
+                                autofocus
+                            />
+                        </div>
+                        <div v-if="cargandoEstudiantes" class="text-center py-3 text-muted small">
+                            <span class="spinner-border spinner-border-sm me-2 text-danger"></span> Buscando estudiantes...
+                        </div>
+                        <div v-else-if="resultadosEstudiantes.length > 0" class="list-group border rounded shadow-sm overflow-auto" style="max-height: 250px;">
+                            <a
+                                v-for="e in resultadosEstudiantes"
+                                :key="e.usu_id"
+                                :href="`/coordinador/estudiantes/${e.usu_id}/expediente`"
+                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2 px-3"
+                                style="background: var(--bg-card); color: var(--text-main);"
+                            >
+                                <div>
+                                    <strong>{{ e.usu_primer_nombre }} {{ e.usu_primer_apellido }}</strong>
+                                    <span class="badge bg-danger ms-2 small">C.I. {{ e.usu_cedula }}</span>
+                                </div>
+                                <span class="btn btn-sm btn-outline-danger py-0 px-2 small">Abrir</span>
+                            </a>
+                        </div>
+                        <div v-else-if="queryEstudiante.length >= 2" class="text-center py-3 text-muted small">
+                            No se encontraron estudiantes con ese criterio.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -637,6 +695,33 @@ import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import axios from "axios";
+
+const modalBusquedaExpediente = ref(false);
+const queryEstudiante = ref("");
+const resultadosEstudiantes = ref([]);
+const cargandoEstudiantes = ref(false);
+let timerBusquedaModal = null;
+
+const buscarEstudiantesModal = () => {
+    clearTimeout(timerBusquedaModal);
+    const q = queryEstudiante.value.trim();
+    if (q.length < 2) {
+        resultadosEstudiantes.value = [];
+        return;
+    }
+    cargandoEstudiantes.value = true;
+    timerBusquedaModal = setTimeout(async () => {
+        try {
+            const res = await axios.get(`/coordinador/estudiantes/buscar?q=${encodeURIComponent(q)}`);
+            resultadosEstudiantes.value = res.data;
+        } catch (e) {
+            console.error(e);
+        } finally {
+            cargandoEstudiantes.value = false;
+        }
+    }, 250);
+};
 
 const esRutaMaestra = typeof window !== "undefined" && (
     window.location.pathname.includes("/coordinador/maestras") ||
@@ -723,9 +808,11 @@ const acciones = [
 ];
 
 const badgeTurno = (t) => {
-    if (t === "Mañana" || t === "Diurno") return "badge-diurno";
-    if (t === "Tarde") return "badge-tarde";
-    if (t === "Noche" || t === "Nocturno") return "badge-nocturno";
+    if (!t) return "badge-default";
+    const lower = String(t).toLowerCase();
+    if (lower.includes("diurno") || lower.includes("mañana")) return "badge-diurno";
+    if (lower.includes("tarde") || lower.includes("vespertino")) return "badge-tarde";
+    if (lower.includes("noche") || lower.includes("nocturno")) return "badge-nocturno";
     return "badge-default";
 };
 
@@ -1191,44 +1278,44 @@ onMounted(() => {
     white-space: nowrap;
 }
 .badge-diurno {
-    background: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeeba;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
 }
 .badge-tarde {
-    background: #cff4fc;
-    color: #055160;
-    border: 1px solid #b6effb;
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
 }
 .badge-nocturno {
-    background: #e2e3e5;
-    color: #383d41;
-    border: 1px solid #d6d8db;
+    background: #ede9fe;
+    color: #5b21b6;
+    border: 1px solid #ddd6fe;
 }
 .badge-default {
-    background: #f8f9fa;
-    color: #6c757d;
-    border: 1px solid #dee2e6;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
 }
 [data-theme="dark"] .badge-diurno {
-    background: rgba(255, 193, 7, 0.18);
-    color: #ffc107;
-    border: 1px solid rgba(255, 193, 7, 0.35);
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
 }
 [data-theme="dark"] .badge-tarde {
-    background: rgba(13, 202, 240, 0.18);
-    color: #0dcaf0;
-    border: 1px solid rgba(13, 202, 240, 0.35);
+    background: rgba(14, 165, 233, 0.2);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.4);
 }
 [data-theme="dark"] .badge-nocturno {
-    background: rgba(108, 117, 125, 0.25);
-    color: #dee2e6;
-    border: 1px solid rgba(108, 117, 125, 0.35);
+    background: rgba(139, 92, 246, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(139, 92, 246, 0.4);
 }
 [data-theme="dark"] .badge-default {
-    background: rgba(255, 255, 255, 0.08);
-    color: #adb5bd;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.3);
 }
 .notif-item {
     display: flex;

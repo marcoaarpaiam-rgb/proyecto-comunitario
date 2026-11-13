@@ -15,6 +15,8 @@ class PuntoControl extends Model
         'puc_id_tra',
         'puc_nombre',
         'puc_descripcion',
+        'puc_semana',
+        'puc_criterios_evaluacion',
         'puc_fecha_limite',
         'puc_fecha_reprogramada',
         'puc_motivo_reprogramacion',
@@ -24,6 +26,10 @@ class PuntoControl extends Model
         'puc_status',
         'puc_id_usu_created',
         'puc_id_usu_updated',
+    ];
+
+    protected $casts = [
+        'puc_criterios_evaluacion' => 'array',
     ];
 
     public function trayecto()

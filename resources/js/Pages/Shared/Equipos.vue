@@ -781,7 +781,7 @@
                                                 Semestre
                                                 <span class="text-danger">*</span>
                                             </label>
-                                            <i v-if="esAutoCompletado && !editarParametrosManual" class="bi bi-lock-fill text-muted small" title="Auto-completado"></i>
+                                            <span class="badge bg-secondary-subtle text-secondary border small" style="font-size: 0.65rem;" title="El primer número de la sección es el semestre"></span>
                                         </div>
                                         <input
                                             type="number"
@@ -789,14 +789,11 @@
                                             v-model="formNuevo.equ_semestre"
                                             min="1"
                                             max="9"
-                                            :readonly="esAutoCompletado && !editarParametrosManual"
-                                            :style="(esAutoCompletado && !editarParametrosManual) ? 'background: var(--bg-th) !important;' : ''"
-                                            @keypress="
-                                                (e) =>
-                                                    !/[0-9]/.test(e.key) &&
-                                                    e.preventDefault()
-                                            "
+                                            readonly
+                                            style="background: var(--bg-th) !important; cursor: not-allowed;"
+                                            title="El semestre se define automáticamente por el primer número de la sección"
                                         />
+                                        
                                         <div
                                             v-if="errores.equ_semestre"
                                             class="text-danger small mt-1"
@@ -2732,7 +2729,7 @@ const onSeccionChange = () => {
         return;
     }
 
-    const sec = props.secciones?.find((s) => String(s.sec_id) === String(secId));
+    const sec = props.secciones?.find((s) => String(s.sec_id) === String(secId)) || props.seccion;
     const traId = sec?.sec_id_tra || sec?.trayecto?.tra_id;
     const todos = [...(props.equipos || [])];
 
@@ -2775,10 +2772,14 @@ const onSeccionChange = () => {
 
     totalOriginalSeccion.value = totalSecHeredado || null;
 
+    // Regla institucional: el primer número de la sección es el semestre del equipo
+    const matchPrimerNum = sec?.sec_codigo?.match(/\d/);
+    const primerNumeroSeccion = matchPrimerNum ? parseInt(matchPrimerNum[0]) : (sec?.trayecto?.tra_numero || 1);
+
     // Si ya existe al menos un equipo en la sección o en el trayecto: AUTO-COMPLETAR
     if (equiposSec.length > 0 || equiposTra.length > 0) {
         esAutoCompletado.value = true;
-        formNuevo.value.equ_semestre = semestreHeredado || (sec?.trayecto?.tra_numero || 1);
+        formNuevo.value.equ_semestre = primerNumeroSeccion;
         const totFijado = totalSecHeredado || totalEquiposSeccion.value || 7;
         formNuevo.value.equ_total_seccion = totFijado;
 
@@ -2800,7 +2801,7 @@ const onSeccionChange = () => {
         esAutoCompletado.value = false;
         editarParametrosManual.value = true;
         formNuevo.value.equ_numero_grupo = "1";
-        formNuevo.value.equ_semestre = sec?.trayecto?.tra_numero || 1;
+        formNuevo.value.equ_semestre = primerNumeroSeccion;
         formNuevo.value.equ_total_seccion = 7;
     }
 
@@ -2960,6 +2961,19 @@ const validarPaso1 = () => {
     errores.value = {};
     if (!formNuevo.value.equ_id_sec) {
         errores.value.equ_id_sec = "La sección es obligatoria.";
+        return false;
+    }
+
+    const sec = props.secciones?.find((s) => String(s.sec_id) === String(formNuevo.value.equ_id_sec)) || props.seccion;
+    if (sec?.sec_codigo) {
+        const matchPrimerNum = sec.sec_codigo.match(/\d/);
+        const primerNum = matchPrimerNum ? parseInt(matchPrimerNum[0]) : null;
+        if (primerNum !== null) {
+            formNuevo.value.equ_semestre = primerNum;
+        }
+    }
+    if (!formNuevo.value.equ_semestre) {
+        errores.value.equ_semestre = "El semestre es obligatorio.";
         return false;
     }
     if (!formNuevo.value.equ_numero_grupo) {

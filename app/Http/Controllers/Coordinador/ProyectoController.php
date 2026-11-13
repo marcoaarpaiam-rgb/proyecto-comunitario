@@ -59,6 +59,39 @@ class ProyectoController extends Controller
             'pco_fecha_limite.after'    => 'La fecha límite debe ser posterior a hoy.',
         ]);
 
+        // Validación contra proyectos duplicados en la misma comunidad
+        $equipoActual = Equipo::find($request->pco_id_equ);
+        $tituloActual = mb_strtolower(trim($equipoActual?->equ_titulo ?? ''));
+
+        $proyectosExistentes = ProyectoComunidad::where('pco_id_com', $request->pco_id_com)
+            ->where('pco_status', true)
+            ->where('pco_id_equ', '!=', $request->pco_id_equ)
+            ->with(['equipo', 'tipoProyecto', 'modalidad'])
+            ->get();
+
+        $modNueva = ModalidadProyecto::find($request->pco_id_mpr);
+        $nuevaEsContinuacion = in_array(mb_strtolower($modNueva?->mpr_nombre ?? ''), ['continuación', 'continuacion', 'reingeniería', 'reingenieria']);
+
+        foreach ($proyectosExistentes as $prev) {
+            $tituloPrev = mb_strtolower(trim($prev->equipo?->equ_titulo ?? ''));
+            // 1. Mismo tipo de proyecto y modalidad no es continuación/reingeniería
+            if ($prev->pco_id_tpr == $request->pco_id_tpr && !$nuevaEsContinuacion) {
+                return back()->withErrors([
+                    'pco_id_com' => "La comunidad ya cuenta con un proyecto activo del mismo tipo ({$prev->tipoProyecto?->tpr_nombre}) asignado al equipo {$prev->equipo?->equ_codigo}. Si se trata de una fase posterior, seleccione la modalidad Continuación o Reingeniería."
+                ]);
+            }
+
+            // 2. Similitud semántica o de título mayor a 65%
+            if ($tituloActual && $tituloPrev) {
+                similar_text($tituloActual, $tituloPrev, $percent);
+                if ($percent >= 65 && !$nuevaEsContinuacion) {
+                    return back()->withErrors([
+                        'pco_id_com' => "Posible proyecto duplicado: La comunidad ya tiene el proyecto '{$prev->equipo?->equ_titulo}' (similitud del " . round($percent) . "%). Verifique con el equipo {$prev->equipo?->equ_codigo}."
+                    ]);
+                }
+            }
+        }
+
         $proyecto = ProyectoComunidad::create([
             'pco_id_equ'          => $request->pco_id_equ,
             'pco_id_com'          => $request->pco_id_com,
@@ -66,6 +99,8 @@ class ProyectoController extends Controller
             'pco_id_mpr'          => $request->pco_id_mpr,
             'pco_id_pco_previo'   => $request->pco_id_pco_previo,
             'pco_resumen'         => $request->pco_resumen,
+            'pco_area_comunidad'  => $request->pco_area_comunidad,
+            'pco_linea_investigacion' => $request->pco_linea_investigacion ?? 'Desarrollo de Software - Web',
             'pco_fecha_limite'    => $request->pco_fecha_limite,
             'pco_fecha_aprobacion' => now()->toDateString(),
             'pco_id_usu_aprobado'  => auth()->id(),

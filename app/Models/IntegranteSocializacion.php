@@ -11,6 +11,7 @@ class IntegranteSocializacion extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'iso_asistio',
         'iso_avanza',
         'iso_justificacion',
         'iso_created_at',

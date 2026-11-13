@@ -20,6 +20,6 @@ export default defineConfig({
         cors: {
             origin: "*",
         },
-        host: "0.0.0.0",
+        host: "localhost",
     },
 });

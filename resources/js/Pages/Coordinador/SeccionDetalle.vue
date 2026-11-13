@@ -268,6 +268,22 @@
                             Asignar
                         </button>
                     </div>
+
+                    <div v-if="mensajeAsignado" class="alert alert-success alert-dismissible fade show py-2 px-3 small mt-2 mb-0">
+                        <i class="bi bi-check-circle-fill me-1"></i> {{ mensajeAsignado }}
+                        <button type="button" class="btn-close p-2" @click="mensajeAsignado = ''"></button>
+                    </div>
+
+                    <!-- Botones de Descarga Excel Oficiales -->
+                    <div class="d-flex align-items-center gap-2 flex-wrap mt-3 pt-3 border-top" style="border-color: var(--border) !important;">
+                        <span class="text-muted small fw-bold"><i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> Formatos Excel Oficiales UPTP:</span>
+                        <a :href="`/coordinador/secciones/${seccion.sec_id}/excel/vinculacion`" class="btn btn-sm btn-outline-success fw-bold rounded-pill px-3">
+                            <i class="bi bi-download me-1"></i> Planilla de Vinculación (.xlsx)
+                        </a>
+                        <a :href="`/coordinador/secciones/${seccion.sec_id}/excel/inventario`" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3">
+                            <i class="bi bi-download me-1"></i> Inventario PST Semanas 6, 10, 14, 18 (.xlsx)
+                        </a>
+                    </div>
                 </div>
                 <!-- Info de la sección -->
                 <div class="info-card">
@@ -442,9 +458,11 @@ const props = defineProps({
 
 const profesorSel = ref("");
 const loadingAsignar = ref(false);
+const mensajeAsignado = ref("");
 const asignarProfesor = () => {
     if (!profesorSel.value) return;
     loadingAsignar.value = true;
+    mensajeAsignado.value = "";
     router.post(
         `/coordinador/secciones/${props.seccion.sec_id}/profesores`,
         { pse_id_usu: profesorSel.value },
@@ -453,6 +471,7 @@ const asignarProfesor = () => {
             onSuccess: () => {
                 profesorSel.value = "";
                 loadingAsignar.value = false;
+                mensajeAsignado.value = "Profesor asignado exitosamente a la sección.";
             },
             onError: (err) => {
                 loadingAsignar.value = false;

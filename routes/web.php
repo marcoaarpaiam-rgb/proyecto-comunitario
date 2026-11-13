@@ -299,6 +299,18 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     
     Route::post('secciones/{id}/profesores', [SeccionDetalleController::class, 'asignarProfesor']);
 
+    // Exportaciones Excel Oficiales UPTP
+    Route::get('secciones/{id}/excel/vinculacion', [\App\Http\Controllers\ExcelExportController::class, 'descargarPlanillaVinculacion'])
+        ->name('secciones.excel.vinculacion');
+    Route::get('secciones/{id}/excel/inventario', [\App\Http\Controllers\ExcelExportController::class, 'descargarInventarioPst'])
+        ->name('secciones.excel.inventario');
+
+    // Expediente del Estudiante (Coordinador)
+    Route::get('estudiantes/buscar', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'buscar'])
+        ->name('estudiantes.buscar');
+    Route::get('estudiantes/{id}/expediente', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'show'])
+        ->name('estudiantes.expediente');
+
     Route::get('cartas/{id}/descargar',
         [CartaController::class, 'descargar'])
         ->name('cartas.descargar');
@@ -476,6 +488,18 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('secciones.index');
     Route::get('secciones/{id}/equipos', [EquipoController::class, 'seccionEquipos'])
         ->name('secciones.equipos');
+
+    // Exportaciones Excel Oficiales UPTP (Profesor)
+    Route::get('secciones/{id}/excel/vinculacion', [\App\Http\Controllers\ExcelExportController::class, 'descargarPlanillaVinculacion'])
+        ->name('secciones.excel.vinculacion');
+    Route::get('secciones/{id}/excel/inventario', [\App\Http\Controllers\ExcelExportController::class, 'descargarInventarioPst'])
+        ->name('secciones.excel.inventario');
+
+    // Expediente del Estudiante (Profesor)
+    Route::get('estudiantes/buscar', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'buscar'])
+        ->name('estudiantes.buscar');
+    Route::get('estudiantes/{id}/expediente', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'show'])
+        ->name('estudiantes.expediente');
     // Equipos — el profesor crea, el coordinador también puede todo
     Route::get('equipos', [EquipoController::class, 'index'])
         ->name('equipos.index');

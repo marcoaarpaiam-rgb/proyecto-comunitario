@@ -74,6 +74,14 @@ class SocializacionController extends Controller
         // Verificar flujo de socializaciones
         $tipoSoc = \App\Models\TipoSocializacion::findOrFail($request->soc_id_tso);
 
+        // Semestre impar: cualitativo, NO cuenta con Socialización Final
+        $seccion = $equipo->seccion;
+        if ($seccion && $seccion->esSemestreImpar() && $tipoSoc->tso_orden === 2) {
+            return back()->withErrors([
+                'soc_id_tso' => "El semestre impar ({$seccion->sec_semestre}) es cualitativo y no cuenta con Socialización Final con jurados. La Socialización Final se realiza en el semestre par."
+            ]);
+        }
+
         if ($tipoSoc->tso_orden === 2) {
             // Es socialización final — verificar que existe pre-soc aprobada (apta)
             $preSocAprobada = Socializacion::where('soc_id_equ', $request->soc_id_equ)
@@ -176,13 +184,19 @@ class SocializacionController extends Controller
             'soc_id_usu_updated'        => auth()->id(),
         ]);
 
-        // Actualizar avance de integrantes
+        // Actualizar asistencia y avance de integrantes
         foreach ($request->integrantes ?? [] as $int) {
+            $asistio = isset($int['asistio']) ? (bool)$int['asistio'] : true;
+            // Regla UPTP: si no asiste a la pre-socialización o socialización, reprueba/no avanza automáticamente
+            $avanza = $asistio ? (bool)($int['avanza'] ?? true) : false;
+
             IntegranteSocializacion::updateOrCreate(
                 ['iso_id_soc' => $soc->soc_id, 'iso_id_usu' => $int['usu_id']],
                 [
-                    'iso_avanza'        => $int['avanza'],
-                    'iso_justificacion' => $int['justificacion'] ?? null,
+                    'iso_asistio'       => $asistio,
+                    'iso_avanza'        => $avanza,
+                    'iso_justificacion' => $int['justificacion'] ?? ($int['observaciones'] ?? null),
+                    'iso_id_usu_created' => auth()->id(),
                 ]
             );
         }

@@ -1023,12 +1023,16 @@ const confirmarDesactivar = () => {
     background: var(--bg-hover);
 }
 .bs {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.76rem;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 0.75rem;
     font-weight: 700;
-    white-space: nowrap;
+    line-height: 1.25;
+    text-align: center;
     display: inline-block;
+    max-width: 150px;
+    white-space: normal;
+    word-break: normal;
 }
 .ba {
     background: #d1e7dd;

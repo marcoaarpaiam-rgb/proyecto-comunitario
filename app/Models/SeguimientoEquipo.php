@@ -15,6 +15,8 @@ class SeguimientoEquipo extends Model
         'seq_fecha_cumplimiento',
         'seq_cumplido_a_tiempo',
         'seq_observaciones',
+        'seq_cumplio_previo',
+        'seq_obs_previas_verificacion',
         'seq_es_previa_socializacion',
         'seq_fecha_registro',
         'seq_status',

@@ -46,15 +46,16 @@
 
         <!-- Modo: Búsqueda y Selección -->
         <div v-else class="search-input-wrap position-relative w-100" style="min-width: 0;">
-            <div class="input-group" :class="{ 'input-group-sm': size === 'sm' }">
-                <span class="input-group-text search-icon-addon border-end-0">
+            <div class="input-group w-100 flex-nowrap" :class="{ 'input-group-sm': size === 'sm' }">
+                <span class="input-group-text search-icon-addon border-end-0 px-3">
                     <i class="bi bi-search"></i>
                 </span>
                 <input
                     ref="inputRef"
                     type="text"
                     v-model="query"
-                    class="form-control border-start-0"
+                    class="form-control border-start-0 w-100"
+                    style="min-width: 0;"
                     :class="{
                         'form-control-sm': size === 'sm',
                         'is-invalid': hasError

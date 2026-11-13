@@ -30,12 +30,31 @@ class PuntoControlController extends Controller
             ->with(['trayecto', 'seccion', 'integrantes.usuario'])
             ->get();
 
+        $puntos = PuntoControl::whereIn('puc_id_equ', $equipos->pluck('equ_id'))
+            ->where('puc_status', true)
+            ->with(['equipo.integrantes.usuario', 'trayecto', 'seguimientos.asistencias.usuario'])
+            ->orderBy('puc_fecha_limite')
+            ->get();
+
+        // Enlazar observaciones del punto anterior de cada equipo
+        $puntosPorEquipo = $puntos->groupBy('puc_id_equ');
+        foreach ($puntosPorEquipo as $equId => $puntosDelEquipo) {
+            $sorted = $puntosDelEquipo->sortBy('puc_orden')->values();
+            for ($i = 0; $i < $sorted->count(); $i++) {
+                if ($i > 0) {
+                    $puntoAnterior = $sorted[$i - 1];
+                    $seqAnt = $puntoAnterior->seguimientos->first();
+                    $sorted[$i]->punto_previo_nombre = $puntoAnterior->puc_nombre;
+                    $sorted[$i]->punto_previo_observaciones = $seqAnt?->seq_observaciones;
+                } else {
+                    $sorted[$i]->punto_previo_nombre = null;
+                    $sorted[$i]->punto_previo_observaciones = null;
+                }
+            }
+        }
+
         return Inertia::render('Profesor/PuntosControl', [
-            'puntosControl' => PuntoControl::whereIn('puc_id_equ', $equipos->pluck('equ_id'))
-                ->where('puc_status', true)
-                ->with(['equipo.integrantes.usuario', 'trayecto', 'seguimientos.asistencias.usuario'])
-                ->orderBy('puc_fecha_limite')
-                ->get(),
+            'puntosControl' => $puntos,
             'equipos'   => $equipos,
             'secciones' => $profSecciones->map(fn($ps) => $ps->seccion)->filter()->values(),
             'trayectos' => Trayecto::where('tra_status', true)->get(),
@@ -47,6 +66,7 @@ class PuntoControlController extends Controller
         $request->validate([
             'puc_id_equ'      => 'required|exists:equipo,equ_id',
             'puc_nombre'      => 'required|string|max:150',
+            'puc_semana'      => 'nullable|integer|in:6,10,14',
             'puc_descripcion' => 'nullable|string',
             'puc_fecha_limite'=> 'required|date|after_or_equal:today',
             'puc_dias_aviso'  => 'required|integer|min:1|max:30',
@@ -66,11 +86,31 @@ class PuntoControlController extends Controller
             ->where('puc_status', true)
             ->max('puc_orden') ?? 0;
 
+        // Traer observaciones del punto anterior como criterios si existen
+        $puntoPrevio = PuntoControl::where('puc_id_equ', $request->puc_id_equ)
+            ->where('puc_status', true)
+            ->with(['seguimientos'])
+            ->orderBy('puc_orden', 'desc')
+            ->first();
+
+        $criteriosPrevios = [];
+        if ($puntoPrevio) {
+            $seqPrevio = $puntoPrevio->seguimientos->first();
+            if ($seqPrevio && !empty($seqPrevio->seq_observaciones)) {
+                $criteriosPrevios[] = [
+                    'origen' => "Observaciones del Punto previo ({$puntoPrevio->puc_nombre})",
+                    'texto'  => $seqPrevio->seq_observaciones,
+                ];
+            }
+        }
+
         $punto = PuntoControl::create([
             'puc_id_equ'         => $request->puc_id_equ,
             'puc_id_tra'         => $equipo->equ_id_tra,
             'puc_nombre'         => $request->puc_nombre,
             'puc_descripcion'    => $request->puc_descripcion,
+            'puc_semana'         => $request->puc_semana ?? ($ultimoOrden == 0 ? 6 : ($ultimoOrden == 1 ? 10 : 14)),
+            'puc_criterios_evaluacion' => $criteriosPrevios,
             'puc_fecha_limite'   => $request->puc_fecha_limite,
             'puc_orden'          => $ultimoOrden + 1,
             'puc_dias_aviso'     => $request->puc_dias_aviso ?? 7,
@@ -106,9 +146,11 @@ class PuntoControlController extends Controller
     public function registrarSeguimiento(Request $request, $id)
     {
         $request->validate([
-            'seq_cumplido'      => 'required|boolean',
-            'seq_observaciones' => 'nullable|string',
-            'asistencias'       => 'nullable',
+            'seq_cumplido'                 => 'required|boolean',
+            'seq_observaciones'            => 'nullable|string',
+            'seq_cumplio_previo'           => 'nullable|boolean',
+            'seq_obs_previas_verificacion' => 'nullable|string',
+            'asistencias'                  => 'nullable',
         ]);
 
         $punto = PuntoControl::findOrFail($id);
@@ -127,29 +169,34 @@ class PuntoControlController extends Controller
         $seq = SeguimientoEquipo::updateOrCreate(
             ['seq_id_equ' => $punto->puc_id_equ, 'seq_id_puc' => $punto->puc_id],
             [
-                'seq_cumplido'           => $request->seq_cumplido,
-                'seq_fecha_cumplimiento' => $request->seq_cumplido ? now()->toDateString() : null,
-                'seq_cumplido_a_tiempo'  => $request->seq_cumplido
+                'seq_cumplido'                 => $request->seq_cumplido,
+                'seq_fecha_cumplimiento'       => $request->seq_cumplido ? now()->toDateString() : null,
+                'seq_cumplido_a_tiempo'        => $request->seq_cumplido
                     ? (now()->toDateString() <= $punto->puc_fecha_limite)
                     : null,
-                'seq_observaciones'      => $request->seq_observaciones,
-                'seq_fecha_registro'     => now()->toDateString(),
-                'seq_id_usu_updated'     => auth()->id(),
+                'seq_cumplio_previo'           => $request->seq_cumplio_previo,
+                'seq_obs_previas_verificacion' => $request->seq_obs_previas_verificacion,
+                'seq_observaciones'            => $request->seq_observaciones,
+                'seq_fecha_registro'           => now()->toDateString(),
+                'seq_id_usu_updated'           => auth()->id(),
             ]
         );
 
         $rawAsistencias = $request->input('asistencias', []);
         $asistenciasList = [];
         if (is_array($rawAsistencias)) {
-            // Check if associative (usu_id => bool) or indexed array of objects
             if (array_is_list($rawAsistencias)) {
                 $asistenciasList = $rawAsistencias;
             } else {
-                foreach ($rawAsistencias as $uId => $asistio) {
-                    $asistenciasList[] = [
-                        'usu_id'  => $uId,
-                        'asistio' => (bool)$asistio,
-                    ];
+                foreach ($rawAsistencias as $uId => $val) {
+                    if (is_array($val)) {
+                        $asistenciasList[] = array_merge(['usu_id' => $uId], $val);
+                    } else {
+                        $asistenciasList[] = [
+                            'usu_id'  => $uId,
+                            'asistio' => (bool)$val,
+                        ];
+                    }
                 }
             }
         }
@@ -160,13 +207,15 @@ class PuntoControlController extends Controller
                 ['apc_id_seq' => $seq->seq_id, 'apc_id_usu' => $asistencia['usu_id']],
                 [
                     'apc_asistio'        => (bool)($asistencia['asistio'] ?? false),
-                    'apc_observaciones'  => $asistencia['observacion'] ?? null,
+                    'apc_justificado'    => (bool)($asistencia['justificado'] ?? false),
+                    'apc_justificativo'  => $asistencia['justificativo'] ?? null,
+                    'apc_observaciones'  => $asistencia['observacion'] ?? ($asistencia['observaciones'] ?? null),
                     'apc_id_usu_created' => auth()->id(),
                 ]
             );
         }
 
-        return back()->with('success', 'Seguimiento registrado correctamente.');
+        return back()->with('success', 'Seguimiento y asistencia registrados correctamente.');
     }
 
     public function reprogramar(\Illuminate\Http\Request $request, $id)

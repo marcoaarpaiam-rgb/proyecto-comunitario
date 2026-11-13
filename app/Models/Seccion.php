@@ -17,6 +17,7 @@ class Seccion extends Model
         'sec_created_at',
         'sec_updated_at',
         'sec_id_tra',
+        'sec_semestre',
         'sec_id_tur',
         'sec_id_usu_created',
         'sec_id_usu_updated',
@@ -35,6 +36,28 @@ class Seccion extends Model
     public function profesores()
     {
         return $this->hasMany(ProfesorSeccion::class, 'pse_id_sec', 'sec_id');
+    }
+
+    public function profesorActual()
+    {
+        return $this->hasOne(ProfesorSeccion::class, 'pse_id_sec', 'sec_id')->where('pse_status', true);
+    }
+
+    public function esSemestreImpar(): bool
+    {
+        $sem = $this->sec_semestre ?? (($this->sec_id_tra ? ($this->sec_id_tra * 2 - 1) : 1));
+        return $sem % 2 !== 0;
+    }
+
+    public function esSemestrePar(): bool
+    {
+        $sem = $this->sec_semestre ?? (($this->sec_id_tra ? ($this->sec_id_tra * 2) : 2));
+        return $sem % 2 === 0;
+    }
+
+    public function esAlfabetizacion(): bool
+    {
+        return (int) $this->sec_id_tra === 1;
     }
 
     public function estudiantes()

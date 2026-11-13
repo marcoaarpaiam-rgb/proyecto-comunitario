@@ -3,8 +3,8 @@
         :data-theme="tema"
         style="
             min-height: 100vh;
-            background: var(--bg-body);
-            color: var(--text-main);
+            background: var(--clr-bg);
+            color: var(--clr-text);
         "
     >
         <div

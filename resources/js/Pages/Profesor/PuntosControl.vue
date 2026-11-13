@@ -375,7 +375,17 @@
                                 </div>
                             </div>
                             <div class="row g-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold"
+                                        >Semana Oficial</label
+                                    >
+                                    <select v-model="form.puc_semana" class="form-select">
+                                        <option :value="6">Semana 6 (I Corte)</option>
+                                        <option :value="10">Semana 10 (II Corte)</option>
+                                        <option :value="14">Semana 14 (III Corte)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
                                     <label class="form-label fw-semibold"
                                         >Fecha Límite
                                         <span class="text-danger"
@@ -399,14 +409,14 @@
                                         {{ errores.puc_fecha_limite }}
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-3">
                                     <label class="form-label fw-semibold"
-                                        >Días de Aviso</label
+                                        >Días Aviso</label
                                     >
                                     <!-- Días de aviso en PuntosControl.vue -->
                                     <input
                                         type="number"
-                                        class="form-control form-control-sm"
+                                        class="form-control"
                                         v-model="form.puc_dias_aviso"
                                         min="1"
                                         max="30"
@@ -533,6 +543,30 @@
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- Búsqueda / Verificación encadenada de observaciones previas -->
+                            <div v-if="puntoActual?.punto_previo_observaciones" class="alert alert-warning py-2 px-3 mb-3 small border-warning">
+                                <div class="fw-bold text-dark d-flex align-items-center gap-1 mb-1">
+                                    <i class="bi bi-clock-history text-warning fs-6"></i>
+                                    <span>Observaciones del Punto de Control Previo ({{ puntoActual.punto_previo_nombre }}):</span>
+                                </div>
+                                <div class="p-2 rounded bg-white text-dark border mb-2" style="white-space: pre-wrap;">
+                                    {{ puntoActual.punto_previo_observaciones }}
+                                </div>
+                                <label class="form-label fw-bold mb-1">¿El equipo cumplió y subsanó las observaciones anteriores?</label>
+                                <div class="d-flex gap-3 mb-2">
+                                    <div class="form-check">
+                                        <input type="radio" class="form-check-input" v-model="formSeg.seq_cumplio_previo" :value="true" :disabled="modoSoloLecturaSeg" id="cumplioPrevSi" />
+                                        <label class="form-check-label fw-semibold text-success" for="cumplioPrevSi">Sí, cumplió</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="radio" class="form-check-input" v-model="formSeg.seq_cumplio_previo" :value="false" :disabled="modoSoloLecturaSeg" id="cumplioPrevNo" />
+                                        <label class="form-check-label fw-semibold text-danger" for="cumplioPrevNo">No cumplió</label>
+                                    </div>
+                                </div>
+                                <input type="text" v-model="formSeg.seq_obs_previas_verificacion" :disabled="modoSoloLecturaSeg" class="form-control form-control-sm bg-white" placeholder="Detalle de verificación de las observaciones anteriores..." />
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >¿El equipo cumplió este punto?</label
@@ -572,18 +606,19 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
-                                    >Observaciones</label
+                                    >Nuevas Observaciones para este punto</label
                                 >
                                 <textarea
                                     v-model="formSeg.seq_observaciones"
                                     :disabled="modoSoloLecturaSeg"
                                     class="form-control"
                                     rows="3"
+                                    placeholder="Indique las observaciones y correcciones que el equipo debe atender para el próximo corte..."
                                 ></textarea>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
-                                    >Asistencia de Integrantes</label
+                                    >Control Individual de Asistencia y Desempeño</label
                                 >
                                 <div
                                     v-if="
@@ -598,34 +633,61 @@
                                     v-for="int in puntoActual?.equipo
                                         ?.integrantes"
                                     :key="int.ein_id"
-                                    class="d-flex align-items-center justify-content-between py-2 border-bottom"
-                                    style="
-                                        border-color: var(--border) !important;
-                                    "
+                                    class="p-2 mb-2 rounded border"
+                                    style="border-color: var(--border) !important; background: var(--bg-body);"
                                 >
-                                    <span style="font-size: 0.9rem"
-                                        >{{ int.usuario?.usu_primer_nombre }}
-                                        {{
-                                            int.usuario?.usu_primer_apellido
-                                        }}</span
-                                    >
-                                    <div class="form-check mb-0">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <strong style="font-size: 0.92rem;">{{ int.usuario?.usu_primer_nombre }} {{ int.usuario?.usu_primer_apellido }}</strong>
+                                            <span class="badge bg-light text-dark border ms-2 small">C.I. {{ int.usuario?.usu_cedula }}</span>
+                                        </div>
+                                        <div class="form-check form-switch mb-0">
+                                            <input
+                                                type="checkbox"
+                                                class="form-check-input"
+                                                :id="'asist_' + int.ein_id"
+                                                :disabled="modoSoloLecturaSeg"
+                                                v-model="formSeg.asistencias[int.ein_id_usu].asistio"
+                                            />
+                                            <label
+                                                class="form-check-label small fw-bold"
+                                                :for="'asist_' + int.ein_id"
+                                            >
+                                                {{ formSeg.asistencias[int.ein_id_usu]?.asistio ? 'Asistió' : 'Inasistencia' }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <!-- Si falta, justificación -->
+                                    <div v-if="!formSeg.asistencias[int.ein_id_usu]?.asistio" class="mt-2 p-2 rounded bg-danger bg-opacity-10 border border-danger-subtle">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <input
+                                                type="checkbox"
+                                                class="form-check-input"
+                                                :id="'just_' + int.ein_id"
+                                                :disabled="modoSoloLecturaSeg"
+                                                v-model="formSeg.asistencias[int.ein_id_usu].justificado"
+                                            />
+                                            <label class="form-check-label small fw-bold text-danger" :for="'just_' + int.ein_id">
+                                                ¿Presentó Justificativo?
+                                            </label>
+                                        </div>
                                         <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            :id="'asist_' + int.ein_id"
+                                            type="text"
+                                            v-model="formSeg.asistencias[int.ein_id_usu].justificativo"
                                             :disabled="modoSoloLecturaSeg"
-                                            v-model="
-                                                formSeg.asistencias[
-                                                    int.ein_id_usu
-                                                ]
-                                            "
+                                            class="form-control form-control-sm"
+                                            placeholder="Motivo o constancia de la inasistencia..."
                                         />
-                                        <label
-                                            class="form-check-label small fw-bold"
-                                            :for="'asist_' + int.ein_id"
-                                            >Asistió</label
-                                        >
+                                    </div>
+                                    <!-- Observación individual -->
+                                    <div class="mt-2">
+                                        <input
+                                            type="text"
+                                            v-model="formSeg.asistencias[int.ein_id_usu].observacion"
+                                            :disabled="modoSoloLecturaSeg"
+                                            class="form-control form-control-sm"
+                                            placeholder="Observación individual (aporte destacado, dificultades, o falta)..."
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -847,6 +909,7 @@ const abrirModal = () => {
     form.value = {
         puc_id_equ: "",
         puc_nombre: "",
+        puc_semana: 6,
         puc_fecha_limite: "",
         puc_dias_aviso: 3,
         puc_descripcion: "",
@@ -883,12 +946,21 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
     const prevAsist = prevSeg?.asistencias || [];
     const prevMap = {};
     prevAsist.forEach((a) => {
-        prevMap[a.apc_id_usu] = Boolean(a.apc_asistio);
+        prevMap[a.apc_id_usu] = {
+            asistio: Boolean(a.apc_asistio),
+            justificado: Boolean(a.apc_justificado),
+            justificativo: a.apc_justificativo || "",
+            observacion: a.apc_observaciones || "",
+        };
     });
 
     ints.forEach((i) => {
-        initialAsist[i.ein_id_usu] =
-            prevMap[i.ein_id_usu] !== undefined ? prevMap[i.ein_id_usu] : true;
+        initialAsist[i.ein_id_usu] = prevMap[i.ein_id_usu] || {
+            asistio: true,
+            justificado: false,
+            justificativo: "",
+            observacion: "",
+        };
     });
 
     formSeg.value = {
@@ -896,6 +968,11 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
             prevSeg?.seq_cumplido !== undefined
                 ? Boolean(prevSeg.seq_cumplido)
                 : true,
+        seq_cumplio_previo:
+            prevSeg?.seq_cumplio_previo !== undefined && prevSeg?.seq_cumplio_previo !== null
+                ? Boolean(prevSeg.seq_cumplio_previo)
+                : true,
+        seq_obs_previas_verificacion: prevSeg?.seq_obs_previas_verificacion || "",
         seq_observaciones: prevSeg?.seq_observaciones || "",
         asistencias: initialAsist,
     };

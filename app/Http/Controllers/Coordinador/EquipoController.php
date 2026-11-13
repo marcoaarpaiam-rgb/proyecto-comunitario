@@ -253,7 +253,22 @@ class EquipoController extends Controller
         $trayecto = $seccion->trayecto;
         $numero   = (int) $request->equ_numero_grupo;
         $totalSec = (int) ($request->equ_total_seccion ?: $numero);
-        $semestre = (int) ($request->equ_semestre ?: 1);
+
+        // Validación del semestre: el primer número de la sección es el semestre del equipo
+        preg_match('/\d/', $seccion->sec_codigo, $matches);
+        $primerNumeroSeccion = isset($matches[0]) ? (int) $matches[0] : null;
+
+        if ($primerNumeroSeccion !== null) {
+            if ($request->filled('equ_semestre') && (int) $request->equ_semestre !== $primerNumeroSeccion) {
+                return back()->withErrors([
+                    'equ_semestre' => "El semestre seleccionado ({$request->equ_semestre}) no coincide con la sección {$seccion->sec_codigo}. El primer número de la sección ({$primerNumeroSeccion}) debe ser el semestre del equipo."
+                ]);
+            }
+            $semestre = $primerNumeroSeccion;
+        } else {
+            $semestre = (int) ($request->equ_semestre ?: 1);
+        }
+
         $sede     = strtoupper(config('siscon.sede', 'ACA'));
         $pnf      = strtoupper($trayecto->pnf?->pnf_siglas ?? 'PNFI');
         $traNum   = $trayecto->tra_numero ?? 1;
@@ -262,11 +277,8 @@ class EquipoController extends Controller
             return back()->withErrors(['equ_total_seccion' => "La cantidad total de equipos ({$totalSec}) no puede ser menor al número del equipo ({$numero})."]);
         }
 
-        if (!empty($request->equ_codigo) && trim($request->equ_codigo) !== '') {
-            $codigo = trim($request->equ_codigo);
-        } else {
-            $codigo = "{$pnf}-{$sede}{$traNum}{$semestre}-{$seccion->sec_codigo}-{$numero}/{$totalSec}";
-        }
+        // Código institucional garantizado con el semestre del equipo
+        $codigo = "{$pnf}-{$sede}{$traNum}{$semestre}-{$seccion->sec_codigo}-{$numero}/{$totalSec}";
 
         // Validar que el código no esté duplicado entre equipos activos
         if (Equipo::where('equ_codigo', $codigo)->where('equ_status', true)->exists()) {
