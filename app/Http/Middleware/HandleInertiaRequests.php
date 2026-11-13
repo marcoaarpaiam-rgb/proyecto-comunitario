@@ -64,6 +64,7 @@ class HandleInertiaRequests extends Middleware
                 ->where('not_leida', false)
                 ->count()
             : 0,
+        'googleMapsApiKey' => config('services.google_maps.key', ''),
     ];
 }
 }

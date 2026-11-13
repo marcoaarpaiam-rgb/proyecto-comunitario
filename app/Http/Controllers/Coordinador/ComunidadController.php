@@ -32,15 +32,21 @@ class ComunidadController extends Controller
             'com_nombre'    => 'required|string|max:150|unique:comunidad,com_nombre',
             'com_ubicacion' => 'nullable|string|max:255',
             'com_id_tor'    => 'required|exists:tipo_organizacion,tor_id',
+            'com_lat'       => 'nullable|numeric|between:-90,90',
+            'com_lng'       => 'nullable|numeric|between:-180,180',
         ], [
-            'com_nombre.required'    => 'El nombre es obligatorio.',
-            'com_nombre.unique'      => 'Ya existe una comunidad con ese nombre.',
-            'com_id_tor.required'    => 'El tipo de organización es obligatorio.',
+            'com_nombre.required' => 'El nombre es obligatorio.',
+            'com_nombre.unique'   => 'Ya existe una comunidad con ese nombre.',
+            'com_id_tor.required' => 'El tipo de organización es obligatorio.',
+            'com_lat.between'     => 'La latitud debe estar entre -90 y 90.',
+            'com_lng.between'     => 'La longitud debe estar entre -180 y 180.',
         ]);
 
         $comunidad = Comunidad::create([
             'com_nombre'         => $request->com_nombre,
             'com_ubicacion'      => $request->com_ubicacion ?: 'Sin ubicación registrada',
+            'com_lat'            => $request->com_lat,
+            'com_lng'            => $request->com_lng,
             'com_id_tor'         => $request->com_id_tor,
             'com_status'         => true,
             'com_id_usu_created' => auth()->id(),
@@ -64,11 +70,18 @@ class ComunidadController extends Controller
             'com_nombre'    => "required|string|max:150|unique:comunidad,com_nombre,{$id},com_id",
             'com_ubicacion' => 'required|string|max:255',
             'com_id_tor'    => 'required|exists:tipo_organizacion,tor_id',
+            'com_lat'       => 'nullable|numeric|between:-90,90',
+            'com_lng'       => 'nullable|numeric|between:-180,180',
+        ], [
+            'com_lat.between' => 'La latitud debe estar entre -90 y 90.',
+            'com_lng.between' => 'La longitud debe estar entre -180 y 180.',
         ]);
 
         $comunidad->update([
             'com_nombre'         => $request->com_nombre,
             'com_ubicacion'      => $request->com_ubicacion,
+            'com_lat'            => $request->com_lat,
+            'com_lng'            => $request->com_lng,
             'com_id_tor'         => $request->com_id_tor,
             'com_id_usu_updated' => auth()->id(),
         ]);

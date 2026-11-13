@@ -47,16 +47,19 @@ class ProyectoController extends Controller
             'pco_fecha_limite'=> 'required|date|after:today',
             'beneficiarios'   => 'sometimes|array',
             'beneficiarios.*.tbe_id'   => 'required|exists:tipo_beneficiario,tbe_id',
-            'beneficiarios.*.cantidad' => 'required|integer|min:1',
+            'beneficiarios.*.cantidad' => 'required|integer|min:1|max:10000',
         ], [
-            'pco_id_equ.required'       => 'El equipo es obligatorio.',
-            'pco_id_com.required'       => 'La comunidad es obligatoria.',
-            'pco_id_tpr.required'       => 'El tipo de proyecto es obligatorio.',
-            'pco_id_mpr.required'       => 'La modalidad es obligatoria.',
-            'pco_resumen.required'      => 'El resumen es obligatorio.',
-            'pco_resumen.max'           => 'El resumen no puede superar 150 caracteres.',
-            'pco_fecha_limite.required' => 'La fecha límite es obligatoria.',
-            'pco_fecha_limite.after'    => 'La fecha límite debe ser posterior a hoy.',
+            'pco_id_equ.required'              => 'El equipo es obligatorio.',
+            'pco_id_com.required'              => 'La comunidad es obligatoria.',
+            'pco_id_tpr.required'              => 'El tipo de proyecto es obligatorio.',
+            'pco_id_mpr.required'              => 'La modalidad es obligatoria.',
+            'pco_resumen.required'             => 'El resumen es obligatorio.',
+            'pco_resumen.max'                  => 'El resumen no puede superar 150 caracteres.',
+            'pco_fecha_limite.required'        => 'La fecha límite es obligatoria.',
+            'pco_fecha_limite.after'           => 'La fecha límite debe ser posterior a hoy.',
+            'beneficiarios.*.cantidad.max'     => 'La cantidad de beneficiarios no puede superar 10.000.',
+            'beneficiarios.*.cantidad.min'     => 'La cantidad debe ser al menos 1.',
+            'beneficiarios.*.cantidad.integer' => 'La cantidad debe ser un número entero.',
         ]);
 
         // Validación contra proyectos duplicados en la misma comunidad

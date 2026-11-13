@@ -13,6 +13,8 @@ class Comunidad extends Model
     protected $fillable = [
         'com_nombre',
         'com_ubicacion',
+        'com_lat',
+        'com_lng',
         'com_status',
         'com_created_at',
         'com_updated_at',

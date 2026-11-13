@@ -9,10 +9,32 @@ use App\Models\Turno;
 use App\Models\Usuario;
 use App\Models\ProfesorSeccion;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SeccionController extends Controller
 {
+    /**
+     * Calcula los semestres válidos para un trayecto dado.
+     * Trayecto 1 → [1,2], Trayecto 2 → [3,4], etc.
+     */
+    private function semestresValidos(int $traId): array
+    {
+        return [($traId * 2) - 1, $traId * 2];
+    }
+
+    /**
+     * Valida que el código numérico de sección pertenezca a la centena del trayecto.
+     * Ej: Trayecto 1 → 100-199, Trayecto 2 → 200-299, etc.
+     */
+    private function validarCentena(string $codigo, int $traNumero): bool
+    {
+        if (!ctype_digit($codigo)) return true; // códigos no numéricos se omiten
+        $num = (int) $codigo;
+        if ($num < 100 || $num > 499) return false;
+        return (int) floor($num / 100) === $traNumero;
+    }
+
     public function index()
     {
         return Inertia::render('Coordinador/Secciones', [
@@ -32,18 +54,35 @@ class SeccionController extends Controller
 
     public function store(Request $request)
     {
+        $trayecto = Trayecto::find($request->sec_id_tra);
+        $semestresValidos = $trayecto ? $this->semestresValidos((int) $trayecto->tra_id) : [];
+
         $request->validate([
             'sec_codigo'   => 'required|string|max:20|unique:seccion,sec_codigo',
             'sec_id_tra'   => 'required|exists:trayecto,tra_id',
-            'sec_semestre' => 'nullable|integer|min:1|max:8',
+            'sec_semestre' => ['nullable', 'integer', 'min:1', 'max:8',
+                Rule::in($semestresValidos ?: range(1, 8)),
+            ],
             'sec_id_tur'   => 'required|exists:turno,tur_id',
             'pse_id_usu'   => 'nullable|exists:usuario,usu_id',
         ], [
-            'sec_codigo.required' => 'El código es obligatorio.',
-            'sec_codigo.unique'   => 'Ya existe una sección con ese código.',
-            'sec_id_tra.required' => 'El trayecto es obligatorio.',
-            'sec_id_tur.required' => 'El turno es obligatorio.',
+            'sec_codigo.required'    => 'El código es obligatorio.',
+            'sec_codigo.unique'      => 'Ya existe una sección con ese código.',
+            'sec_id_tra.required'    => 'El trayecto es obligatorio.',
+            'sec_id_tur.required'    => 'El turno es obligatorio.',
+            'sec_semestre.in'        => $trayecto
+                ? 'El semestre no corresponde al trayecto seleccionado. Para ' . $trayecto->tra_nombre . ' los semestres válidos son: ' . implode(' y ', $semestresValidos) . '.'
+                : 'El semestre no es válido para el trayecto seleccionado.',
         ]);
+
+        // Validación de centena del código
+        if ($trayecto && !$this->validarCentena($request->sec_codigo, (int) $trayecto->tra_numero)) {
+            $min = $trayecto->tra_numero * 100;
+            $max = $min + 99;
+            return back()->withErrors([
+                'sec_codigo' => "El código de la sección debe estar en el rango {$min}–{$max} para {$trayecto->tra_nombre}.",
+            ])->withInput();
+        }
 
         $seccion = Seccion::create([
             'sec_codigo'         => $request->sec_codigo,
@@ -69,15 +108,32 @@ class SeccionController extends Controller
 
     public function update(Request $request, $id)
     {
-        $seccion = Seccion::findOrFail($id);
+        $seccion  = Seccion::findOrFail($id);
+        $trayecto = Trayecto::find($request->sec_id_tra);
+        $semestresValidos = $trayecto ? $this->semestresValidos((int) $trayecto->tra_id) : [];
 
         $request->validate([
             'sec_codigo'   => "required|string|max:20|unique:seccion,sec_codigo,{$id},sec_id",
             'sec_id_tra'   => 'required|exists:trayecto,tra_id',
-            'sec_semestre' => 'nullable|integer|min:1|max:8',
+            'sec_semestre' => ['nullable', 'integer', 'min:1', 'max:8',
+                Rule::in($semestresValidos ?: range(1, 8)),
+            ],
             'sec_id_tur'   => 'required|exists:turno,tur_id',
             'pse_id_usu'   => 'nullable|exists:usuario,usu_id',
+        ], [
+            'sec_semestre.in' => $trayecto
+                ? 'El semestre no corresponde al trayecto. Para ' . $trayecto->tra_nombre . ' los semestres válidos son: ' . implode(' y ', $semestresValidos) . '.'
+                : 'El semestre no es válido para el trayecto seleccionado.',
         ]);
+
+        // Validación de centena del código
+        if ($trayecto && !$this->validarCentena($request->sec_codigo, (int) $trayecto->tra_numero)) {
+            $min = $trayecto->tra_numero * 100;
+            $max = $min + 99;
+            return back()->withErrors([
+                'sec_codigo' => "El código de la sección debe estar en el rango {$min}–{$max} para {$trayecto->tra_nombre}.",
+            ])->withInput();
+        }
 
         $seccion->update([
             'sec_codigo'         => $request->sec_codigo,
