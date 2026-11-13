@@ -167,7 +167,7 @@
                                 <tr>
                                     <th class="ps-4">Punto</th>
                                     <th>Equipo</th>
-                                    <th>Fecha Límite</th>
+                                    <th>Fecha de Encuentro</th>
                                     <th>Días Aviso</th>
                                     <th>Estado</th>
                                     <th class="text-end pe-4">Acciones</th>
@@ -223,7 +223,10 @@
                                     <td>
                                         <template v-if="estaEvaluado(puc)">
                                             <span
-                                                v-if="puc.seguimientos[0].seq_cumplido"
+                                                v-if="
+                                                    puc.seguimientos[0]
+                                                        .seq_cumplido
+                                                "
                                                 class="bs ba"
                                                 >Cumplido</span
                                             >
@@ -256,7 +259,9 @@
                                         <template v-if="estaEvaluado(puc)">
                                             <button
                                                 class="btn btn-sm btn-outline-primary me-1"
-                                                @click="abrirSeguimiento(puc, true)"
+                                                @click="
+                                                    abrirSeguimiento(puc, true)
+                                                "
                                                 title="Ver evaluación registrada (Bloqueado)"
                                             >
                                                 <i class="bi bi-eye"></i>
@@ -264,16 +269,20 @@
                                             <span
                                                 class="badge bg-light text-muted border px-2 py-1"
                                                 title="Punto de control evaluado - No modificable"
-                                                style="vertical-align: middle;"
+                                                style="vertical-align: middle"
                                             >
-                                                <i class="bi bi-lock-fill text-secondary"></i>
+                                                <i
+                                                    class="bi bi-lock-fill text-secondary"
+                                                ></i>
                                             </span>
                                         </template>
                                         <!-- Si no está evaluado: registrar, reprogramar, eliminar -->
                                         <template v-else>
                                             <button
                                                 class="btn btn-sm btn-outline-success me-1"
-                                                @click="abrirSeguimiento(puc, false)"
+                                                @click="
+                                                    abrirSeguimiento(puc, false)
+                                                "
                                                 title="Registrar seguimiento"
                                             >
                                                 <i
@@ -285,7 +294,9 @@
                                                 @click="abrirReprogramar(puc)"
                                                 title="Reprogramar fecha"
                                             >
-                                                <i class="bi bi-calendar-event"></i>
+                                                <i
+                                                    class="bi bi-calendar-event"
+                                                ></i>
                                             </button>
                                             <button
                                                 class="btn btn-sm btn-outline-danger"
@@ -320,13 +331,17 @@
                     <form @submit.prevent="guardar">
                         <div class="modal-body">
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Sección</label>
+                                <label class="form-label fw-semibold"
+                                    >Sección</label
+                                >
                                 <select
                                     v-model="seccionSeleccionadaModal"
                                     class="form-select form-select-sm"
                                     @change="onSeccionModalChange"
                                 >
-                                    <option value="">Todas las secciones...</option>
+                                    <option value="">
+                                        Todas las secciones...
+                                    </option>
                                     <option
                                         v-for="sec in secciones"
                                         :key="sec.sec_id"
@@ -377,17 +392,36 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold"
-                                        >Semana Oficial</label
+                                        >Semana de Corte / Encuentro</label
                                     >
-                                    <select v-model="form.puc_semana" class="form-select">
-                                        <option :value="6">Semana 6 (I Corte)</option>
-                                        <option :value="10">Semana 10 (II Corte)</option>
-                                        <option :value="14">Semana 14 (III Corte)</option>
-                                    </select>
+                                    <div class="input-group">
+                                        <span
+                                            class="input-group-text"
+                                            style="
+                                                background: var(--bg-card);
+                                                color: var(--text-muted);
+                                            "
+                                            >Semana</span
+                                        >
+                                        <input
+                                            v-model.number="form.puc_semana"
+                                            type="number"
+                                            min="1"
+                                            max="24"
+                                            class="form-control"
+                                            placeholder="Ej: 6"
+                                        />
+                                    </div>
+                                    <small
+                                        class="text-muted"
+                                        style="font-size: 0.72rem"
+                                        >Sugerido: 6 (Corte 1), 10 (Corte 2), 14
+                                        (Corte 3)</small
+                                    >
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label fw-semibold"
-                                        >Fecha Límite
+                                        >Fecha de Encuentro
                                         <span class="text-danger"
                                             >*</span
                                         ></label
@@ -470,7 +504,11 @@
                 <div class="modal-content border-0 shadow-lg">
                     <div class="mh">
                         <h5>
-                            {{ modoSoloLecturaSeg ? 'Evaluación del Punto — ' : 'Registrar Seguimiento — ' }}
+                            {{
+                                modoSoloLecturaSeg
+                                    ? "Evaluación del Punto — "
+                                    : "Registrar Seguimiento — "
+                            }}
                             {{ puntoActual?.puc_nombre }}
                         </h5>
                         <button
@@ -482,13 +520,31 @@
                     </div>
                     <form @submit.prevent="guardarSeguimiento">
                         <div class="modal-body">
-                            <div v-if="modoSoloLecturaSeg" class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-3">
-                                <i class="bi bi-lock-fill fs-5 text-secondary"></i>
+                            <div
+                                v-if="modoSoloLecturaSeg"
+                                class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-3"
+                            >
+                                <i
+                                    class="bi bi-lock-fill fs-5 text-secondary"
+                                ></i>
                                 <div>
-                                    <strong>Evaluación Registrada:</strong> Este punto de control ya fue evaluado como
-                                    <span class="badge" :class="formSeg.seq_cumplido ? 'bg-success' : 'bg-danger'">
-                                        {{ formSeg.seq_cumplido ? 'Cumplido' : 'No cumplido' }}
-                                    </span>. No es posible modificarlo ni volver a subir el resultado.
+                                    <strong>Evaluación Registrada:</strong> Este
+                                    punto de control ya fue evaluado como
+                                    <span
+                                        class="badge"
+                                        :class="
+                                            formSeg.seq_cumplido
+                                                ? 'bg-success'
+                                                : 'bg-danger'
+                                        "
+                                    >
+                                        {{
+                                            formSeg.seq_cumplido
+                                                ? "Cumplido"
+                                                : "No cumplido"
+                                        }} </span
+                                    >. No es posible modificarlo ni volver a
+                                    subir el resultado.
                                 </div>
                             </div>
                             <div
@@ -545,26 +601,74 @@
                             </div>
 
                             <!-- Búsqueda / Verificación encadenada de observaciones previas -->
-                            <div v-if="puntoActual?.punto_previo_observaciones" class="alert alert-warning py-2 px-3 mb-3 small border-warning">
-                                <div class="fw-bold text-dark d-flex align-items-center gap-1 mb-1">
-                                    <i class="bi bi-clock-history text-warning fs-6"></i>
-                                    <span>Observaciones del Punto de Control Previo ({{ puntoActual.punto_previo_nombre }}):</span>
+                            <div
+                                v-if="puntoActual?.punto_previo_observaciones"
+                                class="alert alert-warning py-2 px-3 mb-3 small border-warning"
+                            >
+                                <div
+                                    class="fw-bold text-dark d-flex align-items-center gap-1 mb-1"
+                                >
+                                    <i
+                                        class="bi bi-clock-history text-warning fs-6"
+                                    ></i>
+                                    <span
+                                        >Observaciones del Punto de Control
+                                        Previo ({{
+                                            puntoActual.punto_previo_nombre
+                                        }}):</span
+                                    >
                                 </div>
-                                <div class="p-2 rounded bg-white text-dark border mb-2" style="white-space: pre-wrap;">
+                                <div
+                                    class="p-2 rounded bg-white text-dark border mb-2"
+                                    style="white-space: pre-wrap"
+                                >
                                     {{ puntoActual.punto_previo_observaciones }}
                                 </div>
-                                <label class="form-label fw-bold mb-1">¿El equipo cumplió y subsanó las observaciones anteriores?</label>
+                                <label class="form-label fw-bold mb-1"
+                                    >¿El equipo cumplió y subsanó las
+                                    observaciones anteriores?</label
+                                >
                                 <div class="d-flex gap-3 mb-2">
                                     <div class="form-check">
-                                        <input type="radio" class="form-check-input" v-model="formSeg.seq_cumplio_previo" :value="true" :disabled="modoSoloLecturaSeg" id="cumplioPrevSi" />
-                                        <label class="form-check-label fw-semibold text-success" for="cumplioPrevSi">Sí, cumplió</label>
+                                        <input
+                                            type="radio"
+                                            class="form-check-input"
+                                            v-model="formSeg.seq_cumplio_previo"
+                                            :value="true"
+                                            :disabled="modoSoloLecturaSeg"
+                                            id="cumplioPrevSi"
+                                        />
+                                        <label
+                                            class="form-check-label fw-semibold text-success"
+                                            for="cumplioPrevSi"
+                                            >Sí, cumplió</label
+                                        >
                                     </div>
                                     <div class="form-check">
-                                        <input type="radio" class="form-check-input" v-model="formSeg.seq_cumplio_previo" :value="false" :disabled="modoSoloLecturaSeg" id="cumplioPrevNo" />
-                                        <label class="form-check-label fw-semibold text-danger" for="cumplioPrevNo">No cumplió</label>
+                                        <input
+                                            type="radio"
+                                            class="form-check-input"
+                                            v-model="formSeg.seq_cumplio_previo"
+                                            :value="false"
+                                            :disabled="modoSoloLecturaSeg"
+                                            id="cumplioPrevNo"
+                                        />
+                                        <label
+                                            class="form-check-label fw-semibold text-danger"
+                                            for="cumplioPrevNo"
+                                            >No cumplió</label
+                                        >
                                     </div>
                                 </div>
-                                <input type="text" v-model="formSeg.seq_obs_previas_verificacion" :disabled="modoSoloLecturaSeg" class="form-control form-control-sm bg-white" placeholder="Detalle de verificación de las observaciones anteriores..." />
+                                <input
+                                    type="text"
+                                    v-model="
+                                        formSeg.seq_obs_previas_verificacion
+                                    "
+                                    :disabled="modoSoloLecturaSeg"
+                                    class="form-control form-control-sm bg-white"
+                                    placeholder="Detalle de verificación de las observaciones anteriores..."
+                                />
                             </div>
 
                             <div class="mb-3">
@@ -618,7 +722,8 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
-                                    >Control Individual de Asistencia y Desempeño</label
+                                    >Control Individual de Asistencia y
+                                    Desempeño</label
                                 >
                                 <div
                                     v-if="
@@ -634,46 +739,97 @@
                                         ?.integrantes"
                                     :key="int.ein_id"
                                     class="p-2 mb-2 rounded border"
-                                    style="border-color: var(--border) !important; background: var(--bg-body);"
+                                    style="
+                                        border-color: var(--border) !important;
+                                        background: var(--bg-body);
+                                    "
                                 >
-                                    <div class="d-flex align-items-center justify-content-between">
+                                    <div
+                                        class="d-flex align-items-center justify-content-between"
+                                    >
                                         <div>
-                                            <strong style="font-size: 0.92rem;">{{ int.usuario?.usu_primer_nombre }} {{ int.usuario?.usu_primer_apellido }}</strong>
-                                            <span class="badge bg-light text-dark border ms-2 small">C.I. {{ int.usuario?.usu_cedula }}</span>
+                                            <strong style="font-size: 0.92rem"
+                                                >{{
+                                                    int.usuario
+                                                        ?.usu_primer_nombre
+                                                }}
+                                                {{
+                                                    int.usuario
+                                                        ?.usu_primer_apellido
+                                                }}</strong
+                                            >
+                                            <span
+                                                class="badge bg-light text-dark border ms-2 small"
+                                                >C.I.
+                                                {{
+                                                    int.usuario?.usu_cedula
+                                                }}</span
+                                            >
                                         </div>
-                                        <div class="form-check form-switch mb-0">
+                                        <div
+                                            class="form-check form-switch mb-0"
+                                        >
                                             <input
                                                 type="checkbox"
                                                 class="form-check-input"
                                                 :id="'asist_' + int.ein_id"
                                                 :disabled="modoSoloLecturaSeg"
-                                                v-model="formSeg.asistencias[int.ein_id_usu].asistio"
+                                                v-model="
+                                                    formSeg.asistencias[
+                                                        int.ein_id_usu
+                                                    ].asistio
+                                                "
                                             />
                                             <label
                                                 class="form-check-label small fw-bold"
                                                 :for="'asist_' + int.ein_id"
                                             >
-                                                {{ formSeg.asistencias[int.ein_id_usu]?.asistio ? 'Asistió' : 'Inasistencia' }}
+                                                {{
+                                                    formSeg.asistencias[
+                                                        int.ein_id_usu
+                                                    ]?.asistio
+                                                        ? "Asistió"
+                                                        : "Inasistencia"
+                                                }}
                                             </label>
                                         </div>
                                     </div>
                                     <!-- Si falta, justificación -->
-                                    <div v-if="!formSeg.asistencias[int.ein_id_usu]?.asistio" class="mt-2 p-2 rounded bg-danger bg-opacity-10 border border-danger-subtle">
-                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                    <div
+                                        v-if="
+                                            !formSeg.asistencias[int.ein_id_usu]
+                                                ?.asistio
+                                        "
+                                        class="mt-2 p-2 rounded bg-danger bg-opacity-10 border border-danger-subtle"
+                                    >
+                                        <div
+                                            class="d-flex align-items-center gap-2 mb-1"
+                                        >
                                             <input
                                                 type="checkbox"
                                                 class="form-check-input"
                                                 :id="'just_' + int.ein_id"
                                                 :disabled="modoSoloLecturaSeg"
-                                                v-model="formSeg.asistencias[int.ein_id_usu].justificado"
+                                                v-model="
+                                                    formSeg.asistencias[
+                                                        int.ein_id_usu
+                                                    ].justificado
+                                                "
                                             />
-                                            <label class="form-check-label small fw-bold text-danger" :for="'just_' + int.ein_id">
+                                            <label
+                                                class="form-check-label small fw-bold text-danger"
+                                                :for="'just_' + int.ein_id"
+                                            >
                                                 ¿Presentó Justificativo?
                                             </label>
                                         </div>
                                         <input
                                             type="text"
-                                            v-model="formSeg.asistencias[int.ein_id_usu].justificativo"
+                                            v-model="
+                                                formSeg.asistencias[
+                                                    int.ein_id_usu
+                                                ].justificativo
+                                            "
                                             :disabled="modoSoloLecturaSeg"
                                             class="form-control form-control-sm"
                                             placeholder="Motivo o constancia de la inasistencia..."
@@ -683,7 +839,11 @@
                                     <div class="mt-2">
                                         <input
                                             type="text"
-                                            v-model="formSeg.asistencias[int.ein_id_usu].observacion"
+                                            v-model="
+                                                formSeg.asistencias[
+                                                    int.ein_id_usu
+                                                ].observacion
+                                            "
                                             :disabled="modoSoloLecturaSeg"
                                             class="form-control form-control-sm"
                                             placeholder="Observación individual (aporte destacado, dificultades, o falta)..."
@@ -698,7 +858,7 @@
                                 class="btn btn-secondary"
                                 data-bs-dismiss="modal"
                             >
-                                {{ modoSoloLecturaSeg ? 'Cerrar' : 'Cancelar' }}
+                                {{ modoSoloLecturaSeg ? "Cerrar" : "Cancelar" }}
                             </button>
                             <button
                                 v-if="!modoSoloLecturaSeg"
@@ -851,7 +1011,9 @@ const fechaManana = computed(() => {
 
 const onSeccionModalChange = () => {
     if (seccionSeleccionadaModal.value && form.value.puc_id_equ) {
-        const eq = props.equipos?.find((e) => e.equ_id == form.value.puc_id_equ);
+        const eq = props.equipos?.find(
+            (e) => e.equ_id == form.value.puc_id_equ,
+        );
         if (eq && eq.equ_id_sec != seccionSeleccionadaModal.value) {
             form.value.puc_id_equ = "";
         }
@@ -861,7 +1023,9 @@ const onSeccionModalChange = () => {
 const equiposModalFiltrados = computed(() => {
     let list = props.equipos || [];
     if (seccionSeleccionadaModal.value) {
-        list = list.filter((e) => e.equ_id_sec == seccionSeleccionadaModal.value);
+        list = list.filter(
+            (e) => e.equ_id_sec == seccionSeleccionadaModal.value,
+        );
     }
     return list;
 });
@@ -934,7 +1098,12 @@ const guardar = () => {
 const modoSoloLecturaSeg = ref(false);
 const estaEvaluado = (puc) => {
     const seg = puc?.seguimientos?.[0];
-    return seg !== undefined && seg !== null && seg.seq_cumplido !== null && seg.seq_cumplido !== undefined;
+    return (
+        seg !== undefined &&
+        seg !== null &&
+        seg.seq_cumplido !== null &&
+        seg.seq_cumplido !== undefined
+    );
 };
 
 const abrirSeguimiento = (puc, soloLectura = false) => {
@@ -969,10 +1138,12 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
                 ? Boolean(prevSeg.seq_cumplido)
                 : true,
         seq_cumplio_previo:
-            prevSeg?.seq_cumplio_previo !== undefined && prevSeg?.seq_cumplio_previo !== null
+            prevSeg?.seq_cumplio_previo !== undefined &&
+            prevSeg?.seq_cumplio_previo !== null
                 ? Boolean(prevSeg.seq_cumplio_previo)
                 : true,
-        seq_obs_previas_verificacion: prevSeg?.seq_obs_previas_verificacion || "",
+        seq_obs_previas_verificacion:
+            prevSeg?.seq_obs_previas_verificacion || "",
         seq_observaciones: prevSeg?.seq_observaciones || "",
         asistencias: initialAsist,
     };

@@ -326,7 +326,11 @@
                                             class="fw-bold"
                                             style="color: var(--rojo)"
                                         >
-                                            {{ codigoLimpio(pco.equipo?.equ_codigo) }}
+                                            {{
+                                                codigoLimpio(
+                                                    pco.equipo?.equ_codigo,
+                                                )
+                                            }}
                                         </div>
                                         <div
                                             style="
@@ -612,6 +616,140 @@
                                         >
                                     </div>
                                 </div>
+
+                                <!-- Beneficiarios (Máximo 10.000 por tipo) -->
+                                <div class="col-12 mt-3">
+                                    <div
+                                        class="d-flex justify-content-between align-items-center mb-2"
+                                    >
+                                        <label
+                                            class="form-label fw-semibold m-0"
+                                        >
+                                            Beneficiarios del Proyecto
+                                            <small class="text-muted fw-normal"
+                                                >(Límite máx. 10.000 por
+                                                tipo)</small
+                                            >
+                                        </label>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-danger rounded-pill"
+                                            @click="agregarFilaBeneficiario"
+                                        >
+                                            <i
+                                                class="bi bi-plus-circle me-1"
+                                            ></i
+                                            >Añadir Beneficiario
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        v-if="errorBeneficiariosAlerta"
+                                        class="alert alert-danger py-2 px-3 small mb-2 d-flex align-items-center"
+                                    >
+                                        <i
+                                            class="bi bi-exclamation-triangle-fill me-2 fs-6"
+                                        ></i>
+                                        <span>{{
+                                            errorBeneficiariosAlerta
+                                        }}</span>
+                                    </div>
+
+                                    <div
+                                        v-if="form.beneficiarios.length === 0"
+                                        class="p-2 border rounded text-center small text-muted"
+                                        style="background: var(--bg-th)"
+                                    >
+                                        No hay beneficiarios agregados. Haz clic
+                                        en "Añadir Beneficiario" para registrar
+                                        cantidades (máx. 10.000).
+                                    </div>
+
+                                    <div
+                                        v-for="(ben, idx) in form.beneficiarios"
+                                        :key="idx"
+                                        class="row g-2 mb-2 align-items-center"
+                                    >
+                                        <div class="col-md-7">
+                                            <select
+                                                v-model="ben.tbe_id"
+                                                class="form-select form-select-sm"
+                                                required
+                                            >
+                                                <option value="">
+                                                    Selecciona tipo de
+                                                    beneficiario...
+                                                </option>
+                                                <option
+                                                    v-for="tb in beneficiarios"
+                                                    :key="tb.tbe_id"
+                                                    :value="tb.tbe_id"
+                                                >
+                                                    {{ tb.tbe_nombre }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div
+                                                class="input-group input-group-sm"
+                                            >
+                                                <span class="input-group-text"
+                                                    >Cant.</span
+                                                >
+                                                <input
+                                                    v-model.number="
+                                                        ben.cantidad
+                                                    "
+                                                    type="number"
+                                                    min="1"
+                                                    max="10000"
+                                                    class="form-control form-control-sm"
+                                                    :class="{
+                                                        'is-invalid':
+                                                            ben.cantidad >
+                                                                10000 ||
+                                                            ben.cantidad < 1,
+                                                    }"
+                                                    placeholder="1 a 10000"
+                                                    required
+                                                    @keydown="
+                                                        bloquearExcesoBeneficiarios(
+                                                            $event,
+                                                            ben,
+                                                        )
+                                                    "
+                                                    @input="
+                                                        validarCantidadBeneficiario(
+                                                            ben,
+                                                        )
+                                                    "
+                                                />
+                                            </div>
+                                            <div
+                                                v-if="ben.cantidad > 10000"
+                                                class="text-danger small mt-1 fw-bold"
+                                                style="font-size: 0.72rem"
+                                            >
+                                                ⚠️ Límite excedido: El tope
+                                                máximo es 10.000 beneficiarios.
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1 text-end">
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-danger p-1"
+                                                title="Eliminar fila"
+                                                @click="
+                                                    eliminarFilaBeneficiario(
+                                                        idx,
+                                                    )
+                                                "
+                                            >
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer border-0">
@@ -638,8 +776,6 @@
                 </div>
             </div>
         </div>
-
-
 
         <!-- Modal Desactivar -->
         <div class="modal fade" id="mDesact" tabindex="-1">
@@ -796,7 +932,99 @@ const abrirModal = () => {
     modal = modal || new Modal(document.getElementById("mProy"));
     modal.show();
 };
+
+const agregarFilaBeneficiario = () => {
+    form.value.beneficiarios.push({ tbe_id: "", cantidad: 1 });
+};
+
+const eliminarFilaBeneficiario = (idx) => {
+    form.value.beneficiarios.splice(idx, 1);
+};
+
+const errorBeneficiariosAlerta = ref("");
+
+const bloquearExcesoBeneficiarios = (event, ben) => {
+    // Teclas permitidas: Backspace, Delete, Tab, Escape, Enter, Flechas
+    const permitidas = [
+        "Backspace",
+        "Delete",
+        "Tab",
+        "Escape",
+        "Enter",
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown",
+    ];
+    if (permitidas.includes(event.key) || event.ctrlKey || event.metaKey) {
+        return;
+    }
+    // Si no es un dígito, bloquear
+    if (!/^\d$/.test(event.key)) {
+        event.preventDefault();
+        return;
+    }
+    const valorFuturo = parseInt(`${ben.cantidad || ""}${event.key}`, 10);
+    if (valorFuturo > 10000) {
+        event.preventDefault();
+        ben.cantidad = 10000;
+        errorBeneficiariosAlerta.value =
+            "Has alcanzado el tope máximo de 10.000 beneficiarios.";
+        setTimeout(() => {
+            errorBeneficiariosAlerta.value = "";
+        }, 3500);
+    }
+};
+
+const validarCantidadBeneficiario = (ben) => {
+    if (ben.cantidad > 10000) {
+        ben.cantidad = 10000;
+        errorBeneficiariosAlerta.value =
+            "No es posible ingresar más de 10.000 beneficiarios.";
+        setTimeout(() => {
+            errorBeneficiariosAlerta.value = "";
+        }, 3500);
+    } else if (
+        ben.cantidad !== null &&
+        ben.cantidad !== undefined &&
+        ben.cantidad < 1
+    ) {
+        ben.cantidad = 1;
+    }
+};
+
+// Observar profundamente el arreglo de beneficiarios
+watch(
+    () => form.value.beneficiarios,
+    (nuevos) => {
+        nuevos.forEach((b) => {
+            if (b.cantidad > 10000) {
+                b.cantidad = 10000;
+            }
+        });
+    },
+    { deep: true },
+);
+
 const guardar = () => {
+    // Validar que ningún beneficiario supere 10000 antes del envío
+    for (const ben of form.value.beneficiarios) {
+        if (!ben.tbe_id) {
+            alert("Por favor selecciona el tipo de beneficiario en cada fila.");
+            return;
+        }
+        if (ben.cantidad > 10000) {
+            alert(
+                "La cantidad de beneficiarios no puede exceder los 10.000 por tipo.",
+            );
+            ben.cantidad = 10000;
+            return;
+        }
+        if (!ben.cantidad || ben.cantidad < 1) {
+            alert("La cantidad de beneficiarios debe ser al menos 1.");
+            return;
+        }
+    }
     loading.value = true;
     router.post("/coordinador/proyectos", form.value, {
         onError: (e) => {

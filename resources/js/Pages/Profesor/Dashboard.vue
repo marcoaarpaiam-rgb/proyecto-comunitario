@@ -3,8 +3,8 @@
         :data-theme="tema"
         style="
             min-height: 100vh;
-            background: var(--clr-bg);
-            color: var(--clr-text);
+            background: var(--bg-body);
+            color: var(--text-main);
         "
     >
         <div
@@ -78,6 +78,9 @@
                         class="sb-badge"
                         >{{ stats.entregablesPendientes }}</span
                     ></Link
+                >
+                <Link href="/profesor/estudiantes/buscar" class="sb-link"
+                    ><i class="bi bi-person-badge"></i> Expediente Estudiantes</Link
                 >
                 <div style="padding: 0.75rem 1.4rem; margin-top: auto">
                     <form @submit.prevent="logout">
@@ -611,7 +614,7 @@ const props = defineProps({
 
 const page = usePage();
 const sidebarOpen = ref(false);
-const tema = ref(localStorage.getItem("prof-theme") || "light");
+const tema = ref(localStorage.getItem("prof-theme") || localStorage.getItem("coord-theme") || localStorage.getItem("modo") || "light");
 
 const iniciales = computed(() => {
     const u = page.props.auth.user;
@@ -623,6 +626,9 @@ const iniciales = computed(() => {
 const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem("prof-theme", tema.value);
+    localStorage.setItem("coord-theme", tema.value);
+    localStorage.setItem("modo", tema.value);
+    document.documentElement.setAttribute("data-bs-theme", tema.value);
 };
 
 const modalLogout = ref(null);

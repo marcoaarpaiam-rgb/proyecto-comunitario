@@ -521,6 +521,11 @@ const menuCoordinador = [
         href: "/coordinador/cartas",
     },
     {
+        label: "Expediente Estudiantes",
+        icon: "bi bi-person-badge-fill",
+        href: "/coordinador/estudiantes/buscar",
+    },
+    {
         label: "Bitácora",
         icon: "bi bi-journal-text",
         href: "/coordinador/bitacora",
@@ -552,6 +557,11 @@ const menuProfesor = [
         label: "Entregables",
         icon: "bi bi-file-earmark-check-fill",
         href: "/profesor/entregables",
+    },
+    {
+        label: "Expediente Estudiantes",
+        icon: "bi bi-person-badge-fill",
+        href: "/profesor/estudiantes/buscar",
     },
 ];
 const menuLider = [

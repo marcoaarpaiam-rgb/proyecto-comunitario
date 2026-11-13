@@ -66,15 +66,18 @@ class PuntoControlController extends Controller
         $request->validate([
             'puc_id_equ'      => 'required|exists:equipo,equ_id',
             'puc_nombre'      => 'required|string|max:150',
-            'puc_semana'      => 'nullable|integer|in:6,10,14',
+            'puc_semana'      => 'nullable|integer|min:1|max:24',
             'puc_descripcion' => 'nullable|string',
             'puc_fecha_limite'=> 'required|date|after_or_equal:today',
             'puc_dias_aviso'  => 'required|integer|min:1|max:30',
         ], [
             'puc_id_equ.required'            => 'El equipo es obligatorio.',
             'puc_nombre.required'            => 'El nombre es obligatorio.',
-            'puc_fecha_limite.required'      => 'La fecha límite es obligatoria.',
-            'puc_fecha_limite.after_or_equal'=> 'La fecha límite no puede ser anterior a la fecha de hoy.',
+            'puc_semana.integer'             => 'La semana debe ser un número entero.',
+            'puc_semana.min'                 => 'La semana debe ser mínimo 1.',
+            'puc_semana.max'                 => 'La semana no puede ser mayor a 24.',
+            'puc_fecha_limite.required'      => 'La fecha del encuentro es obligatoria.',
+            'puc_fecha_limite.after_or_equal'=> 'La fecha del encuentro no puede ser anterior a la fecha de hoy.',
         ]);
 
         $this->autorizarEquipoId($request->puc_id_equ);

@@ -643,7 +643,7 @@
                                     <thead>
                                         <tr>
                                             <th class="ps-4">Punto</th>
-                                            <th>Fecha Límite</th>
+                                            <th>Fecha de Encuentro</th>
                                             <th>Cumplido</th>
                                             <th>Observaciones</th>
                                         </tr>

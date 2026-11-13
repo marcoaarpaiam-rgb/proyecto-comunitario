@@ -167,6 +167,9 @@
                     <Link href="/coordinador/cartas" class="sb-link">
                         <i class="bi bi-file-earmark-text"></i> Cartas
                     </Link>
+                    <Link href="/coordinador/estudiantes/buscar" class="sb-link">
+                        <i class="bi bi-person-badge"></i> Expediente Estudiantes
+                    </Link>
                     <Link href="/coordinador/bitacora" class="sb-link">
                         <i class="bi bi-journal-text"></i> Bitácora
                     </Link>

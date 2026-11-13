@@ -472,22 +472,42 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Ubicación
-                                    <span class="text-danger">*</span></label
-                                >
-                                <input
-                                    v-model="form.com_ubicacion"
-                                    type="text"
-                                    class="form-control"
-                                    :class="{
-                                        'is-invalid': errores.com_ubicacion,
-                                    }"
-                                    placeholder="Ej: Sector Bolívar, Acarigua"
-                                />
+                                    <span class="text-danger">*</span>
+                                    <small class="text-muted fw-normal ms-1">(Google Maps Autocomplete)</small>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: var(--bg-card); color: var(--text-muted);">
+                                        <i class="bi bi-geo-alt-fill text-danger"></i>
+                                    </span>
+                                    <input
+                                        id="inputUbicacionGoogle"
+                                        ref="inputUbicacionRef"
+                                        v-model="form.com_ubicacion"
+                                        type="text"
+                                        class="form-control"
+                                        :class="{
+                                            'is-invalid': errores.com_ubicacion,
+                                        }"
+                                        placeholder="🔍 Escribe una dirección, sector o ciudad..."
+                                    />
+                                </div>
                                 <div
                                     v-if="errores.com_ubicacion"
-                                    class="invalid-feedback"
+                                    class="invalid-feedback d-block"
                                 >
                                     {{ errores.com_ubicacion }}
+                                </div>
+                                <div v-if="form.com_lat && form.com_lng" class="mt-2 p-2 rounded small d-flex align-items-center justify-content-between" style="background: var(--bg-th); border: 1px solid var(--border);">
+                                    <span class="text-success fw-semibold">
+                                        <i class="bi bi-check2-circle me-1"></i>Coordenadas: {{ Number(form.com_lat).toFixed(5) }}, {{ Number(form.com_lng).toFixed(5) }}
+                                    </span>
+                                    <a
+                                        :href="`https://www.google.com/maps?q=${form.com_lat},${form.com_lng}`"
+                                        target="_blank"
+                                        class="btn btn-sm btn-link text-danger p-0"
+                                    >
+                                        Ver en Google Maps <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -586,7 +606,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
@@ -611,13 +631,63 @@ const iniciales = computed(() => {
 const busqueda = ref("");
 const pagina = ref(1);
 const porPagina = 10;
-const form = ref({ com_nombre: "", com_ubicacion: "", com_id_tor: "" });
+const form = ref({ com_nombre: "", com_ubicacion: "", com_lat: null, com_lng: null, com_id_tor: "" });
 const errores = ref({});
 const loading = ref(false);
 const editando = ref(null);
 const itemAEliminar = ref(null);
 let modal = null;
 let modalConf = null;
+const inputUbicacionRef = ref(null);
+let autocompleteInstance = null;
+
+const cargarGoogleMaps = () => {
+    const apiKey = page.props.googleMapsApiKey;
+    if (!apiKey || apiKey === "TU_API_KEY_AQUI") return;
+    if (window.google && window.google.maps && window.google.maps.places) {
+        inicializarAutocomplete();
+        return;
+    }
+    if (document.getElementById("google-maps-script")) return;
+
+    const script = document.createElement("script");
+    script.id = "google-maps-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => inicializarAutocomplete();
+    document.head.appendChild(script);
+};
+
+const inicializarAutocomplete = () => {
+    if (!window.google || !window.google.maps || !window.google.maps.places) return;
+    const input = document.getElementById("inputUbicacionGoogle");
+    if (!input) return;
+
+    // Evitar reinicializar si ya existe listener
+    if (autocompleteInstance) {
+        window.google.maps.event.clearInstanceListeners(autocompleteInstance);
+    }
+
+    autocompleteInstance = new window.google.maps.places.Autocomplete(input, {
+        fields: ["formatted_address", "geometry", "name"],
+    });
+
+    autocompleteInstance.addListener("place_changed", () => {
+        const place = autocompleteInstance.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+            form.value.com_ubicacion = place.formatted_address || place.name || input.value;
+            form.value.com_lat = place.geometry.location.lat();
+            form.value.com_lng = place.geometry.location.lng();
+        } else if (input.value) {
+            form.value.com_ubicacion = input.value;
+        }
+    });
+};
+
+onMounted(() => {
+    cargarGoogleMaps();
+});
 watch(busqueda, () => {
     pagina.value = 1;
 });
@@ -652,11 +722,16 @@ const abrirModal = (com = null) => {
     form.value = {
         com_nombre: com?.com_nombre || "",
         com_ubicacion: com?.com_ubicacion || "",
+        com_lat: com?.com_lat || null,
+        com_lng: com?.com_lng || null,
         com_id_tor: com?.com_id_tor || "",
     };
     errores.value = {};
     modal = modal || new Modal(document.getElementById("mCom"));
     modal.show();
+    nextTick(() => {
+        inicializarAutocomplete();
+    });
 };
 const guardar = () => {
     loading.value = true;

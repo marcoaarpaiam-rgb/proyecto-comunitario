@@ -309,16 +309,23 @@
                     "
                 >
                     <div class="d-flex align-items-center flex-wrap gap-2">
-                        <span class="badge bg-danger fs-6">Sección {{ seccion.sec_codigo }}</span>
-                        <span class="fw-bold" style="color: var(--text-main)">{{ seccion.trayecto }}</span>
-                        <span class="badge bg-secondary">Turno {{ seccion.turno }}</span>
+                        <span class="badge bg-danger fs-6"
+                            >Sección {{ seccion.sec_codigo }}</span
+                        >
+                        <span class="fw-bold" style="color: var(--text-main)">{{
+                            seccion.trayecto
+                        }}</span>
+                        <span class="badge bg-secondary"
+                            >Turno {{ seccion.turno }}</span
+                        >
                     </div>
                     <Link
                         v-if="modoProfesor || esProfesor"
                         href="/profesor/secciones"
                         class="btn btn-sm btn-outline-danger fw-bold"
                     >
-                        <i class="bi bi-arrow-left me-1"></i>Volver a Mis Secciones
+                        <i class="bi bi-arrow-left me-1"></i>Volver a Mis
+                        Secciones
                     </Link>
                 </div>
 
@@ -463,7 +470,12 @@
                                             @click="verIntegrantes(equ)"
                                         >
                                             <i class="bi bi-people me-1"></i
-                                            >{{ (equ.integrantes || []).filter(i => i.ein_status !== false).length }}
+                                            >{{
+                                                (equ.integrantes || []).filter(
+                                                    (i) =>
+                                                        i.ein_status !== false,
+                                                ).length
+                                            }}
                                         </button>
                                     </td>
                                     <td
@@ -490,10 +502,14 @@
                                             ></a>
                                             <button
                                                 class="btn btn-sm btn-outline-warning me-1"
-                                                @click="abrirHistorialAcademico(equ)"
+                                                @click="
+                                                    abrirHistorialAcademico(equ)
+                                                "
                                                 title="Historial Académico"
                                             >
-                                                <i class="bi bi-mortarboard-fill"></i>
+                                                <i
+                                                    class="bi bi-mortarboard-fill"
+                                                ></i>
                                             </button>
                                             <a
                                                 v-if="equ.resultado_proyecto"
@@ -531,12 +547,12 @@
                                             </button>
                                             <button
                                                 class="btn btn-sm btn-outline-danger ms-1"
-                                                @click="eliminarDefinitivamente(equ)"
+                                                @click="
+                                                    eliminarDefinitivamente(equ)
+                                                "
                                                 title="Eliminar definitivamente"
                                             >
-                                                <i
-                                                    class="bi bi-trash me-1"
-                                                ></i
+                                                <i class="bi bi-trash me-1"></i
                                                 >Eliminar
                                             </button>
                                         </template>
@@ -716,51 +732,126 @@
                                         />
                                     </div>
                                     <!-- Banner informativo según sea primer equipo o segundo en adelante -->
-                                    <div class="col-12" v-if="formNuevo.equ_id_sec && esAutoCompletado">
+                                    <div
+                                        class="col-12"
+                                        v-if="
+                                            formNuevo.equ_id_sec &&
+                                            esAutoCompletado
+                                        "
+                                    >
                                         <div
                                             class="py-2 px-3 rounded small d-flex align-items-center justify-content-between"
-                                            style="background: rgba(13, 110, 253, 0.08); border-left: 3px solid #0d6efd; color: var(--text-main);"
+                                            style="
+                                                background: rgba(
+                                                    13,
+                                                    110,
+                                                    253,
+                                                    0.08
+                                                );
+                                                border-left: 3px solid #0d6efd;
+                                                color: var(--text-main);
+                                            "
                                         >
                                             <div>
-                                                <i class="bi bi-magic text-primary me-1"></i>
-                                                <strong>Datos auto-completados:</strong> Semestre ({{ formNuevo.equ_semestre }}) y Total de Equipos ({{ formNuevo.equ_total_seccion }}) configurados según el equipo previo de este trayecto. Solo debes indicar el <strong>N° de Equipo</strong>.
+                                                <i
+                                                    class="bi bi-magic text-primary me-1"
+                                                ></i>
+                                                <strong
+                                                    >Datos
+                                                    auto-completados:</strong
+                                                >
+                                                Semestre ({{
+                                                    formNuevo.equ_semestre
+                                                }}) y Total de Equipos ({{
+                                                    formNuevo.equ_total_seccion
+                                                }}) configurados según el equipo
+                                                previo de este trayecto. Solo
+                                                debes indicar el
+                                                <strong>N° de Equipo</strong>.
                                             </div>
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold text-primary ms-2 flex-shrink-0"
-                                                @click="editarParametrosManual = !editarParametrosManual"
+                                                @click="
+                                                    editarParametrosManual =
+                                                        !editarParametrosManual
+                                                "
                                             >
-                                                <i class="bi bi-pencil-square me-1"></i>{{ editarParametrosManual ? 'Bloquear' : 'Modificar' }}
+                                                <i
+                                                    class="bi bi-pencil-square me-1"
+                                                ></i
+                                                >{{
+                                                    editarParametrosManual
+                                                        ? "Bloquear"
+                                                        : "Modificar"
+                                                }}
                                             </button>
                                         </div>
                                     </div>
-                                    <div class="col-12" v-else-if="formNuevo.equ_id_sec">
+                                    <div
+                                        class="col-12"
+                                        v-else-if="formNuevo.equ_id_sec"
+                                    >
                                         <div
                                             class="py-2 px-3 rounded small"
-                                            style="background: rgba(255, 193, 7, 0.12); border-left: 3px solid #ffc107; color: var(--text-main);"
+                                            style="
+                                                background: rgba(
+                                                    255,
+                                                    193,
+                                                    7,
+                                                    0.12
+                                                );
+                                                border-left: 3px solid #ffc107;
+                                                color: var(--text-main);
+                                            "
                                         >
-                                            <i class="bi bi-flag-fill text-warning me-1"></i>
-                                            <strong>Primer equipo de este trayecto:</strong> Define el Semestre y Total de Equipos para la sección. A partir del 2do equipo, estos datos se auto-completarán solos.
+                                            <i
+                                                class="bi bi-flag-fill text-warning me-1"
+                                            ></i>
+                                            <strong
+                                                >Primer equipo de este
+                                                trayecto:</strong
+                                            >
+                                            Define el Semestre y Total de
+                                            Equipos para la sección. A partir
+                                            del 2do equipo, estos datos se
+                                            auto-completarán solos.
                                         </div>
                                     </div>
 
                                     <div class="col-md-3">
-                                        <div class="d-flex align-items-end mb-1" style="min-height: 22px;">
-                                            <label class="form-label fw-semibold small mb-0" :class="{ 'text-danger': esAutoCompletado }">
+                                        <div
+                                            class="d-flex align-items-end mb-1"
+                                            style="min-height: 22px"
+                                        >
+                                            <label
+                                                class="form-label fw-semibold small mb-0"
+                                                :class="{
+                                                    'text-danger':
+                                                        esAutoCompletado,
+                                                }"
+                                            >
                                                 N° Equipo
-                                                <span class="text-danger">*</span>
+                                                <span class="text-danger"
+                                                    >*</span
+                                                >
                                             </label>
                                         </div>
                                         <input
                                             type="number"
                                             class="form-control"
                                             :class="{
-                                                'border-danger fw-bold shadow-sm': esAutoCompletado,
-                                                'is-invalid': errores.equ_numero_grupo
+                                                'border-danger fw-bold shadow-sm':
+                                                    esAutoCompletado,
+                                                'is-invalid':
+                                                    errores.equ_numero_grupo,
                                             }"
                                             v-model="formNuevo.equ_numero_grupo"
                                             min="1"
-                                            :max="formNuevo.equ_total_seccion || 99"
+                                            :max="
+                                                formNuevo.equ_total_seccion ||
+                                                99
+                                            "
                                             @input="validarNumeroVsTotal"
                                             @keypress="
                                                 (e) =>
@@ -776,12 +867,23 @@
                                         </div>
                                     </div>
                                     <div class="col-md-2">
-                                        <div class="d-flex align-items-end justify-content-between mb-1" style="min-height: 22px;">
-                                            <label class="form-label fw-semibold small mb-0">
+                                        <div
+                                            class="d-flex align-items-end justify-content-between mb-1"
+                                            style="min-height: 22px"
+                                        >
+                                            <label
+                                                class="form-label fw-semibold small mb-0"
+                                            >
                                                 Semestre
-                                                <span class="text-danger">*</span>
+                                                <span class="text-danger"
+                                                    >*</span
+                                                >
                                             </label>
-                                            <span class="badge bg-secondary-subtle text-secondary border small" style="font-size: 0.65rem;" title="El primer número de la sección es el semestre"></span>
+                                            <span
+                                                class="badge bg-secondary-subtle text-secondary border small"
+                                                style="font-size: 0.65rem"
+                                                title="El primer número de la sección es el semestre"
+                                            ></span>
                                         </div>
                                         <input
                                             type="number"
@@ -790,10 +892,15 @@
                                             min="1"
                                             max="9"
                                             readonly
-                                            style="background: var(--bg-th) !important; cursor: not-allowed;"
+                                            style="
+                                                background: var(
+                                                    --bg-th
+                                                ) !important;
+                                                cursor: not-allowed;
+                                            "
                                             title="El semestre se define automáticamente por el primer número de la sección"
                                         />
-                                        
+
                                         <div
                                             v-if="errores.equ_semestre"
                                             class="text-danger small mt-1"
@@ -802,35 +909,72 @@
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="d-flex align-items-end justify-content-between mb-1" style="min-height: 22px;">
-                                            <label class="form-label fw-semibold small mb-0 text-truncate">
+                                        <div
+                                            class="d-flex align-items-end justify-content-between mb-1"
+                                            style="min-height: 22px"
+                                        >
+                                            <label
+                                                class="form-label fw-semibold small mb-0 text-truncate"
+                                            >
                                                 Total Equipos
-                                                <span class="text-danger">*</span>
+                                                <span class="text-danger"
+                                                    >*</span
+                                                >
                                             </label>
                                             <button
                                                 v-if="esAutoCompletado"
                                                 type="button"
                                                 class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold"
-                                                style="font-size: 0.75rem;"
-                                                @click="editarParametrosManual = !editarParametrosManual"
-                                                :title="editarParametrosManual ? 'Fijar total' : 'Modificar total de equipos de la sección'"
+                                                style="font-size: 0.75rem"
+                                                @click="
+                                                    editarParametrosManual =
+                                                        !editarParametrosManual
+                                                "
+                                                :title="
+                                                    editarParametrosManual
+                                                        ? 'Fijar total'
+                                                        : 'Modificar total de equipos de la sección'
+                                                "
                                             >
-                                                <i class="bi" :class="editarParametrosManual ? 'bi-lock-fill text-success' : 'bi-pencil-square text-primary'"></i>
-                                                {{ editarParametrosManual ? 'Fijar' : 'Modificar' }}
+                                                <i
+                                                    class="bi"
+                                                    :class="
+                                                        editarParametrosManual
+                                                            ? 'bi-lock-fill text-success'
+                                                            : 'bi-pencil-square text-primary'
+                                                    "
+                                                ></i>
+                                                {{
+                                                    editarParametrosManual
+                                                        ? "Fijar"
+                                                        : "Modificar"
+                                                }}
                                             </button>
                                         </div>
                                         <input
                                             type="number"
                                             class="form-control"
                                             :class="{
-                                                'border-primary fw-bold': editarParametrosManual,
-                                                'is-invalid': errores.equ_total_seccion
+                                                'border-primary fw-bold':
+                                                    editarParametrosManual,
+                                                'is-invalid':
+                                                    errores.equ_total_seccion,
                                             }"
-                                            v-model="formNuevo.equ_total_seccion"
+                                            v-model="
+                                                formNuevo.equ_total_seccion
+                                            "
                                             min="1"
                                             max="99"
-                                            :readonly="esAutoCompletado && !editarParametrosManual"
-                                            :style="(esAutoCompletado && !editarParametrosManual) ? 'background: var(--bg-th) !important;' : ''"
+                                            :readonly="
+                                                esAutoCompletado &&
+                                                !editarParametrosManual
+                                            "
+                                            :style="
+                                                esAutoCompletado &&
+                                                !editarParametrosManual
+                                                    ? 'background: var(--bg-th) !important;'
+                                                    : ''
+                                            "
                                             @input="onTotalSeccionInput"
                                             @keypress="
                                                 (e) =>
@@ -846,8 +990,13 @@
                                         </div>
                                     </div>
                                     <div class="col-md-4">
-                                        <div class="d-flex align-items-end mb-1" style="min-height: 22px;">
-                                            <label class="form-label fw-semibold small mb-0 text-truncate">
+                                        <div
+                                            class="d-flex align-items-end mb-1"
+                                            style="min-height: 22px"
+                                        >
+                                            <label
+                                                class="form-label fw-semibold small mb-0 text-truncate"
+                                            >
                                                 Código generado
                                             </label>
                                         </div>
@@ -870,11 +1019,44 @@
                                     <div class="col-12" v-if="totalModificado">
                                         <div
                                             class="py-2 px-3 rounded small d-flex align-items-center gap-2"
-                                            style="background: rgba(25, 135, 84, 0.08); border-left: 3px solid #198754; color: var(--text-main);"
+                                            style="
+                                                background: rgba(
+                                                    25,
+                                                    135,
+                                                    84,
+                                                    0.08
+                                                );
+                                                border-left: 3px solid #198754;
+                                                color: var(--text-main);
+                                            "
                                         >
-                                            <i class="bi bi-arrow-repeat text-success fs-6 flex-shrink-0"></i>
+                                            <i
+                                                class="bi bi-arrow-repeat text-success fs-6 flex-shrink-0"
+                                            ></i>
                                             <span>
-                                                <strong>Actualización automática de códigos:</strong> El total de la sección cambiará de <strong>{{ totalOriginalSeccion }}</strong> a <strong>{{ formNuevo.equ_total_seccion }}</strong>. Al guardar este equipo, los códigos de todos los equipos de esta sección se actualizarán automáticamente al nuevo total (ej: <strong>/{{ formNuevo.equ_total_seccion }}</strong>).
+                                                <strong
+                                                    >Actualización automática de
+                                                    códigos:</strong
+                                                >
+                                                El total de la sección cambiará
+                                                de
+                                                <strong>{{
+                                                    totalOriginalSeccion
+                                                }}</strong>
+                                                a
+                                                <strong>{{
+                                                    formNuevo.equ_total_seccion
+                                                }}</strong
+                                                >. Al guardar este equipo, los
+                                                códigos de todos los equipos de
+                                                esta sección se actualizarán
+                                                automáticamente al nuevo total
+                                                (ej:
+                                                <strong
+                                                    >/{{
+                                                        formNuevo.equ_total_seccion
+                                                    }}</strong
+                                                >).
                                             </span>
                                         </div>
                                     </div>
@@ -955,7 +1137,11 @@
                                     <i
                                         class="bi bi-star-fill text-warning me-1"
                                     ></i>
-                                    <strong>Líder de Equipo:</strong> El primer estudiante de la lista es asignado automáticamente como líder del equipo. Recibirá credenciales de acceso con su cédula.
+                                    <strong>Líder de Equipo:</strong> El primer
+                                    estudiante de la lista es asignado
+                                    automáticamente como líder del equipo.
+                                    Recibirá credenciales de acceso con su
+                                    cédula.
                                 </div>
                                 <!-- Encabezado de columnas ANTES del v-for -->
                                 <div
@@ -963,7 +1149,9 @@
                                     style="color: var(--text-muted)"
                                 >
                                     <div class="col-8">Estudiante</div>
-                                    <div class="col-3 text-center">Rol en el Equipo</div>
+                                    <div class="col-3 text-center">
+                                        Rol en el Equipo
+                                    </div>
                                     <div class="col-1 text-center"></div>
                                 </div>
                                 <div
@@ -974,27 +1162,46 @@
                                     <div class="col-8">
                                         <SelectBuscableEstudiante
                                             v-model="item.usu_id"
-                                            :estudiantes="estudiantesDisponibles(item.usu_id)"
-                                            :todos-estudiantes="props.estudiantes"
+                                            :estudiantes="
+                                                estudiantesDisponibles(
+                                                    item.usu_id,
+                                                )
+                                            "
+                                            :todos-estudiantes="
+                                                props.estudiantes
+                                            "
                                             :is-lider="idx === 0"
                                             :disabled="!formNuevo.equ_id_sec"
-                                            :placeholder="!formNuevo.equ_id_sec ? 'Seleccione primero una sección...' : (idx === 0 ? 'Escribe para buscar Líder...' : 'Escribe para buscar estudiante...')"
+                                            :placeholder="
+                                                !formNuevo.equ_id_sec
+                                                    ? 'Seleccione primero una sección...'
+                                                    : idx === 0
+                                                      ? 'Escribe para buscar Líder...'
+                                                      : 'Escribe para buscar estudiante...'
+                                            "
                                         />
                                     </div>
                                     <div class="col-3 text-center">
                                         <span
                                             v-if="idx === 0"
                                             class="badge bg-danger py-2 px-2 shadow-sm d-inline-flex align-items-center justify-content-center w-100"
-                                            style="font-size: 0.78rem; letter-spacing: 0.2px;"
+                                            style="
+                                                font-size: 0.78rem;
+                                                letter-spacing: 0.2px;
+                                            "
                                         >
-                                            <i class="bi bi-star-fill text-warning me-1"></i> Líder de Equipo
+                                            <i
+                                                class="bi bi-star-fill text-warning me-1"
+                                            ></i>
+                                            Líder de Equipo
                                         </span>
                                         <span
                                             v-else
                                             class="badge bg-secondary py-2 px-2 text-white d-inline-flex align-items-center justify-content-center w-100"
-                                            style="font-size: 0.78rem;"
+                                            style="font-size: 0.78rem"
                                         >
-                                            <i class="bi bi-person me-1"></i> Integrante
+                                            <i class="bi bi-person me-1"></i>
+                                            Integrante
                                         </span>
                                     </div>
                                     <div class="col-1 text-center">
@@ -1074,10 +1281,17 @@
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label fw-semibold">Comunidad</label>
-                                        <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
+                                        <label class="form-label fw-semibold"
+                                            >Comunidad</label
+                                        >
+                                        <div
+                                            class="d-flex gap-2 align-items-center w-100"
+                                            style="min-width: 0"
+                                        >
                                             <SelectBuscableComunidad
-                                                v-model="formProyecto.pco_id_com"
+                                                v-model="
+                                                    formProyecto.pco_id_com
+                                                "
                                                 :comunidades="comunidades"
                                                 size="sm"
                                                 placeholder="Escribe para buscar comunidad..."
@@ -1085,21 +1299,35 @@
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
-                                                style="white-space: nowrap;"
-                                                @click="abrirModalNuevaComunidad('crear')"
+                                                style="white-space: nowrap"
+                                                @click="
+                                                    abrirModalNuevaComunidad(
+                                                        'crear',
+                                                    )
+                                                "
                                                 title="Registrar nueva comunidad"
                                             >
-                                                <i class="bi bi-plus-lg me-1"></i>Nueva
+                                                <i
+                                                    class="bi bi-plus-lg me-1"
+                                                ></i
+                                                >Nueva
                                             </button>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label fw-semibold">Tipo de Proyecto</label>
-                                        <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
+                                        <label class="form-label fw-semibold"
+                                            >Tipo de Proyecto</label
+                                        >
+                                        <div
+                                            class="d-flex gap-2 align-items-center w-100"
+                                            style="min-width: 0"
+                                        >
                                             <select
                                                 class="form-select form-select-sm flex-grow-1"
-                                                style="min-width: 0;"
-                                                v-model="formProyecto.pco_id_tpr"
+                                                style="min-width: 0"
+                                                v-model="
+                                                    formProyecto.pco_id_tpr
+                                                "
                                             >
                                                 <option value="">
                                                     Seleccionar tipo...
@@ -1115,11 +1343,16 @@
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
-                                                style="white-space: nowrap;"
-                                                @click="abrirModalNuevoTipo('crear')"
+                                                style="white-space: nowrap"
+                                                @click="
+                                                    abrirModalNuevoTipo('crear')
+                                                "
                                                 title="Registrar nuevo tipo de proyecto"
                                             >
-                                                <i class="bi bi-plus-lg me-1"></i>Nuevo
+                                                <i
+                                                    class="bi bi-plus-lg me-1"
+                                                ></i
+                                                >Nuevo
                                             </button>
                                         </div>
                                     </div>
@@ -1144,32 +1377,74 @@
                                         </select>
                                     </div>
                                     <!-- Buscador de proyectos anteriores si la modalidad lo requiere -->
-                                    <div v-if="requiereProyectoPrevio" class="col-12">
+                                    <div
+                                        v-if="requiereProyectoPrevio"
+                                        class="col-12"
+                                    >
                                         <div
                                             class="p-2 rounded border"
                                             style="
-                                                background: rgba(13, 110, 253, 0.05);
-                                                border-color: rgba(13, 110, 253, 0.2) !important;
+                                                background: rgba(
+                                                    13,
+                                                    110,
+                                                    253,
+                                                    0.05
+                                                );
+                                                border-color: rgba(
+                                                    13,
+                                                    110,
+                                                    253,
+                                                    0.2
+                                                ) !important;
                                             "
                                         >
-                                            <label class="form-label fw-semibold small mb-1">
-                                                <i class="bi bi-search me-1 text-primary"></i>Proyecto previo en esta comunidad:
+                                            <label
+                                                class="form-label fw-semibold small mb-1"
+                                            >
+                                                <i
+                                                    class="bi bi-search me-1 text-primary"
+                                                ></i
+                                                >Proyecto previo en esta
+                                                comunidad:
                                             </label>
                                             <select
-                                                v-model="formProyecto.pco_id_pco_previo"
+                                                v-model="
+                                                    formProyecto.pco_id_pco_previo
+                                                "
                                                 class="form-select form-select-sm"
                                             >
-                                                <option value="">Seleccionar proyecto anterior...</option>
+                                                <option value="">
+                                                    Seleccionar proyecto
+                                                    anterior...
+                                                </option>
                                                 <option
                                                     v-for="prev in proyectosPreviosComunidad"
                                                     :key="prev.pco_id"
                                                     :value="prev.pco_id"
                                                 >
-                                                    {{ prev.equipo?.equ_titulo || prev.pco_resumen || ('Proyecto #' + prev.pco_id) }} ({{ prev.equipo?.equ_codigo || 'Sin código' }})
+                                                    {{
+                                                        prev.equipo
+                                                            ?.equ_titulo ||
+                                                        prev.pco_resumen ||
+                                                        "Proyecto #" +
+                                                            prev.pco_id
+                                                    }}
+                                                    ({{
+                                                        prev.equipo
+                                                            ?.equ_codigo ||
+                                                        "Sin código"
+                                                    }})
                                                 </option>
                                             </select>
-                                            <small v-if="proyectosPreviosComunidad.length === 0" class="text-muted d-block mt-1">
-                                                No se encontraron proyectos previos en esta comunidad.
+                                            <small
+                                                v-if="
+                                                    proyectosPreviosComunidad.length ===
+                                                    0
+                                                "
+                                                class="text-muted d-block mt-1"
+                                            >
+                                                No se encontraron proyectos
+                                                previos en esta comunidad.
                                             </small>
                                         </div>
                                     </div>
@@ -1312,7 +1587,8 @@
                                         v-if="loading"
                                         class="spinner-border spinner-border-sm me-1"
                                     ></span>
-                                    <i v-else class="bi bi-check-lg me-1"></i>Guardar sin Comunidad
+                                    <i v-else class="bi bi-check-lg me-1"></i
+                                    >Guardar sin Comunidad
                                 </button>
                                 <button
                                     v-if="paso === 1"
@@ -1413,14 +1689,23 @@
                             >
                                 <i class="bi bi-folder me-1 text-danger"></i>
                                 Proyecto Comunitario
-                                <span v-if="!equipoSeleccionado?.proyecto_comunidad" class="badge bg-secondary ms-1">Sin asignar</span>
+                                <span
+                                    v-if="
+                                        !equipoSeleccionado?.proyecto_comunidad
+                                    "
+                                    class="badge bg-secondary ms-1"
+                                    >Sin asignar</span
+                                >
                             </p>
 
                             <div class="mb-3">
                                 <label class="form-label small fw-bold"
                                     >Comunidad</label
                                 >
-                                <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
+                                <div
+                                    class="d-flex gap-2 align-items-center w-100"
+                                    style="min-width: 0"
+                                >
                                     <SelectBuscableComunidad
                                         v-model="formEditar.pco_id_com"
                                         :comunidades="comunidades"
@@ -1430,8 +1715,10 @@
                                     <button
                                         type="button"
                                         class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
-                                        style="white-space: nowrap;"
-                                        @click="abrirModalNuevaComunidad('editar')"
+                                        style="white-space: nowrap"
+                                        @click="
+                                            abrirModalNuevaComunidad('editar')
+                                        "
                                         title="Registrar nueva comunidad"
                                     >
                                         <i class="bi bi-plus-lg me-1"></i>Nueva
@@ -1443,10 +1730,13 @@
                                 <label class="form-label small fw-bold"
                                     >Tipo de Proyecto</label
                                 >
-                                <div class="d-flex gap-2 align-items-center w-100" style="min-width: 0;">
+                                <div
+                                    class="d-flex gap-2 align-items-center w-100"
+                                    style="min-width: 0"
+                                >
                                     <select
                                         class="form-select form-select-sm flex-grow-1"
-                                        style="min-width: 0;"
+                                        style="min-width: 0"
                                         v-model="formEditar.pco_id_tpr"
                                     >
                                         <option value="">
@@ -1492,32 +1782,62 @@
                                 </select>
                             </div>
 
-                            <div v-if="requiereProyectoPrevioEditar" class="mb-2">
+                            <div
+                                v-if="requiereProyectoPrevioEditar"
+                                class="mb-2"
+                            >
                                 <div
                                     class="p-2 rounded border"
                                     style="
                                         background: rgba(13, 110, 253, 0.05);
-                                        border-color: rgba(13, 110, 253, 0.2) !important;
+                                        border-color: rgba(
+                                            13,
+                                            110,
+                                            253,
+                                            0.2
+                                        ) !important;
                                     "
                                 >
-                                    <label class="form-label fw-semibold small mb-1">
-                                        <i class="bi bi-search me-1 text-primary"></i>Proyecto previo en esta comunidad:
+                                    <label
+                                        class="form-label fw-semibold small mb-1"
+                                    >
+                                        <i
+                                            class="bi bi-search me-1 text-primary"
+                                        ></i
+                                        >Proyecto previo en esta comunidad:
                                     </label>
                                     <select
                                         v-model="formEditar.pco_id_pco_previo"
                                         class="form-select form-select-sm"
                                     >
-                                        <option value="">Seleccionar proyecto anterior...</option>
+                                        <option value="">
+                                            Seleccionar proyecto anterior...
+                                        </option>
                                         <option
                                             v-for="prev in proyectosPreviosComunidadEditar"
                                             :key="prev.pco_id"
                                             :value="prev.pco_id"
                                         >
-                                            {{ prev.equipo?.equ_titulo || prev.pco_resumen || ('Proyecto #' + prev.pco_id) }} ({{ prev.equipo?.equ_codigo || 'Sin código' }})
+                                            {{
+                                                prev.equipo?.equ_titulo ||
+                                                prev.pco_resumen ||
+                                                "Proyecto #" + prev.pco_id
+                                            }}
+                                            ({{
+                                                prev.equipo?.equ_codigo ||
+                                                "Sin código"
+                                            }})
                                         </option>
                                     </select>
-                                    <small v-if="proyectosPreviosComunidadEditar.length === 0" class="text-muted d-block mt-1">
-                                        No se encontraron proyectos previos en esta comunidad.
+                                    <small
+                                        v-if="
+                                            proyectosPreviosComunidadEditar.length ===
+                                            0
+                                        "
+                                        class="text-muted d-block mt-1"
+                                    >
+                                        No se encontraron proyectos previos en
+                                        esta comunidad.
                                     </small>
                                 </div>
                             </div>
@@ -1529,9 +1849,7 @@
                                 <input
                                     type="date"
                                     class="form-control form-control-sm"
-                                    v-model="
-                                        formEditar.pco_fecha_limite
-                                    "
+                                    v-model="formEditar.pco_fecha_limite"
                                     :min="fechaMinima"
                                     :max="fechaMaxima"
                                 />
@@ -1663,7 +1981,12 @@
                                     </button>
                                 </div>
                             </div>
-                            <ul v-if="integrantesActivosSeleccionados.length > 0" class="list-group list-group-flush">
+                            <ul
+                                v-if="
+                                    integrantesActivosSeleccionados.length > 0
+                                "
+                                class="list-group list-group-flush"
+                            >
                                 <li
                                     v-for="int in integrantesActivosSeleccionados"
                                     :key="int.ein_id"
@@ -1732,7 +2055,9 @@
                                             @click="abrirTraslado(int)"
                                             title="Trasladar a otro equipo"
                                         >
-                                            <i class="bi bi-arrow-left-right"></i>
+                                            <i
+                                                class="bi bi-arrow-left-right"
+                                            ></i>
                                         </button>
                                         <button
                                             v-if="!int.ein_es_lider"
@@ -1745,8 +2070,12 @@
                                     </div>
                                 </li>
                             </ul>
-                            <div v-else class="text-center py-4 text-muted small">
-                                <i class="bi bi-people me-1"></i>No hay integrantes activos en este equipo.
+                            <div
+                                v-else
+                                class="text-center py-4 text-muted small"
+                            >
+                                <i class="bi bi-people me-1"></i>No hay
+                                integrantes activos en este equipo.
                             </div>
                         </div>
 
@@ -1856,13 +2185,19 @@
                         >
                             <i class="bi bi-info-circle me-1 text-primary"></i>
                             Vas a trasladar a
-                            <strong>{{
-                                integranteATrasladar?.usuario?.usu_primer_nombre
-                            }}
-                            {{
-                                integranteATrasladar?.usuario?.usu_primer_apellido
-                            }}</strong>
-                            (CI: {{ integranteATrasladar?.usuario?.usu_cedula }}) a otro equipo de la misma sección.
+                            <strong
+                                >{{
+                                    integranteATrasladar?.usuario
+                                        ?.usu_primer_nombre
+                                }}
+                                {{
+                                    integranteATrasladar?.usuario
+                                        ?.usu_primer_apellido
+                                }}</strong
+                            >
+                            (CI:
+                            {{ integranteATrasladar?.usuario?.usu_cedula }}) a
+                            otro equipo de la misma sección.
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">
@@ -1872,20 +2207,27 @@
                                 v-model="equipoDestinoId"
                                 class="form-select"
                             >
-                                <option value="">Seleccionar equipo de destino...</option>
+                                <option value="">
+                                    Seleccionar equipo de destino...
+                                </option>
                                 <option
                                     v-for="eq in equiposDestinoDisponibles"
                                     :key="eq.equ_id"
                                     :value="eq.equ_id"
                                 >
-                                    {{ eq.equ_codigo }} — {{ eq.equ_titulo }} ({{ eq.integrantes?.length || 0 }} integrantes)
+                                    {{ eq.equ_codigo }} —
+                                    {{ eq.equ_titulo }} ({{
+                                        eq.integrantes?.length || 0
+                                    }}
+                                    integrantes)
                                 </option>
                             </select>
                             <small
                                 v-if="equiposDestinoDisponibles.length === 0"
                                 class="text-danger d-block mt-1"
                             >
-                                No hay otros equipos activos en esta sección a los cuales trasladar.
+                                No hay otros equipos activos en esta sección a
+                                los cuales trasladar.
                             </small>
                         </div>
                     </div>
@@ -1941,13 +2283,18 @@
                         <div class="modal-body">
                             <div class="alert alert-danger small py-2 mb-3">
                                 <i class="bi bi-exclamation-triangle me-1"></i>
-                                Selecciona si deseas disolver el equipo (desactivarlo para posible reactivación) o eliminarlo por completo si no se volverá a utilizar.
+                                Selecciona si deseas disolver el equipo
+                                (desactivarlo para posible reactivación) o
+                                eliminarlo por completo si no se volverá a
+                                utilizar.
                             </div>
                             <div class="mb-3">
                                 <p style="color: var(--text-main)" class="mb-1">
                                     Equipo:
                                     <strong style="color: #dc3545">{{
-                                        codigoLimpio(equipoADisolver?.equ_codigo)
+                                        codigoLimpio(
+                                            equipoADisolver?.equ_codigo,
+                                        )
                                     }}</strong>
                                 </p>
                                 <p
@@ -1962,8 +2309,19 @@
                             </div>
 
                             <!-- Opción de acción -->
-                            <div class="mb-3 p-3 rounded" style="background: var(--bg-th, rgba(0,0,0,0.03)); border: 1px solid var(--border)">
-                                <label class="form-label fw-bold mb-2">Acción a ejecutar:</label>
+                            <div
+                                class="mb-3 p-3 rounded"
+                                style="
+                                    background: var(
+                                        --bg-th,
+                                        rgba(0, 0, 0, 0.03)
+                                    );
+                                    border: 1px solid var(--border);
+                                "
+                            >
+                                <label class="form-label fw-bold mb-2"
+                                    >Acción a ejecutar:</label
+                                >
                                 <div class="form-check mb-2">
                                     <input
                                         class="form-check-input"
@@ -1973,11 +2331,17 @@
                                         value="disolver"
                                         v-model="tipoAccionDisolver"
                                     />
-                                    <label class="form-check-label fw-semibold" for="accionDisolver">
+                                    <label
+                                        class="form-check-label fw-semibold"
+                                        for="accionDisolver"
+                                    >
                                         Disolver equipo
                                     </label>
                                     <div class="small text-muted">
-                                        Desactiva el equipo y libera a los integrantes. Se conserva en "Ver Disueltos" y podrá ser reactivado posteriormente.
+                                        Desactiva el equipo y libera a los
+                                        integrantes. Se conserva en "Ver
+                                        Disueltos" y podrá ser reactivado
+                                        posteriormente.
                                     </div>
                                 </div>
                                 <div class="form-check">
@@ -1989,11 +2353,17 @@
                                         value="eliminar"
                                         v-model="tipoAccionDisolver"
                                     />
-                                    <label class="form-check-label fw-semibold text-danger" for="accionEliminar">
+                                    <label
+                                        class="form-check-label fw-semibold text-danger"
+                                        for="accionEliminar"
+                                    >
                                         Eliminar definitivamente
                                     </label>
                                     <div class="small text-muted">
-                                        Elimina por completo el equipo y sus registros si no se reactivará. Libera el código y a los integrantes de forma definitiva.
+                                        Elimina por completo el equipo y sus
+                                        registros si no se reactivará. Libera el
+                                        código y a los integrantes de forma
+                                        definitiva.
                                     </div>
                                 </div>
                             </div>
@@ -2021,9 +2391,14 @@
                                     El motivo es obligatorio.
                                 </div>
                             </div>
-                            <div v-else class="alert alert-warning small mb-0 py-2">
+                            <div
+                                v-else
+                                class="alert alert-warning small mb-0 py-2"
+                            >
                                 <i class="bi bi-info-circle me-1"></i>
-                                Se borrarán todos los registros, puntos y entregables de este equipo de forma permanente e irreversible.
+                                Se borrarán todos los registros, puntos y
+                                entregables de este equipo de forma permanente e
+                                irreversible.
                             </div>
                         </div>
                         <div class="modal-footer border-0">
@@ -2039,14 +2414,16 @@
                                 type="submit"
                                 class="btn btn-danger fw-bold"
                             >
-                                <i class="bi bi-x-circle me-2"></i>Disolver Equipo
+                                <i class="bi bi-x-circle me-2"></i>Disolver
+                                Equipo
                             </button>
                             <button
                                 v-else
                                 type="submit"
                                 class="btn btn-outline-danger fw-bold"
                             >
-                                <i class="bi bi-trash me-2"></i>Eliminar Definitivamente
+                                <i class="bi bi-trash me-2"></i>Eliminar
+                                Definitivamente
                             </button>
                         </div>
                     </form>
@@ -2055,96 +2432,272 @@
         </div>
 
         <!-- Modal Historial Académico -->
-        <div class="modal fade" id="mHistorialAcademico" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                <div class="modal-content border-0 shadow-lg overflow-hidden" style="background: var(--bg-card); border-radius: 12px;">
-                    <div class="mh" style="background: #1a1d23; border-bottom: 2px solid #dc3545; padding: 1.1rem 1.4rem;">
+        <div
+            class="modal fade"
+            id="mHistorialAcademico"
+            tabindex="-1"
+            aria-hidden="true"
+        >
+            <div
+                class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"
+            >
+                <div
+                    class="modal-content border-0 shadow-lg overflow-hidden"
+                    style="background: var(--bg-card); border-radius: 12px"
+                >
+                    <div
+                        class="mh"
+                        style="
+                            background: #1a1d23;
+                            border-bottom: 2px solid #dc3545;
+                            padding: 1.1rem 1.4rem;
+                        "
+                    >
                         <div class="d-flex align-items-center gap-2">
-                            <div style="width: 34px; height: 34px; background: #dc3545; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800;">
+                            <div
+                                style="
+                                    width: 34px;
+                                    height: 34px;
+                                    background: #dc3545;
+                                    border-radius: 8px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    color: #fff;
+                                    font-weight: 800;
+                                "
+                            >
                                 <i class="bi bi-mortarboard-fill"></i>
                             </div>
                             <div>
-                                <h5 class="mb-0 text-white fw-bold">Historial Académico del Equipo</h5>
-                                <small class="text-white-50" v-if="equipoHistorial">
-                                    <span class="badge bg-danger me-1">{{ equipoHistorial.equ_codigo }}</span> {{ equipoHistorial.equ_titulo }}
+                                <h5 class="mb-0 text-white fw-bold">
+                                    Historial Académico del Equipo
+                                </h5>
+                                <small
+                                    class="text-white-50"
+                                    v-if="equipoHistorial"
+                                >
+                                    <span class="badge bg-danger me-1">{{
+                                        equipoHistorial.equ_codigo
+                                    }}</span>
+                                    {{ equipoHistorial.equ_titulo }}
                                 </small>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm text-white p-0 fs-5" data-bs-dismiss="modal">
+                        <button
+                            type="button"
+                            class="btn btn-sm text-white p-0 fs-5"
+                            data-bs-dismiss="modal"
+                        >
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
                     <div class="modal-body p-4">
-                        <div v-if="cargandoHistorialAcademico" class="text-center py-5">
-                            <div class="spinner-border text-danger" role="status"></div>
-                            <p class="text-muted mt-2">Cargando historial académico...</p>
+                        <div
+                            v-if="cargandoHistorialAcademico"
+                            class="text-center py-5"
+                        >
+                            <div
+                                class="spinner-border text-danger"
+                                role="status"
+                            ></div>
+                            <p class="text-muted mt-2">
+                                Cargando historial académico...
+                            </p>
                         </div>
                         <template v-else-if="equipoHistorial">
                             <!-- Resumen del Equipo -->
-                            <div class="sc mb-3 p-3" style="border-left: 4px solid #dc3545 !important;">
+                            <div
+                                class="sc mb-3 p-3"
+                                style="
+                                    border-left: 4px solid #dc3545 !important;
+                                "
+                            >
                                 <div class="row g-3 text-center text-md-start">
                                     <div class="col-md-3">
-                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Sección & Trayecto</span>
-                                        <span class="fw-bold" style="color: var(--text-main);">{{ equipoHistorial.seccion?.sec_codigo }} — {{ equipoHistorial.trayecto?.tra_nombre }}</span>
+                                        <span
+                                            class="small fw-bold text-uppercase d-block"
+                                            style="
+                                                color: var(--text-muted);
+                                                font-size: 0.72rem;
+                                            "
+                                            >Sección & Trayecto</span
+                                        >
+                                        <span
+                                            class="fw-bold"
+                                            style="color: var(--text-main)"
+                                            >{{
+                                                equipoHistorial.seccion
+                                                    ?.sec_codigo
+                                            }}
+                                            —
+                                            {{
+                                                equipoHistorial.trayecto
+                                                    ?.tra_nombre
+                                            }}</span
+                                        >
                                     </div>
                                     <div class="col-md-3">
-                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Comunidad</span>
-                                        <span class="fw-bold" style="color: var(--text-main);">{{ equipoHistorial.proyecto_comunidad?.comunidad?.com_nombre || 'Sin asignar' }}</span>
+                                        <span
+                                            class="small fw-bold text-uppercase d-block"
+                                            style="
+                                                color: var(--text-muted);
+                                                font-size: 0.72rem;
+                                            "
+                                            >Comunidad</span
+                                        >
+                                        <span
+                                            class="fw-bold"
+                                            style="color: var(--text-main)"
+                                            >{{
+                                                equipoHistorial
+                                                    .proyecto_comunidad
+                                                    ?.comunidad?.com_nombre ||
+                                                "Sin asignar"
+                                            }}</span
+                                        >
                                     </div>
                                     <div class="col-md-3">
-                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Tipo de Proyecto</span>
-                                        <span class="fw-bold" style="color: var(--text-main);">{{ equipoHistorial.proyecto_comunidad?.tipo_proyecto?.tpr_nombre || 'Sin definir' }}</span>
+                                        <span
+                                            class="small fw-bold text-uppercase d-block"
+                                            style="
+                                                color: var(--text-muted);
+                                                font-size: 0.72rem;
+                                            "
+                                            >Tipo de Proyecto</span
+                                        >
+                                        <span
+                                            class="fw-bold"
+                                            style="color: var(--text-main)"
+                                            >{{
+                                                equipoHistorial
+                                                    .proyecto_comunidad
+                                                    ?.tipo_proyecto
+                                                    ?.tpr_nombre ||
+                                                "Sin definir"
+                                            }}</span
+                                        >
                                     </div>
                                     <div class="col-md-3">
-                                        <span class="small fw-bold text-uppercase d-block" style="color: var(--text-muted); font-size: 0.72rem;">Estado del Proyecto</span>
-                                        <span class="bs" :class="equipoHistorial.resultado_proyecto?.estado_proyecto?.epr_nombre === 'Aprobado' ? 'ba' : 'bd'">
-                                            {{ equipoHistorial.resultado_proyecto?.estado_proyecto?.epr_nombre || 'En Desarrollo' }}
+                                        <span
+                                            class="small fw-bold text-uppercase d-block"
+                                            style="
+                                                color: var(--text-muted);
+                                                font-size: 0.72rem;
+                                            "
+                                            >Estado del Proyecto</span
+                                        >
+                                        <span
+                                            class="bs"
+                                            :class="
+                                                equipoHistorial
+                                                    .resultado_proyecto
+                                                    ?.estado_proyecto
+                                                    ?.epr_nombre === 'Aprobado'
+                                                    ? 'ba'
+                                                    : 'bd'
+                                            "
+                                        >
+                                            {{
+                                                equipoHistorial
+                                                    .resultado_proyecto
+                                                    ?.estado_proyecto
+                                                    ?.epr_nombre ||
+                                                "En Desarrollo"
+                                            }}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Navegación por pestañas (Rojo, Negro y Blanco) -->
-                            <div class="d-flex gap-2 mb-3 pb-2 overflow-x-auto" style="border-bottom: 1px solid var(--border);">
+                            <div
+                                class="d-flex gap-2 mb-3 pb-2 overflow-x-auto"
+                                style="border-bottom: 1px solid var(--border)"
+                            >
                                 <button
                                     type="button"
                                     class="btn btn-sm fw-bold px-3 py-2 rounded-3"
-                                    :style="tabHistorial === 'puntos' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    :style="
+                                        tabHistorial === 'puntos'
+                                            ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;'
+                                            : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'
+                                    "
                                     @click="tabHistorial = 'puntos'"
                                 >
-                                    <i class="bi bi-flag me-1"></i> Puntos de Control ({{ equipoHistorial.puntos_control?.length || 0 }})
+                                    <i class="bi bi-flag me-1"></i> Puntos de
+                                    Control ({{
+                                        equipoHistorial.puntos_control
+                                            ?.length || 0
+                                    }})
                                 </button>
                                 <button
                                     type="button"
                                     class="btn btn-sm fw-bold px-3 py-2 rounded-3"
-                                    :style="tabHistorial === 'entregables' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    :style="
+                                        tabHistorial === 'entregables'
+                                            ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;'
+                                            : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'
+                                    "
                                     @click="tabHistorial = 'entregables'"
                                 >
-                                    <i class="bi bi-file-earmark-check me-1"></i> Entregables ({{ equipoHistorial.entregables?.length || 0 }})
+                                    <i
+                                        class="bi bi-file-earmark-check me-1"
+                                    ></i>
+                                    Entregables ({{
+                                        equipoHistorial.entregables?.length ||
+                                        0
+                                    }})
                                 </button>
                                 <button
                                     type="button"
                                     class="btn btn-sm fw-bold px-3 py-2 rounded-3"
-                                    :style="tabHistorial === 'socializaciones' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    :style="
+                                        tabHistorial === 'socializaciones'
+                                            ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;'
+                                            : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'
+                                    "
                                     @click="tabHistorial = 'socializaciones'"
                                 >
-                                    <i class="bi bi-people me-1"></i> Socializaciones ({{ equipoHistorial.socializaciones?.length || 0 }})
+                                    <i class="bi bi-people me-1"></i>
+                                    Socializaciones ({{
+                                        equipoHistorial.socializaciones
+                                            ?.length || 0
+                                    }})
                                 </button>
                                 <button
                                     type="button"
                                     class="btn btn-sm fw-bold px-3 py-2 rounded-3"
-                                    :style="tabHistorial === 'integrantes' ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;' : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'"
+                                    :style="
+                                        tabHistorial === 'integrantes'
+                                            ? 'background: #dc3545; color: #fff; border: 1px solid #dc3545;'
+                                            : 'background: var(--bg-th); color: var(--text-muted); border: 1px solid var(--border);'
+                                    "
                                     @click="tabHistorial = 'integrantes'"
                                 >
-                                    <i class="bi bi-person-lines-fill me-1"></i> Integrantes ({{ equipoHistorial.integrantes?.length || 0 }})
+                                    <i class="bi bi-person-lines-fill me-1"></i>
+                                    Integrantes ({{
+                                        equipoHistorial.integrantes?.length ||
+                                        0
+                                    }})
                                 </button>
                             </div>
 
                             <!-- Contenido Pestaña 1: Puntos de Control -->
                             <div v-if="tabHistorial === 'puntos'">
-                                <div v-if="!equipoHistorial.puntos_control || equipoHistorial.puntos_control.length === 0" class="text-center py-4 text-muted">
-                                    <i class="bi bi-info-circle fs-3 d-block mb-2 text-danger"></i>
-                                    No hay puntos de control registrados para este equipo.
+                                <div
+                                    v-if="
+                                        !equipoHistorial.puntos_control ||
+                                        equipoHistorial.puntos_control
+                                            .length === 0
+                                    "
+                                    class="text-center py-4 text-muted"
+                                >
+                                    <i
+                                        class="bi bi-info-circle fs-3 d-block mb-2 text-danger"
+                                    ></i>
+                                    No hay puntos de control registrados para
+                                    este equipo.
                                 </div>
                                 <div v-else class="sc">
                                     <div class="table-responsive">
@@ -2153,38 +2706,134 @@
                                                 <tr>
                                                     <th>N°</th>
                                                     <th>Punto de Control</th>
-                                                    <th>Fecha Límite</th>
+                                                    <th>Fecha de Encuentro</th>
                                                     <th>Estado</th>
                                                     <th>Observaciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr v-for="(puc, idx) in equipoHistorial.puntos_control" :key="puc.puc_id">
-                                                    <td><span class="bs bsec">{{ puc.puc_orden || idx + 1 }}</span></td>
+                                                <tr
+                                                    v-for="(
+                                                        puc, idx
+                                                    ) in equipoHistorial.puntos_control"
+                                                    :key="puc.puc_id"
+                                                    style="cursor: pointer"
+                                                    class="fila-interactiva"
+                                                    @click="
+                                                        abrirDetalleHistorial(
+                                                            puc,
+                                                            'punto',
+                                                        )
+                                                    "
+                                                    title="Haz clic para ver el detalle completo"
+                                                >
                                                     <td>
-                                                        <div class="fw-bold">{{ puc.puc_nombre }}</div>
-                                                        <small class="text-muted" v-if="puc.puc_descripcion">{{ puc.puc_descripcion }}</small>
+                                                        <span class="bs bsec">{{
+                                                            puc.puc_orden ||
+                                                            idx + 1
+                                                        }}</span>
                                                     </td>
                                                     <td>
-                                                        <span>{{ puc.puc_fecha_reprogramada || puc.puc_fecha_limite }}</span>
-                                                        <span v-if="puc.puc_fecha_reprogramada" class="bs bw ms-1">Reprogramada</span>
+                                                        <div
+                                                            class="fw-bold text-danger text-decoration-underline-hover"
+                                                        >
+                                                            {{ puc.puc_nombre }}
+                                                            <i
+                                                                class="bi bi-box-arrow-up-right small ms-1"
+                                                            ></i>
+                                                        </div>
+                                                        <small
+                                                            class="text-muted"
+                                                            v-if="
+                                                                puc.puc_descripcion
+                                                            "
+                                                            >{{
+                                                                puc.puc_descripcion
+                                                            }}</small
+                                                        >
                                                     </td>
                                                     <td>
-                                                        <span v-if="puc.seguimientos && puc.seguimientos.length > 0 && puc.seguimientos[0].seq_cumplido" class="bs ba">
-                                                            <i class="bi bi-check-circle me-1"></i>Cumplido
+                                                        <span>{{
+                                                            puc.puc_fecha_reprogramada ||
+                                                            puc.puc_fecha_limite
+                                                        }}</span>
+                                                        <span
+                                                            v-if="
+                                                                puc.puc_fecha_reprogramada
+                                                            "
+                                                            class="bs bw ms-1"
+                                                            >Reprogramada</span
+                                                        >
+                                                    </td>
+                                                    <td>
+                                                        <span
+                                                            v-if="
+                                                                puc.seguimientos &&
+                                                                puc.seguimientos
+                                                                    .length >
+                                                                    0 &&
+                                                                puc
+                                                                    .seguimientos[0]
+                                                                    .seq_cumplido
+                                                            "
+                                                            class="bs ba"
+                                                        >
+                                                            <i
+                                                                class="bi bi-check-circle me-1"
+                                                            ></i
+                                                            >Cumplido
                                                         </span>
-                                                        <span v-else-if="puc.seguimientos && puc.seguimientos.length > 0 && puc.seguimientos[0].seq_cumplido === false" class="bs bd">
-                                                            <i class="bi bi-x-circle me-1"></i>No Cumplido
+                                                        <span
+                                                            v-else-if="
+                                                                puc.seguimientos &&
+                                                                puc.seguimientos
+                                                                    .length >
+                                                                    0 &&
+                                                                puc
+                                                                    .seguimientos[0]
+                                                                    .seq_cumplido ===
+                                                                    false
+                                                            "
+                                                            class="bs bd"
+                                                        >
+                                                            <i
+                                                                class="bi bi-x-circle me-1"
+                                                            ></i
+                                                            >No Cumplido
                                                         </span>
-                                                        <span v-else class="bs bw">
-                                                            <i class="bi bi-clock me-1"></i>Pendiente
+                                                        <span
+                                                            v-else
+                                                            class="bs bw"
+                                                        >
+                                                            <i
+                                                                class="bi bi-clock me-1"
+                                                            ></i
+                                                            >Pendiente
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <small v-if="puc.seguimientos && puc.seguimientos.length > 0 && puc.seguimientos[0].seq_observaciones">
-                                                            {{ puc.seguimientos[0].seq_observaciones }}
+                                                        <small
+                                                            v-if="
+                                                                puc.seguimientos &&
+                                                                puc.seguimientos
+                                                                    .length >
+                                                                    0 &&
+                                                                puc
+                                                                    .seguimientos[0]
+                                                                    .seq_observaciones
+                                                            "
+                                                        >
+                                                            {{
+                                                                puc
+                                                                    .seguimientos[0]
+                                                                    .seq_observaciones
+                                                            }}
                                                         </small>
-                                                        <small v-else class="text-muted">—</small>
+                                                        <small
+                                                            v-else
+                                                            class="text-muted"
+                                                            >—</small
+                                                        >
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -2195,8 +2844,16 @@
 
                             <!-- Contenido Pestaña 2: Entregables -->
                             <div v-if="tabHistorial === 'entregables'">
-                                <div v-if="!equipoHistorial.entregables || equipoHistorial.entregables.length === 0" class="text-center py-4 text-muted">
-                                    <i class="bi bi-info-circle fs-3 d-block mb-2 text-danger"></i>
+                                <div
+                                    v-if="
+                                        !equipoHistorial.entregables ||
+                                        equipoHistorial.entregables.length === 0
+                                    "
+                                    class="text-center py-4 text-muted"
+                                >
+                                    <i
+                                        class="bi bi-info-circle fs-3 d-block mb-2 text-danger"
+                                    ></i>
                                     No hay entregables subidos por este equipo.
                                 </div>
                                 <div v-else class="sc">
@@ -2208,30 +2865,101 @@
                                                     <th>Punto de Control</th>
                                                     <th>Versión</th>
                                                     <th>Estado</th>
-                                                    <th class="text-end pe-3">Acción</th>
+                                                    <th class="text-end pe-3">
+                                                        Acción
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr v-for="ent in equipoHistorial.entregables" :key="ent.entr_id">
+                                                <tr
+                                                    v-for="ent in equipoHistorial.entregables"
+                                                    :key="ent.entr_id"
+                                                >
                                                     <td>
-                                                        <div class="fw-bold">{{ ent.tipo_entregable?.tet_nombre || 'Entregable' }}</div>
-                                                        <small class="text-muted"><i class="bi bi-file-earmark me-1"></i>{{ ent.entr_nombre_archivo }}</small>
+                                                        <div class="fw-bold">
+                                                            {{
+                                                                ent
+                                                                    .tipo_entregable
+                                                                    ?.tet_nombre ||
+                                                                "Entregable"
+                                                            }}
+                                                        </div>
+                                                        <small
+                                                            class="text-muted"
+                                                            ><i
+                                                                class="bi bi-file-earmark me-1"
+                                                            ></i
+                                                            >{{
+                                                                ent.entr_nombre_archivo
+                                                            }}</small
+                                                        >
                                                     </td>
                                                     <td>
-                                                        <span v-if="ent.punto_control" class="bs bsec">{{ ent.punto_control.puc_nombre }}</span>
-                                                        <span v-else class="text-muted">—</span>
+                                                        <span
+                                                            v-if="
+                                                                ent.punto_control
+                                                            "
+                                                            class="bs bsec"
+                                                            >{{
+                                                                ent
+                                                                    .punto_control
+                                                                    .puc_nombre
+                                                            }}</span
+                                                        >
+                                                        <span
+                                                            v-else
+                                                            class="text-muted"
+                                                            >—</span
+                                                        >
                                                     </td>
-                                                    <td><span class="bs bsec">v{{ ent.entr_version || 1 }}</span></td>
                                                     <td>
-                                                        <span v-if="ent.entr_aprobado === true" class="bs ba">Aprobado</span>
-                                                        <span v-else-if="ent.entr_aprobado === false" class="bs bd">Rechazado</span>
-                                                        <span v-else class="bs bw">En Revisión</span>
+                                                        <span class="bs bsec"
+                                                            >v{{
+                                                                ent.entr_version ||
+                                                                1
+                                                            }}</span
+                                                        >
+                                                    </td>
+                                                    <td>
+                                                        <span
+                                                            v-if="
+                                                                ent.entr_aprobado ===
+                                                                true
+                                                            "
+                                                            class="bs ba"
+                                                            >Aprobado</span
+                                                        >
+                                                        <span
+                                                            v-else-if="
+                                                                ent.entr_aprobado ===
+                                                                false
+                                                            "
+                                                            class="bs bd"
+                                                            >Rechazado</span
+                                                        >
+                                                        <span
+                                                            v-else
+                                                            class="bs bw"
+                                                            >En Revisión</span
+                                                        >
                                                     </td>
                                                     <td class="text-end pe-3">
-                                                        <a v-if="ent.entr_ruta" :href="`/storage/${ent.entr_ruta}`" target="_blank" class="btn btn-sm btn-outline-danger">
-                                                            <i class="bi bi-download me-1"></i>Descargar
+                                                        <a
+                                                            v-if="ent.entr_ruta"
+                                                            :href="`/storage/${ent.entr_ruta}`"
+                                                            target="_blank"
+                                                            class="btn btn-sm btn-outline-danger"
+                                                        >
+                                                            <i
+                                                                class="bi bi-download me-1"
+                                                            ></i
+                                                            >Descargar
                                                         </a>
-                                                        <span v-else class="text-muted">—</span>
+                                                        <span
+                                                            v-else
+                                                            class="text-muted"
+                                                            >—</span
+                                                        >
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -2242,31 +2970,127 @@
 
                             <!-- Contenido Pestaña 3: Socializaciones -->
                             <div v-if="tabHistorial === 'socializaciones'">
-                                <div v-if="!equipoHistorial.socializaciones || equipoHistorial.socializaciones.length === 0" class="text-center py-4 text-muted">
-                                    <i class="bi bi-info-circle fs-3 d-block mb-2 text-danger"></i>
-                                    No hay socializaciones registradas para este equipo.
+                                <div
+                                    v-if="
+                                        !equipoHistorial.socializaciones ||
+                                        equipoHistorial.socializaciones
+                                            .length === 0
+                                    "
+                                    class="text-center py-4 text-muted"
+                                >
+                                    <i
+                                        class="bi bi-info-circle fs-3 d-block mb-2 text-danger"
+                                    ></i>
+                                    No hay socializaciones registradas para este
+                                    equipo.
                                 </div>
                                 <div v-else class="row g-3">
-                                    <div v-for="soc in equipoHistorial.socializaciones" :key="soc.soc_id" class="col-md-6">
-                                        <div class="sc h-100 p-3" style="border-left: 3px solid #dc3545 !important;">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 class="fw-bold mb-0" style="color: var(--text-main);">{{ soc.tipo_socializacion?.tso_nombre || 'Socialización' }}</h6>
-                                                <span v-if="soc.soc_apto === true" class="bs ba">Apto</span>
-                                                <span v-else-if="soc.soc_apto === false" class="bs bd">No Apto</span>
-                                                <span v-else class="bs bw">Pendiente</span>
+                                    <div
+                                        v-for="soc in equipoHistorial.socializaciones"
+                                        :key="soc.soc_id"
+                                        class="col-md-6"
+                                    >
+                                        <div
+                                            class="sc h-100 p-3 fila-interactiva"
+                                            style="
+                                                border-left: 3px solid #dc3545 !important;
+                                                cursor: pointer;
+                                            "
+                                            @click="
+                                                abrirDetalleHistorial(
+                                                    soc,
+                                                    'socializacion',
+                                                )
+                                            "
+                                            title="Haz clic para ver el detalle de la socialización"
+                                        >
+                                            <div
+                                                class="d-flex justify-content-between align-items-start mb-2"
+                                            >
+                                                <h6
+                                                    class="fw-bold mb-0 text-danger"
+                                                    style="
+                                                        color: var(--text-main);
+                                                    "
+                                                >
+                                                    {{
+                                                        soc.tipo_socializacion
+                                                            ?.tso_nombre ||
+                                                        "Socialización"
+                                                    }}
+                                                    <i
+                                                        class="bi bi-box-arrow-up-right small ms-1"
+                                                    ></i>
+                                                </h6>
+                                                <span
+                                                    v-if="soc.soc_apto === true"
+                                                    class="bs ba"
+                                                    >Apto</span
+                                                >
+                                                <span
+                                                    v-else-if="
+                                                        soc.soc_apto === false
+                                                    "
+                                                    class="bs bd"
+                                                    >No Apto</span
+                                                >
+                                                <span v-else class="bs bw"
+                                                    >Pendiente</span
+                                                >
                                             </div>
                                             <div class="small text-muted mb-2">
-                                                <div><i class="bi bi-calendar-event me-1 text-danger"></i>{{ soc.soc_fecha }} a las {{ soc.soc_hora }}</div>
-                                                <div><i class="bi bi-geo-alt me-1 text-danger"></i>{{ soc.soc_lugar }}</div>
+                                                <div>
+                                                    <i
+                                                        class="bi bi-calendar-event me-1 text-danger"
+                                                    ></i
+                                                    >{{ soc.soc_fecha }} a las
+                                                    {{ soc.soc_hora }}
+                                                </div>
+                                                <div>
+                                                    <i
+                                                        class="bi bi-geo-alt me-1 text-danger"
+                                                    ></i
+                                                    >{{ soc.soc_lugar }}
+                                                </div>
                                             </div>
-                                            <div v-if="soc.soc_observaciones" class="p-2 rounded small mb-2" style="background: var(--bg-th); border: 1px solid var(--border);">
-                                                <strong>Observaciones:</strong> {{ soc.soc_observaciones }}
+                                            <div
+                                                v-if="soc.soc_observaciones"
+                                                class="p-2 rounded small mb-2"
+                                                style="
+                                                    background: var(--bg-th);
+                                                    border: 1px solid
+                                                        var(--border);
+                                                "
+                                            >
+                                                <strong>Observaciones:</strong>
+                                                {{ soc.soc_observaciones }}
                                             </div>
-                                            <div v-if="soc.jurados && soc.jurados.length > 0">
-                                                <small class="fw-semibold text-muted d-block mb-1">Jurados:</small>
-                                                <div class="d-flex flex-wrap gap-1">
-                                                    <span v-for="j in soc.jurados" :key="j.jso_id" class="bs bsec">
-                                                        {{ j.usuario?.usu_primer_nombre }} {{ j.usuario?.usu_primer_apellido }}
+                                            <div
+                                                v-if="
+                                                    soc.jurados &&
+                                                    soc.jurados.length > 0
+                                                "
+                                            >
+                                                <small
+                                                    class="fw-semibold text-muted d-block mb-1"
+                                                    >Jurados:</small
+                                                >
+                                                <div
+                                                    class="d-flex flex-wrap gap-1"
+                                                >
+                                                    <span
+                                                        v-for="j in soc.jurados"
+                                                        :key="j.jso_id"
+                                                        class="bs bsec"
+                                                    >
+                                                        {{
+                                                            j.usuario
+                                                                ?.usu_primer_nombre
+                                                        }}
+                                                        {{
+                                                            j.usuario
+                                                                ?.usu_primer_apellido
+                                                        }}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2289,18 +3113,57 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr v-for="integ in equipoHistorial.integrantes" :key="integ.ein_id">
-                                                    <td>{{ integ.usuario?.usu_cedula }}</td>
-                                                    <td class="fw-bold">{{ integ.usuario?.usu_primer_nombre }} {{ integ.usuario?.usu_primer_apellido }}</td>
+                                                <tr
+                                                    v-for="integ in equipoHistorial.integrantes"
+                                                    :key="integ.ein_id"
+                                                >
                                                     <td>
-                                                        <span v-if="integ.ein_es_lider" class="bs bd">
-                                                            <i class="bi bi-star-fill me-1 text-warning"></i>Líder
-                                                        </span>
-                                                        <span v-else class="bs bsec">Integrante</span>
+                                                        {{
+                                                            integ.usuario
+                                                                ?.usu_cedula
+                                                        }}
+                                                    </td>
+                                                    <td class="fw-bold">
+                                                        {{
+                                                            integ.usuario
+                                                                ?.usu_primer_nombre
+                                                        }}
+                                                        {{
+                                                            integ.usuario
+                                                                ?.usu_primer_apellido
+                                                        }}
                                                     </td>
                                                     <td>
-                                                        <span v-if="integ.ein_status" class="bs ba">Activo</span>
-                                                        <span v-else class="bs bsec">Retirado</span>
+                                                        <span
+                                                            v-if="
+                                                                integ.ein_es_lider
+                                                            "
+                                                            class="bs bd"
+                                                        >
+                                                            <i
+                                                                class="bi bi-star-fill me-1 text-warning"
+                                                            ></i
+                                                            >Líder
+                                                        </span>
+                                                        <span
+                                                            v-else
+                                                            class="bs bsec"
+                                                            >Integrante</span
+                                                        >
+                                                    </td>
+                                                    <td>
+                                                        <span
+                                                            v-if="
+                                                                integ.ein_status
+                                                            "
+                                                            class="bs ba"
+                                                            >Activo</span
+                                                        >
+                                                        <span
+                                                            v-else
+                                                            class="bs bsec"
+                                                            >Retirado</span
+                                                        >
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -2310,65 +3173,292 @@
                             </div>
                         </template>
                     </div>
-                    <div class="modal-footer" style="background: var(--bg-th); border-top: 1px solid var(--border);">
-                        <button type="button" class="btn btn-sm btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Cerrar</button>
+                    <div
+                        class="modal-footer"
+                        style="
+                            background: var(--bg-th);
+                            border-top: 1px solid var(--border);
+                        "
+                    >
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary px-4 fw-bold"
+                            data-bs-dismiss="modal"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Detalle Interactivo de Actividad del Historial -->
+        <div
+            class="modal fade"
+            id="mDetalleActividadHistorial"
+            tabindex="-1"
+            style="z-index: 1065"
+        >
+            <div class="modal-dialog modal-dialog-centered">
+                <div
+                    class="modal-content border-0 shadow-lg"
+                    style="border-radius: 12px; background: var(--bg-card)"
+                >
+                    <div
+                        class="mh"
+                        style="
+                            background: #1a1d23;
+                            border-bottom: 2px solid #dc3545;
+                            color: #fff;
+                            padding: 1rem 1.25rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        "
+                    >
+                        <h5
+                            class="mb-0 fw-bold fs-6 text-white d-flex align-items-center"
+                        >
+                            <i
+                                class="bi bi-info-circle-fill text-danger me-2"
+                            ></i
+                            >{{ detalleModal.titulo }}
+                        </h5>
+                        <button
+                            type="button"
+                            class="btn btn-sm text-white p-0 fs-5"
+                            data-bs-dismiss="modal"
+                        >
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4" style="color: var(--text-main)">
+                        <div
+                            class="mb-3 p-3 rounded"
+                            style="
+                                background: var(--bg-th);
+                                border: 1px solid var(--border);
+                            "
+                        >
+                            <div
+                                class="d-flex justify-content-between align-items-center mb-2"
+                            >
+                                <span class="badge bg-danger">{{
+                                    detalleModal.subtitulo
+                                }}</span>
+                                <span class="small text-muted">{{
+                                    detalleModal.fecha
+                                }}</span>
+                            </div>
+                            <h6
+                                class="fw-bold mb-1"
+                                style="color: var(--text-main)"
+                            >
+                                {{ detalleModal.nombre }}
+                            </h6>
+                            <p
+                                class="small text-muted mb-0"
+                                v-if="detalleModal.descripcion"
+                            >
+                                {{ detalleModal.descripcion }}
+                            </p>
+                        </div>
+
+                        <div class="row g-2 mb-3 small">
+                            <div class="col-6">
+                                <span class="text-muted d-block">Estado:</span>
+                                <strong>{{ detalleModal.estado }}</strong>
+                            </div>
+                            <div class="col-6" v-if="detalleModal.semana">
+                                <span class="text-muted d-block"
+                                    >Semana de Corte:</span
+                                >
+                                <strong
+                                    >Semana {{ detalleModal.semana }}</strong
+                                >
+                            </div>
+                        </div>
+
+                        <div v-if="detalleModal.observaciones" class="mb-3">
+                            <label class="fw-bold small text-muted d-block mb-1"
+                                >Observaciones / Criterios Evaluados:</label
+                            >
+                            <div
+                                class="p-2 rounded small"
+                                style="
+                                    background: var(--bg-th);
+                                    border: 1px solid var(--border);
+                                "
+                            >
+                                {{ detalleModal.observaciones }}
+                            </div>
+                        </div>
+
+                        <div v-if="detalleModal.criterios" class="mb-3">
+                            <label class="fw-bold small text-muted d-block mb-1"
+                                >Criterios de Evaluación:</label
+                            >
+                            <div
+                                class="p-2 rounded small"
+                                style="
+                                    background: var(--bg-th);
+                                    border: 1px solid var(--border);
+                                "
+                            >
+                                {{ detalleModal.criterios }}
+                            </div>
+                        </div>
+
+                        <div v-if="detalleModal.lugar" class="mb-2 small">
+                            <span class="text-muted">Lugar / Aula:</span>
+                            <strong>{{ detalleModal.lugar }}</strong>
+                        </div>
+                    </div>
+                    <div
+                        class="modal-footer"
+                        style="
+                            background: var(--bg-th);
+                            border-top: 1px solid var(--border);
+                        "
+                    >
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-secondary px-3"
+                            data-bs-dismiss="modal"
+                        >
+                            Cerrar
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Modal Nueva Comunidad (Submodal con diseño Rojo, Negro y Blanco) -->
-        <div class="modal fade" id="mModalNuevaComunidad" tabindex="-1" aria-labelledby="mModalNuevaComunidadLabel" aria-hidden="true" style="z-index: 1070;">
+        <div
+            class="modal fade"
+            id="mModalNuevaComunidad"
+            tabindex="-1"
+            aria-labelledby="mModalNuevaComunidadLabel"
+            aria-hidden="true"
+            style="z-index: 1070"
+        >
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden; background: var(--bg-card);">
-                    <div class="mh" style="background: #1a1d23; border-bottom: 2px solid #dc3545; color: #fff; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
-                        <h5 class="mb-0 fw-bold fs-6 text-white d-flex align-items-center">
-                            <i class="bi bi-geo-alt-fill text-danger me-2"></i>Registrar Nueva Comunidad
+                <div
+                    class="modal-content border-0 shadow-lg"
+                    style="
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: var(--bg-card);
+                    "
+                >
+                    <div
+                        class="mh"
+                        style="
+                            background: #1a1d23;
+                            border-bottom: 2px solid #dc3545;
+                            color: #fff;
+                            padding: 1rem 1.25rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        "
+                    >
+                        <h5
+                            class="mb-0 fw-bold fs-6 text-white d-flex align-items-center"
+                        >
+                            <i class="bi bi-geo-alt-fill text-danger me-2"></i
+                            >Registrar Nueva Comunidad
                         </h5>
-                        <button type="button" class="btn btn-sm text-white p-0 fs-5" @click="cerrarModalNuevaComunidad">
+                        <button
+                            type="button"
+                            class="btn btn-sm text-white p-0 fs-5"
+                            @click="cerrarModalNuevaComunidad"
+                        >
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
                     <form @submit.prevent="guardarNuevaComunidad">
-                        <div class="modal-body p-4" style="color: var(--text-main);">
-                            <div class="alert py-2 px-3 small mb-3 rounded" style="background: rgba(220, 53, 69, 0.08); border-left: 3px solid #dc3545; color: var(--text-main);">
-                                <i class="bi bi-info-circle-fill me-1 text-danger"></i>
-                                Registra la comunidad para asociarla directamente al proyecto.
+                        <div
+                            class="modal-body p-4"
+                            style="color: var(--text-main)"
+                        >
+                            <div
+                                class="alert py-2 px-3 small mb-3 rounded"
+                                style="
+                                    background: rgba(220, 53, 69, 0.08);
+                                    border-left: 3px solid #dc3545;
+                                    color: var(--text-main);
+                                "
+                            >
+                                <i
+                                    class="bi bi-info-circle-fill me-1 text-danger"
+                                ></i>
+                                Registra la comunidad para asociarla
+                                directamente al proyecto.
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label small fw-bold">Nombre de la Comunidad <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold"
+                                    >Nombre de la Comunidad
+                                    <span class="text-danger">*</span></label
+                                >
                                 <input
                                     type="text"
                                     class="form-control"
-                                    :class="{ 'is-invalid': erroresNuevaComunidad.com_nombre }"
+                                    :class="{
+                                        'is-invalid':
+                                            erroresNuevaComunidad.com_nombre,
+                                    }"
                                     v-model="nuevaComunidad.com_nombre"
                                     placeholder="Ej: Comunidad Brisas del Este"
                                 />
-                                <div v-if="erroresNuevaComunidad.com_nombre" class="invalid-feedback">
+                                <div
+                                    v-if="erroresNuevaComunidad.com_nombre"
+                                    class="invalid-feedback"
+                                >
                                     {{ erroresNuevaComunidad.com_nombre }}
                                 </div>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label small fw-bold">Tipo de Organización <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold"
+                                    >Tipo de Organización
+                                    <span class="text-danger">*</span></label
+                                >
                                 <select
                                     class="form-select"
-                                    :class="{ 'is-invalid': erroresNuevaComunidad.com_id_tor }"
+                                    :class="{
+                                        'is-invalid':
+                                            erroresNuevaComunidad.com_id_tor,
+                                    }"
                                     v-model="nuevaComunidad.com_id_tor"
                                 >
-                                    <option value="">Seleccione tipo de organización...</option>
-                                    <option v-for="t in tiposOrganizacion" :key="t.tor_id" :value="t.tor_id">
+                                    <option value="">
+                                        Seleccione tipo de organización...
+                                    </option>
+                                    <option
+                                        v-for="t in tiposOrganizacion"
+                                        :key="t.tor_id"
+                                        :value="t.tor_id"
+                                    >
                                         {{ t.tor_nombre }}
                                     </option>
                                 </select>
-                                <div v-if="erroresNuevaComunidad.com_id_tor" class="invalid-feedback">
+                                <div
+                                    v-if="erroresNuevaComunidad.com_id_tor"
+                                    class="invalid-feedback"
+                                >
                                     {{ erroresNuevaComunidad.com_id_tor }}
                                 </div>
                             </div>
 
                             <div class="mb-2">
-                                <label class="form-label small fw-bold">Ubicación / Dirección <span class="text-muted fw-normal">(opcional)</span></label>
+                                <label class="form-label small fw-bold"
+                                    >Ubicación / Dirección
+                                    <span class="text-muted fw-normal"
+                                        >(opcional)</span
+                                    ></label
+                                >
                                 <textarea
                                     class="form-control"
                                     v-model="nuevaComunidad.com_ubicacion"
@@ -2377,13 +3467,31 @@
                                 ></textarea>
                             </div>
                         </div>
-                        <div class="modal-footer border-0 p-3" style="background: var(--bg-th); border-top: 1px solid var(--border) !important;">
-                            <button type="button" class="btn btn-secondary btn-sm px-3" @click="cerrarModalNuevaComunidad">
+                        <div
+                            class="modal-footer border-0 p-3"
+                            style="
+                                background: var(--bg-th);
+                                border-top: 1px solid var(--border) !important;
+                            "
+                        >
+                            <button
+                                type="button"
+                                class="btn btn-secondary btn-sm px-3"
+                                @click="cerrarModalNuevaComunidad"
+                            >
                                 Cancelar
                             </button>
-                            <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold" :disabled="guardandoComunidad">
-                                <span v-if="guardandoComunidad" class="spinner-border spinner-border-sm me-1"></span>
-                                <i v-else class="bi bi-check2 me-1"></i>Guardar Comunidad
+                            <button
+                                type="submit"
+                                class="btn btn-danger btn-sm px-4 fw-bold"
+                                :disabled="guardandoComunidad"
+                            >
+                                <span
+                                    v-if="guardandoComunidad"
+                                    class="spinner-border spinner-border-sm me-1"
+                                ></span>
+                                <i v-else class="bi bi-check2 me-1"></i>Guardar
+                                Comunidad
                             </button>
                         </div>
                     </form>
@@ -2392,45 +3500,117 @@
         </div>
 
         <!-- Modal Nuevo Tipo de Proyecto (Submodal con diseño Rojo, Negro y Blanco) -->
-        <div class="modal fade" id="mModalNuevoTipo" tabindex="-1" aria-labelledby="mModalNuevoTipoLabel" aria-hidden="true" style="z-index: 1070;">
+        <div
+            class="modal fade"
+            id="mModalNuevoTipo"
+            tabindex="-1"
+            aria-labelledby="mModalNuevoTipoLabel"
+            aria-hidden="true"
+            style="z-index: 1070"
+        >
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden; background: var(--bg-card);">
-                    <div class="mh" style="background: #1a1d23; border-bottom: 2px solid #dc3545; color: #fff; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
-                        <h5 class="mb-0 fw-bold fs-6 text-white d-flex align-items-center">
-                            <i class="bi bi-tag-fill text-danger me-2"></i>Registrar Nuevo Tipo de Proyecto
+                <div
+                    class="modal-content border-0 shadow-lg"
+                    style="
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: var(--bg-card);
+                    "
+                >
+                    <div
+                        class="mh"
+                        style="
+                            background: #1a1d23;
+                            border-bottom: 2px solid #dc3545;
+                            color: #fff;
+                            padding: 1rem 1.25rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        "
+                    >
+                        <h5
+                            class="mb-0 fw-bold fs-6 text-white d-flex align-items-center"
+                        >
+                            <i class="bi bi-tag-fill text-danger me-2"></i
+                            >Registrar Nuevo Tipo de Proyecto
                         </h5>
-                        <button type="button" class="btn btn-sm text-white p-0 fs-5" @click="cerrarModalNuevoTipo">
+                        <button
+                            type="button"
+                            class="btn btn-sm text-white p-0 fs-5"
+                            @click="cerrarModalNuevoTipo"
+                        >
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
                     <form @submit.prevent="guardarNuevoTipo">
-                        <div class="modal-body p-4" style="color: var(--text-main);">
-                            <div class="alert py-2 px-3 small mb-3 rounded" style="background: rgba(220, 53, 69, 0.08); border-left: 3px solid #dc3545; color: var(--text-main);">
-                                <i class="bi bi-info-circle-fill me-1 text-danger"></i>
-                                Ingresa el nombre del tipo de proyecto. Quedará seleccionado automáticamente en el formulario.
+                        <div
+                            class="modal-body p-4"
+                            style="color: var(--text-main)"
+                        >
+                            <div
+                                class="alert py-2 px-3 small mb-3 rounded"
+                                style="
+                                    background: rgba(220, 53, 69, 0.08);
+                                    border-left: 3px solid #dc3545;
+                                    color: var(--text-main);
+                                "
+                            >
+                                <i
+                                    class="bi bi-info-circle-fill me-1 text-danger"
+                                ></i>
+                                Ingresa el nombre del tipo de proyecto. Quedará
+                                seleccionado automáticamente en el formulario.
                             </div>
 
                             <div class="mb-2">
-                                <label class="form-label small fw-bold">Nombre del Tipo de Proyecto <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-bold"
+                                    >Nombre del Tipo de Proyecto
+                                    <span class="text-danger">*</span></label
+                                >
                                 <input
                                     type="text"
                                     class="form-control"
-                                    :class="{ 'is-invalid': erroresNuevoTipo.tpr_nombre }"
+                                    :class="{
+                                        'is-invalid':
+                                            erroresNuevoTipo.tpr_nombre,
+                                    }"
                                     v-model="nuevoTipo.tpr_nombre"
                                     placeholder="Ej: Desarrollo de Software, Redes, Capacitación..."
                                 />
-                                <div v-if="erroresNuevoTipo.tpr_nombre" class="invalid-feedback">
+                                <div
+                                    v-if="erroresNuevoTipo.tpr_nombre"
+                                    class="invalid-feedback"
+                                >
                                     {{ erroresNuevoTipo.tpr_nombre }}
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer border-0 p-3" style="background: var(--bg-th); border-top: 1px solid var(--border) !important;">
-                            <button type="button" class="btn btn-secondary btn-sm px-3" @click="cerrarModalNuevoTipo">
+                        <div
+                            class="modal-footer border-0 p-3"
+                            style="
+                                background: var(--bg-th);
+                                border-top: 1px solid var(--border) !important;
+                            "
+                        >
+                            <button
+                                type="button"
+                                class="btn btn-secondary btn-sm px-3"
+                                @click="cerrarModalNuevoTipo"
+                            >
                                 Cancelar
                             </button>
-                            <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold" :disabled="guardandoTipo">
-                                <span v-if="guardandoTipo" class="spinner-border spinner-border-sm me-1"></span>
-                                <i v-else class="bi bi-check2 me-1"></i>Guardar Tipo
+                            <button
+                                type="submit"
+                                class="btn btn-danger btn-sm px-4 fw-bold"
+                                :disabled="guardandoTipo"
+                            >
+                                <span
+                                    v-if="guardandoTipo"
+                                    class="spinner-border spinner-border-sm me-1"
+                                ></span>
+                                <i v-else class="bi bi-check2 me-1"></i>Guardar
+                                Tipo
                             </button>
                         </div>
                     </form>
@@ -2505,6 +3685,77 @@ const ejecutarLogout = () => {
 const equipoHistorial = ref(null);
 const cargandoHistorialAcademico = ref(false);
 const tabHistorial = ref("puntos");
+
+const detalleModal = ref({
+    titulo: "",
+    subtitulo: "",
+    nombre: "",
+    descripcion: "",
+    fecha: "",
+    estado: "",
+    semana: null,
+    observaciones: "",
+    criterios: "",
+    lugar: "",
+});
+
+const abrirDetalleHistorial = (item, tipo) => {
+    if (tipo === "punto") {
+        const seg =
+            item.seguimientos && item.seguimientos.length > 0
+                ? item.seguimientos[0]
+                : null;
+        let estadoStr = "Pendiente";
+        if (seg) {
+            estadoStr =
+                seg.seq_cumplido === true
+                    ? "Cumplido"
+                    : seg.seq_cumplido === false
+                      ? "No Cumplido"
+                      : "Pendiente";
+        }
+        detalleModal.value = {
+            titulo: "Detalle del Punto de Control",
+            subtitulo: `Punto de Control #${item.puc_orden || 1}`,
+            nombre: item.puc_nombre,
+            descripcion: item.puc_descripcion || "Sin descripción",
+            fecha: item.puc_fecha_reprogramada
+                ? `${item.puc_fecha_reprogramada} (Reprogramada)`
+                : item.puc_fecha_limite,
+            estado: estadoStr,
+            semana: item.puc_semana || null,
+            observaciones:
+                seg?.seq_observaciones || "Sin observaciones registradas",
+            criterios: item.puc_criterios_evaluacion || "",
+            lugar: "",
+        };
+    } else if (tipo === "socializacion") {
+        let estadoStr = "Pendiente";
+        if (item.soc_apto === true) estadoStr = "Apto";
+        else if (item.soc_apto === false) estadoStr = "No Apto";
+
+        detalleModal.value = {
+            titulo: "Detalle de Socialización",
+            subtitulo: item.tipo_socializacion?.tso_nombre || "Socialización",
+            nombre:
+                item.tipo_socializacion?.tso_nombre ||
+                "Socialización Académica",
+            descripcion: item.soc_observaciones || "",
+            fecha: `${item.soc_fecha} a las ${item.soc_hora || "—"}`,
+            estado: estadoStr,
+            semana: null,
+            observaciones: item.soc_observaciones || "Sin observaciones",
+            criterios: "",
+            lugar: item.soc_lugar || "No especificado",
+        };
+    }
+
+    const modalEl = document.getElementById("mDetalleActividadHistorial");
+    if (modalEl) {
+        const bsModal = Modal.getInstance(modalEl) || new Modal(modalEl);
+        bsModal.show();
+    }
+};
 
 const abrirHistorialAcademico = async (equ) => {
     cargandoHistorialAcademico.value = true;
@@ -2642,7 +3893,9 @@ const parsearCodigoEquipo = (codigo) => {
     if (!codigo) return null;
     // Formato estándar institucional: PNFI-ACA33-331-2/5 o PNFI-ACA11-131-1/7
     // Partes: [PNF]-[SEDE][TRAYECTO][SEMESTRE]-[SECCION]-[NUM]/[TOTAL]
-    const m = String(codigo).match(/^[A-Z]+-[A-Z]+(\d)(\d)-([^-]+)-(\d+)\/(\d+)$/i);
+    const m = String(codigo).match(
+        /^[A-Z]+-[A-Z]+(\d)(\d)-([^-]+)-(\d+)\/(\d+)$/i,
+    );
     if (m) {
         return {
             trayecto: parseInt(m[1]),
@@ -2673,14 +3926,18 @@ const siguienteNumeroEquipo = computed(() => {
     const secId = formNuevo.value.equ_id_sec;
     if (!secId) return 1;
     const todos = [...(props.equipos || [])];
-    const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
+    const equiposSec = todos.filter(
+        (e) => String(e.equ_id_sec) === String(secId),
+    );
     let maxN = 0;
     equiposSec.forEach((e) => {
         const parsed = parsearCodigoEquipo(e.equ_codigo);
         if (parsed?.numero) {
             maxN = Math.max(maxN, parsed.numero);
         } else {
-            const mSlash = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/(\d+)$/) : null;
+            const mSlash = e.equ_codigo
+                ? e.equ_codigo.match(/-(\d+)\/(\d+)$/)
+                : null;
             if (mSlash) {
                 maxN = Math.max(maxN, parseInt(mSlash[1]));
             } else {
@@ -2696,11 +3953,15 @@ const totalEquiposSeccion = computed(() => {
     const secId = formNuevo.value.equ_id_sec;
     if (!secId) return 7;
     const todos = [...(props.equipos || [])];
-    const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
+    const equiposSec = todos.filter(
+        (e) => String(e.equ_id_sec) === String(secId),
+    );
     for (const e of equiposSec) {
         const parsed = parsearCodigoEquipo(e.equ_codigo);
         if (parsed?.totalSeccion) return parsed.totalSeccion;
-        const mSlash = e.equ_codigo ? e.equ_codigo.match(/-(\d+)\/(\d+)$/) : null;
+        const mSlash = e.equ_codigo
+            ? e.equ_codigo.match(/-(\d+)\/(\d+)$/)
+            : null;
         if (mSlash && parseInt(mSlash[2])) {
             return parseInt(mSlash[2]);
         }
@@ -2729,16 +3990,22 @@ const onSeccionChange = () => {
         return;
     }
 
-    const sec = props.secciones?.find((s) => String(s.sec_id) === String(secId)) || props.seccion;
+    const sec =
+        props.secciones?.find((s) => String(s.sec_id) === String(secId)) ||
+        props.seccion;
     const traId = sec?.sec_id_tra || sec?.trayecto?.tra_id;
     const todos = [...(props.equipos || [])];
 
     // Equipos existentes de la sección
-    const equiposSec = todos.filter((e) => String(e.equ_id_sec) === String(secId));
+    const equiposSec = todos.filter(
+        (e) => String(e.equ_id_sec) === String(secId),
+    );
 
     // Equipos existentes en el mismo trayecto (cualquier sección de este trayecto)
     const equiposTra = todos.filter((e) => {
-        const s = props.secciones?.find((item) => String(item.sec_id) === String(e.equ_id_sec));
+        const s = props.secciones?.find(
+            (item) => String(item.sec_id) === String(e.equ_id_sec),
+        );
         const t = e.equ_id_tra || s?.sec_id_tra || s?.trayecto?.tra_id;
         return traId && String(t) === String(traId);
     });
@@ -2753,8 +4020,10 @@ const onSeccionChange = () => {
         for (let i = equiposSec.length - 1; i >= 0; i--) {
             const parsed = parsearCodigoEquipo(equiposSec[i].equ_codigo);
             if (parsed) {
-                if (parsed.semestre && !semestreHeredado) semestreHeredado = parsed.semestre;
-                if (parsed.totalSeccion && !totalSecHeredado) totalSecHeredado = parsed.totalSeccion;
+                if (parsed.semestre && !semestreHeredado)
+                    semestreHeredado = parsed.semestre;
+                if (parsed.totalSeccion && !totalSecHeredado)
+                    totalSecHeredado = parsed.totalSeccion;
             }
         }
     }
@@ -2774,7 +4043,9 @@ const onSeccionChange = () => {
 
     // Regla institucional: el primer número de la sección es el semestre del equipo
     const matchPrimerNum = sec?.sec_codigo?.match(/\d/);
-    const primerNumeroSeccion = matchPrimerNum ? parseInt(matchPrimerNum[0]) : (sec?.trayecto?.tra_numero || 1);
+    const primerNumeroSeccion = matchPrimerNum
+        ? parseInt(matchPrimerNum[0])
+        : sec?.trayecto?.tra_numero || 1;
 
     // Si ya existe al menos un equipo en la sección o en el trayecto: AUTO-COMPLETAR
     if (equiposSec.length > 0 || equiposTra.length > 0) {
@@ -2791,7 +4062,10 @@ const onSeccionChange = () => {
         } else {
             editarParametrosManual.value = false;
             formNuevo.value.equ_numero_grupo = String(sigNum);
-            if (errores.value.equ_numero_grupo?.includes("supera el total") || errores.value.equ_numero_grupo?.includes("no puede sobrepasar")) {
+            if (
+                errores.value.equ_numero_grupo?.includes("supera el total") ||
+                errores.value.equ_numero_grupo?.includes("no puede sobrepasar")
+            ) {
                 delete errores.value.equ_numero_grupo;
             }
         }
@@ -2808,7 +4082,9 @@ const onSeccionChange = () => {
     // Limpiar integrantes que no pertenezcan a la sección elegida
     formNuevo.value.integrantes.forEach((item) => {
         if (!item.usu_id) return;
-        const est = props.estudiantes?.find((e) => String(e.usu_id) === String(item.usu_id));
+        const est = props.estudiantes?.find(
+            (e) => String(e.usu_id) === String(item.usu_id),
+        );
         if (est && est.sec_id && String(est.sec_id) !== String(secId)) {
             item.usu_id = "";
         }
@@ -2820,7 +4096,8 @@ const totalModificado = computed(() => {
     return (
         totalOriginalSeccion.value !== null &&
         formNuevo.value.equ_total_seccion &&
-        Number(formNuevo.value.equ_total_seccion) !== Number(totalOriginalSeccion.value)
+        Number(formNuevo.value.equ_total_seccion) !==
+            Number(totalOriginalSeccion.value)
     );
 });
 
@@ -2832,7 +4109,9 @@ const validarNumeroVsTotal = () => {
             errores.value.equ_numero_grupo = `El N° de equipo (${num}) no puede sobrepasar el Total de Equipos (${tot}). Modifica el Total de Equipos si deseas agregar más.`;
         } else {
             if (
-                errores.value.equ_numero_grupo?.includes("no puede sobrepasar") ||
+                errores.value.equ_numero_grupo?.includes(
+                    "no puede sobrepasar",
+                ) ||
                 errores.value.equ_numero_grupo?.includes("supera el total")
             ) {
                 delete errores.value.equ_numero_grupo;
@@ -2964,7 +4243,10 @@ const validarPaso1 = () => {
         return false;
     }
 
-    const sec = props.secciones?.find((s) => String(s.sec_id) === String(formNuevo.value.equ_id_sec)) || props.seccion;
+    const sec =
+        props.secciones?.find(
+            (s) => String(s.sec_id) === String(formNuevo.value.equ_id_sec),
+        ) || props.seccion;
     if (sec?.sec_codigo) {
         const matchPrimerNum = sec.sec_codigo.match(/\d/);
         const primerNum = matchPrimerNum ? parseInt(matchPrimerNum[0]) : null;
@@ -3038,7 +4320,10 @@ const guardarNuevo = () => {
             pco_resumen: formProyecto.value.pco_resumen || "",
             beneficiarios: (formProyecto.value.beneficiarios || [])
                 .filter((b) => b.tbe_id && Number(b.cantidad) > 0)
-                .map((b) => ({ tbe_id: b.tbe_id, cantidad: Number(b.cantidad) })),
+                .map((b) => ({
+                    tbe_id: b.tbe_id,
+                    cantidad: Number(b.cantidad),
+                })),
         };
     }
 
@@ -3046,7 +4331,9 @@ const guardarNuevo = () => {
         equ_id_sec: formNuevo.value.equ_id_sec,
         equ_numero_grupo: formNuevo.value.equ_numero_grupo,
         equ_semestre: formNuevo.value.equ_semestre || 1,
-        equ_total_seccion: formNuevo.value.equ_total_seccion || formNuevo.value.equ_numero_grupo,
+        equ_total_seccion:
+            formNuevo.value.equ_total_seccion ||
+            formNuevo.value.equ_numero_grupo,
         equ_codigo: codigoPreview.value !== "—" ? codigoPreview.value : "",
         equ_titulo: formNuevo.value.equ_titulo,
         integrantes: formNuevo.value.integrantes,
@@ -3092,7 +4379,11 @@ const guardarEdicion = () => {
 const confirmarDisolver = () => {
     if (tipoAccionDisolver.value === "eliminar") {
         const cod = codigoLimpio(equipoADisolver.value?.equ_codigo);
-        if (!confirm(`¿Estás completamente seguro de eliminar de forma permanente el equipo ${cod}? Esta acción borrará todos sus datos y no se podrá deshacer.`)) {
+        if (
+            !confirm(
+                `¿Estás completamente seguro de eliminar de forma permanente el equipo ${cod}? Esta acción borrará todos sus datos y no se podrá deshacer.`,
+            )
+        ) {
             return;
         }
         router.delete(`${base.value}/equipos/${equipoADisolver.value.equ_id}`, {
@@ -3126,7 +4417,11 @@ const reactivar = (equ) => {
 
 const eliminarDefinitivamente = (equ) => {
     const cod = codigoLimpio(equ.equ_codigo);
-    if (!confirm(`¿Eliminar definitivamente el equipo ${cod}? Esta acción borrará el equipo y todos sus datos del sistema si no se reactivará.`)) {
+    if (
+        !confirm(
+            `¿Eliminar definitivamente el equipo ${cod}? Esta acción borrará el equipo y todos sus datos del sistema si no se reactivará.`,
+        )
+    ) {
         return;
     }
     router.delete(`${base.value}/equipos/${equ.equ_id}`);
@@ -3211,17 +4506,24 @@ const iconEvt = (n) => {
     if (n === "Reactivado") return "bi-arrow-counterclockwise";
     return "bi-circle";
 };
-const esRutaMaestra = typeof window !== "undefined" && (
-    window.location.pathname.includes("/coordinador/maestras") ||
-    window.location.pathname.includes("/coordinador/tipos-proyecto")
+const esRutaMaestra =
+    typeof window !== "undefined" &&
+    (window.location.pathname.includes("/coordinador/maestras") ||
+        window.location.pathname.includes("/coordinador/tipos-proyecto"));
+const menuMaestras = ref(
+    esRutaMaestra || localStorage.getItem("coord-menu-maestras") === "true",
 );
-const menuMaestras = ref(esRutaMaestra || localStorage.getItem("coord-menu-maestras") === "true");
-const menuAcademico = ref(localStorage.getItem("coord-menu-academico") === "true");
+const menuAcademico = ref(
+    localStorage.getItem("coord-menu-academico") === "true",
+);
 const menuSistema = ref(localStorage.getItem("coord-menu-sistema") === "true");
 
 const toggleMenuMaestras = () => {
     menuMaestras.value = !menuMaestras.value;
-    localStorage.setItem("coord-menu-maestras", menuMaestras.value ? "true" : "false");
+    localStorage.setItem(
+        "coord-menu-maestras",
+        menuMaestras.value ? "true" : "false",
+    );
 };
 const fechaMinima = computed(() => {
     return new Date().toISOString().split("T")[0];
@@ -3253,7 +4555,8 @@ const abrirModalNuevaComunidad = (origen = "crear") => {
     };
     const el = document.getElementById("mModalNuevaComunidad");
     if (el) {
-        modalSubComunidad = Modal.getInstance(el) || new Modal(el, { backdrop: "static" });
+        modalSubComunidad =
+            Modal.getInstance(el) || new Modal(el, { backdrop: "static" });
         modalSubComunidad.show();
     }
 };
@@ -3274,7 +4577,8 @@ const guardarNuevaComunidad = async () => {
         return;
     }
     if (!nuevaComunidad.value.com_id_tor) {
-        erroresNuevaComunidad.value.com_id_tor = "El tipo de organización es obligatorio.";
+        erroresNuevaComunidad.value.com_id_tor =
+            "El tipo de organización es obligatorio.";
         return;
     }
     guardandoComunidad.value = true;
@@ -3298,12 +4602,17 @@ const guardarNuevaComunidad = async () => {
         guardandoComunidad.value = false;
         if (error.response?.data?.errors) {
             erroresNuevaComunidad.value = Object.fromEntries(
-                Object.entries(error.response.data.errors).map(([k, v]) => [k, v[0]])
+                Object.entries(error.response.data.errors).map(([k, v]) => [
+                    k,
+                    v[0],
+                ]),
             );
         } else if (error.response?.data?.message) {
-            erroresNuevaComunidad.value.com_nombre = error.response.data.message;
+            erroresNuevaComunidad.value.com_nombre =
+                error.response.data.message;
         } else {
-            erroresNuevaComunidad.value.com_nombre = "Error al registrar la comunidad.";
+            erroresNuevaComunidad.value.com_nombre =
+                "Error al registrar la comunidad.";
         }
     }
 };
@@ -3319,7 +4628,8 @@ const abrirModalNuevoTipo = (origen = "crear") => {
     nuevoTipo.value = { tpr_nombre: "" };
     const el = document.getElementById("mModalNuevoTipo");
     if (el) {
-        modalSubTipo = Modal.getInstance(el) || new Modal(el, { backdrop: "static" });
+        modalSubTipo =
+            Modal.getInstance(el) || new Modal(el, { backdrop: "static" });
         modalSubTipo.show();
     }
 };
@@ -3360,12 +4670,16 @@ const guardarNuevoTipo = async () => {
         guardandoTipo.value = false;
         if (error.response?.data?.errors) {
             erroresNuevoTipo.value = Object.fromEntries(
-                Object.entries(error.response.data.errors).map(([k, v]) => [k, v[0]])
+                Object.entries(error.response.data.errors).map(([k, v]) => [
+                    k,
+                    v[0],
+                ]),
             );
         } else if (error.response?.data?.message) {
             erroresNuevoTipo.value.tpr_nombre = error.response.data.message;
         } else {
-            erroresNuevoTipo.value.tpr_nombre = "Error al registrar el tipo de proyecto.";
+            erroresNuevoTipo.value.tpr_nombre =
+                "Error al registrar el tipo de proyecto.";
         }
     }
 };
@@ -3459,7 +4773,9 @@ const confirmarTraslado = () => {
             },
             onError: (err) => {
                 cargandoTraslado.value = false;
-                alert(Object.values(err)[0] || "Error al trasladar integrante.");
+                alert(
+                    Object.values(err)[0] || "Error al trasladar integrante.",
+                );
             },
         },
     );

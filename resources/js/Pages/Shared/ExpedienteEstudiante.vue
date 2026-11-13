@@ -71,7 +71,35 @@
                 </div>
             </div>
 
+            <!-- SIN ESTUDIANTE SELECCIONADO -->
+            <div v-if="!estudiante" class="card border-0 shadow-sm p-5 text-center my-4" style="background: var(--bg-card); border-radius: 16px;">
+                <i class="bi bi-person-bounding-box text-danger" style="font-size: 3.5rem;"></i>
+                <h5 class="fw-bold mt-3" style="color: var(--text-main);">Consulta de Expediente Estudiantil</h5>
+                <p class="text-muted small mx-auto" style="max-width: 500px;">
+                    Usa el buscador superior para escribir la cédula, nombre o apellido de cualquier estudiante y presiona "Ver expediente".
+                </p>
+                <div v-if="estudiantesLista && estudiantesLista.length > 0" class="mt-3 text-start mx-auto" style="max-width: 600px;">
+                    <div class="fw-bold small text-muted mb-2">Estudiantes sugeridos:</div>
+                    <div class="list-group shadow-sm">
+                        <a
+                            v-for="est in estudiantesLista"
+                            :key="est.usu_id"
+                            :href="`${esCoordinador ? '/coordinador' : '/profesor'}/estudiantes/${est.usu_id}/expediente`"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2"
+                            style="background: var(--bg-card); color: var(--text-main);"
+                        >
+                            <div>
+                                <strong>{{ est.usu_primer_nombre }} {{ est.usu_primer_apellido }}</strong>
+                                <span class="badge bg-light text-dark border ms-2">C.I. {{ est.usu_cedula }}</span>
+                            </div>
+                            <span class="btn btn-sm btn-outline-danger py-0 px-2">Ver expediente</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- FICHA PRINCIPAL DEL ESTUDIANTE -->
+            <template v-else>
             <div class="card border-0 shadow-sm mb-4" style="background: var(--bg-card); border-radius: 16px;">
                 <div class="card-body p-3 p-md-4">
                     <div class="row align-items-center g-3">
@@ -361,6 +389,7 @@
                     </div>
                 </div>
             </div>
+            </template>
         </div>
     </div>
 </template>
@@ -371,11 +400,12 @@ import axios from "axios";
 
 const props = defineProps({
     estudiante: Object,
-    historialEventos: Array,
-    asistenciasPuntos: Array,
-    socializaciones: Array,
+    historialEventos: { type: Array, default: () => [] },
+    asistenciasPuntos: { type: Array, default: () => [] },
+    socializaciones: { type: Array, default: () => [] },
     backUrl: String,
     esCoordinador: Boolean,
+    estudiantesLista: { type: Array, default: () => [] },
 });
 
 const tabActiva = ref("equipos");
@@ -389,17 +419,18 @@ const toggleTema = () => {
 };
 
 const iniciales = computed(() => {
+    if (!props.estudiante) return "UP";
     const nom = props.estudiante.usu_primer_nombre || "";
     const ape = props.estudiante.usu_primer_apellido || "";
     return `${nom[0] || ""}${ape[0] || ""}`.toUpperCase();
 });
 
 const seccionActual = computed(() => {
-    return props.estudiante.secciones_estudiante?.[0]?.seccion || null;
+    return props.estudiante?.secciones_estudiante?.[0]?.seccion || null;
 });
 
 const equipoActual = computed(() => {
-    return props.estudiante.equipos_integrante?.[0]?.equipo || null;
+    return props.estudiante?.equipos_integrante?.[0]?.equipo || null;
 });
 
 const formatearFecha = (fechaStr) => {
