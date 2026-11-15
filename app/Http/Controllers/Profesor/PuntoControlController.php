@@ -224,12 +224,13 @@ class PuntoControlController extends Controller
     public function reprogramar(\Illuminate\Http\Request $request, $id)
     {
         $request->validate([
-            'nueva_fecha' => 'required|date|after:today',
+            'nueva_fecha' => 'required|date|after_or_equal:today',
             'motivo'      => 'required|string|max:300',
         ], [
-            'nueva_fecha.required' => 'La nueva fecha es obligatoria.',
-            'nueva_fecha.after'    => 'La nueva fecha debe ser posterior a hoy.',
-            'motivo.required'      => 'El motivo de la reprogramación es obligatorio.',
+            'nueva_fecha.required'       => 'La nueva fecha es obligatoria.',
+            'nueva_fecha.after_or_equal' => 'La nueva fecha no puede ser anterior a la fecha de hoy.',
+            'motivo.required'            => 'El motivo de la reprogramación es obligatorio.',
+            'motivo.max'                 => 'El motivo de la reprogramación no puede exceder 300 caracteres.',
         ]);
 
         $punto = PuntoControl::findOrFail($id);
@@ -243,7 +244,10 @@ class PuntoControlController extends Controller
             ->first();
 
         if ($seguimientoExistente) {
-            return back()->withErrors(['error' => 'No se puede reprogramar un punto de control que ya ha sido evaluado.']);
+            return back()->withErrors([
+                'general' => 'No se puede reprogramar un punto de control que ya ha sido evaluado.',
+                'error'   => 'No se puede reprogramar un punto de control que ya ha sido evaluado.',
+            ]);
         }
 
         $punto->update([
@@ -253,27 +257,41 @@ class PuntoControlController extends Controller
         ]);
 
         // Notificar al líder del equipo
-        $lider = \App\Models\EquipoIntegrante::where('ein_id_equ', $punto->puc_id_equ)
-            ->where('ein_es_lider', true)
-            ->where('ein_status', true)
-            ->first();
-        if ($lider) {
-            $tnoId = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%reprogram%')
-                ->orWhere('tno_nombre', 'like', '%punto%')
-                ->value('tno_id') ?? \App\Models\TipoNotificacion::first()?->tno_id;
+        try {
+            $lider = \App\Models\EquipoIntegrante::where('ein_id_equ', $punto->puc_id_equ)
+                ->where('ein_es_lider', true)
+                ->where('ein_status', true)
+                ->first();
+            if ($lider) {
+                $tnoId = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%reprogram%')
+                    ->orWhere('tno_nombre', 'like', '%punto%')
+                    ->value('tno_id') ?? \App\Models\TipoNotificacion::first()?->tno_id;
 
-            \App\Models\Notificacion::create([
-                'not_id_usu'           => $lider->ein_id_usu,
-                'not_id_tno'           => $tnoId,
-                'not_id_equ'           => $punto->puc_id_equ,
-                'not_id_puc'           => $punto->puc_id,
-                'not_mensaje'          => "Se ha reprogramado el Punto de Control: \"{$punto->puc_nombre}\" para el {$request->nueva_fecha}. Motivo: {$request->motivo}",
-                'not_leida'            => false,
-                'not_fecha_generacion' => now(),
+                if ($tnoId) {
+                    \App\Models\Notificacion::create([
+                        'not_id_usu'           => $lider->ein_id_usu,
+                        'not_id_tno'           => $tnoId,
+                        'not_id_equ'           => $punto->puc_id_equ,
+                        'not_id_puc'           => $punto->puc_id,
+                        'not_mensaje'          => "Se ha reprogramado el Punto de Control: \"{$punto->puc_nombre}\" para el {$request->nueva_fecha}. Motivo: {$request->motivo}",
+                        'not_leida'            => false,
+                        'not_fecha_generacion' => now(),
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("No se pudo enviar notificación de reprogramación: " . $e->getMessage());
+        }
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Punto de control reprogramado correctamente.',
+                'punto'   => $punto,
             ]);
         }
 
-        return back()->with('success', 'Punto de control reprogramado correctamente.');
+        return redirect()->back()->with('success', 'Punto de control reprogramado correctamente.');
     }
 
     public function destroy($id)

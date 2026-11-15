@@ -744,111 +744,113 @@
                                         background: var(--bg-body);
                                     "
                                 >
-                                    <div
-                                        class="d-flex align-items-center justify-content-between"
-                                    >
-                                        <div>
-                                            <strong style="font-size: 0.92rem"
-                                                >{{
-                                                    int.usuario
-                                                        ?.usu_primer_nombre
-                                                }}
-                                                {{
-                                                    int.usuario
-                                                        ?.usu_primer_apellido
-                                                }}</strong
-                                            >
-                                            <span
-                                                class="badge bg-light text-dark border ms-2 small"
-                                                >C.I.
-                                                {{
-                                                    int.usuario?.usu_cedula
-                                                }}</span
-                                            >
-                                        </div>
+                                    <template v-if="formSeg.asistencias && formSeg.asistencias[int.ein_id_usu]">
                                         <div
-                                            class="form-check form-switch mb-0"
+                                            class="d-flex align-items-center justify-content-between"
                                         >
+                                            <div>
+                                                <strong style="font-size: 0.92rem"
+                                                    >{{
+                                                        int.usuario
+                                                            ?.usu_primer_nombre
+                                                    }}
+                                                    {{
+                                                        int.usuario
+                                                            ?.usu_primer_apellido
+                                                    }}</strong
+                                                >
+                                                <span
+                                                    class="badge bg-light text-dark border ms-2 small"
+                                                    >C.I.
+                                                    {{
+                                                        int.usuario?.usu_cedula
+                                                    }}</span
+                                                >
+                                            </div>
+                                            <div
+                                                class="form-check form-switch mb-0"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    class="form-check-input"
+                                                    :id="'asist_' + int.ein_id"
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    v-model="
+                                                        formSeg.asistencias[
+                                                            int.ein_id_usu
+                                                        ].asistio
+                                                    "
+                                                />
+                                                <label
+                                                    class="form-check-label small fw-bold"
+                                                    :for="'asist_' + int.ein_id"
+                                                >
+                                                    {{
+                                                        formSeg.asistencias[
+                                                            int.ein_id_usu
+                                                        ]?.asistio
+                                                            ? "Asistió"
+                                                            : "Inasistencia"
+                                                    }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <!-- Si falta, justificación -->
+                                        <div
+                                            v-if="
+                                                !formSeg.asistencias[int.ein_id_usu]
+                                                    ?.asistio
+                                            "
+                                            class="mt-2 p-2 rounded bg-danger bg-opacity-10 border border-danger-subtle"
+                                        >
+                                            <div
+                                                class="d-flex align-items-center gap-2 mb-1"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    class="form-check-input"
+                                                    :id="'just_' + int.ein_id"
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    v-model="
+                                                        formSeg.asistencias[
+                                                            int.ein_id_usu
+                                                        ].justificado
+                                                    "
+                                                />
+                                                <label
+                                                    class="form-check-label small fw-bold text-danger"
+                                                    :for="'just_' + int.ein_id"
+                                                >
+                                                    ¿Presentó Justificativo?
+                                                </label>
+                                            </div>
                                             <input
-                                                type="checkbox"
-                                                class="form-check-input"
-                                                :id="'asist_' + int.ein_id"
-                                                :disabled="modoSoloLecturaSeg"
+                                                type="text"
                                                 v-model="
                                                     formSeg.asistencias[
                                                         int.ein_id_usu
-                                                    ].asistio
+                                                    ].justificativo
                                                 "
-                                            />
-                                            <label
-                                                class="form-check-label small fw-bold"
-                                                :for="'asist_' + int.ein_id"
-                                            >
-                                                {{
-                                                    formSeg.asistencias[
-                                                        int.ein_id_usu
-                                                    ]?.asistio
-                                                        ? "Asistió"
-                                                        : "Inasistencia"
-                                                }}
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <!-- Si falta, justificación -->
-                                    <div
-                                        v-if="
-                                            !formSeg.asistencias[int.ein_id_usu]
-                                                ?.asistio
-                                        "
-                                        class="mt-2 p-2 rounded bg-danger bg-opacity-10 border border-danger-subtle"
-                                    >
-                                        <div
-                                            class="d-flex align-items-center gap-2 mb-1"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                class="form-check-input"
-                                                :id="'just_' + int.ein_id"
                                                 :disabled="modoSoloLecturaSeg"
+                                                class="form-control form-control-sm"
+                                                placeholder="Motivo o constancia de la inasistencia..."
+                                            />
+                                        </div>
+                                        <!-- Observación individual -->
+                                        <div class="mt-2">
+                                            <input
+                                                type="text"
                                                 v-model="
                                                     formSeg.asistencias[
                                                         int.ein_id_usu
-                                                    ].justificado
+                                                    ].observacion
                                                 "
+                                                :disabled="modoSoloLecturaSeg"
+                                                class="form-control form-control-sm"
+                                                placeholder="Observación individual (aporte destacado, dificultades, o falta)..."
                                             />
-                                            <label
-                                                class="form-check-label small fw-bold text-danger"
-                                                :for="'just_' + int.ein_id"
-                                            >
-                                                ¿Presentó Justificativo?
-                                            </label>
                                         </div>
-                                        <input
-                                            type="text"
-                                            v-model="
-                                                formSeg.asistencias[
-                                                    int.ein_id_usu
-                                                ].justificativo
-                                            "
-                                            :disabled="modoSoloLecturaSeg"
-                                            class="form-control form-control-sm"
-                                            placeholder="Motivo o constancia de la inasistencia..."
-                                        />
-                                    </div>
-                                    <!-- Observación individual -->
-                                    <div class="mt-2">
-                                        <input
-                                            type="text"
-                                            v-model="
-                                                formSeg.asistencias[
-                                                    int.ein_id_usu
-                                                ].observacion
-                                            "
-                                            :disabled="modoSoloLecturaSeg"
-                                            class="form-control form-control-sm"
-                                            placeholder="Observación individual (aporte destacado, dificultades, o falta)..."
-                                        />
-                                    </div>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -879,51 +881,161 @@
         </div>
 
         <!-- Modal Reprogramar -->
-        <div class="modal fade" id="mReprog" tabindex="-1">
-            <div class="modal-dialog modal-sm modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="mh">
-                        <h5>Reprogramar Punto</h5>
+        <div
+            class="modal fade"
+            id="mReprog"
+            tabindex="-1"
+            aria-labelledby="mReprogLabel"
+            aria-hidden="true"
+        >
+            <div
+                class="modal-dialog modal-dialog-centered"
+                style="max-width: 450px"
+            >
+                <div
+                    class="modal-content border-0 shadow-lg"
+                    style="
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: var(--bg-card);
+                    "
+                >
+                    <div
+                        class="mh"
+                        style="
+                            background: #1a1d23;
+                            border-bottom: 2px solid #dc3545;
+                            color: #fff;
+                            padding: 1rem 1.25rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        "
+                    >
+                        <h5
+                            id="mReprogLabel"
+                            class="mb-0 fw-bold fs-6 text-white d-flex align-items-center"
+                        >
+                            <i
+                                class="bi bi-calendar-event text-warning me-2"
+                            ></i
+                            >Reprogramar Encuentro
+                        </h5>
                         <button
+                            type="button"
                             class="btn btn-sm text-white p-0 fs-5"
                             data-bs-dismiss="modal"
+                            aria-label="Cerrar"
                         >
-                            <i class="bi bi-x"></i>
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
                     <form @submit.prevent="guardarReprogramar">
-                        <div class="modal-body">
-                            <label class="form-label fw-semibold"
-                                >Nueva Fecha
-                                <span class="text-danger">*</span></label
+                        <div
+                            class="modal-body p-4"
+                            style="color: var(--text-main)"
+                        >
+                            <div
+                                v-if="puntoReprog"
+                                class="alert py-2 px-3 small mb-3 rounded"
+                                style="
+                                    background: var(--bg-th);
+                                    border: 1px solid var(--border);
+                                    color: var(--text-main);
+                                "
                             >
-                            <input
-                                v-model="formReprog.nueva_fecha"
-                                type="date"
-                                :min="fechaManana"
-                                class="form-control"
-                            />
-                            <label class="form-label fw-semibold mt-3"
-                                >Motivo</label
+                                <div class="fw-bold text-danger">
+                                    {{ puntoReprog.puc_nombre }}
+                                </div>
+                                <div
+                                    class="text-muted"
+                                    style="font-size: 0.75rem"
+                                >
+                                    Equipo:
+                                    <strong>{{
+                                        puntoReprog.equipo?.equ_codigo
+                                    }}</strong>
+                                    &bull; Fecha actual:
+                                    {{
+                                        puntoReprog.puc_fecha_reprogramada ||
+                                        puntoReprog.puc_fecha_limite
+                                    }}
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="erroresReprog.general || erroresReprog.error"
+                                class="alert alert-danger py-2 px-3 small mb-3"
                             >
-                            <textarea
-                                v-model="formReprog.motivo"
-                                class="form-control"
-                                rows="2"
-                            ></textarea>
+                                {{ erroresReprog.general || erroresReprog.error }}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small"
+                                    >Nueva Fecha de Encuentro
+                                    <span class="text-danger">*</span></label
+                                >
+                                <input
+                                    v-model="formReprog.nueva_fecha"
+                                    type="date"
+                                    :min="fechaHoy"
+                                    class="form-control"
+                                    :class="{
+                                        'is-invalid': erroresReprog.nueva_fecha,
+                                    }"
+                                    required
+                                />
+                                <div
+                                    v-if="erroresReprog.nueva_fecha"
+                                    class="invalid-feedback"
+                                >
+                                    {{ erroresReprog.nueva_fecha }}
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold small"
+                                    >Motivo de la Reprogramación
+                                    <span class="text-danger">*</span></label
+                                >
+                                <textarea
+                                    v-model="formReprog.motivo"
+                                    class="form-control"
+                                    :class="{
+                                        'is-invalid': erroresReprog.motivo,
+                                    }"
+                                    rows="3"
+                                    placeholder="Indica la razón por la cual se reprograma el encuentro..."
+                                    required
+                                ></textarea>
+                                <div
+                                    v-if="erroresReprog.motivo"
+                                    class="invalid-feedback"
+                                >
+                                    {{ erroresReprog.motivo }}
+                                </div>
+                            </div>
                         </div>
-                        <div class="modal-footer border-0">
+                        <div
+                            class="modal-footer border-0 p-3 pt-0 d-flex justify-content-end gap-2"
+                            style="background: var(--bg-card)"
+                        >
                             <button
                                 type="button"
-                                class="btn btn-secondary"
+                                class="btn btn-sm btn-secondary px-3"
                                 data-bs-dismiss="modal"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
-                                class="btn btn-warning fw-bold text-dark"
+                                class="btn btn-sm btn-warning fw-bold text-dark px-3"
+                                :disabled="loadingReprog"
                             >
+                                <span
+                                    v-if="loadingReprog"
+                                    class="spinner-border spinner-border-sm me-1"
+                                ></span>
                                 Reprogramar
                             </button>
                         </div>
@@ -1002,11 +1114,20 @@ const iniciales = computed(() => {
 const busqueda = ref("");
 const seccionSeleccionadaModal = ref("");
 
-const fechaHoy = computed(() => new Date().toISOString().split("T")[0]);
+const fechaHoy = computed(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+});
 const fechaManana = computed(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
 });
 
 const onSeccionModalChange = () => {
@@ -1046,7 +1167,11 @@ const formSeg = ref({
     asistencias: {},
 });
 const loadingSeg = ref(false);
+const puntoActual = ref(null);
+const puntoReprog = ref(null);
 const formReprog = ref({ nueva_fecha: "", motivo: "" });
+const erroresReprog = ref({});
+const loadingReprog = ref(false);
 
 const puntoAEliminar = ref(null);
 let mPunto = null;
@@ -1171,28 +1296,70 @@ const guardarSeguimiento = () => {
     );
 };
 const abrirReprogramar = (puc) => {
-    puntoActual.value = puc;
-    formReprog.value = { nueva_fecha: "", motivo: "" };
-    mReprog = mReprog || new Modal(document.getElementById("mReprog"));
-    mReprog.show();
+    puntoReprog.value = puc;
+    formReprog.value = {
+        nueva_fecha: puc.puc_fecha_reprogramada || "",
+        motivo: puc.puc_motivo_reprogramacion || "",
+    };
+    erroresReprog.value = {};
+    const modalEl = document.getElementById("mReprog");
+    if (modalEl) {
+        mReprog = Modal.getInstance(modalEl) || new Modal(modalEl);
+        mReprog.show();
+    }
 };
 const guardarReprogramar = () => {
+    if (!puntoReprog.value) return;
+    loadingReprog.value = true;
+    erroresReprog.value = {};
+
     router.post(
-        `/profesor/puntos-control/${puntoActual.value.puc_id}/reprogramar`,
+        `/profesor/puntos-control/${puntoReprog.value.puc_id}/reprogramar`,
         formReprog.value,
-        { onSuccess: () => mReprog?.hide() },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                loadingReprog.value = false;
+                const modalEl = document.getElementById("mReprog");
+                const inst = Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+                // Limpiar posibles backdrops residuales
+                document
+                    .querySelectorAll(".modal-backdrop")
+                    .forEach((el) => el.remove());
+                document.body.classList.remove("modal-open");
+                document.body.style.removeProperty("overflow");
+                document.body.style.removeProperty("padding-right");
+                puntoReprog.value = null;
+            },
+            onError: (errs) => {
+                loadingReprog.value = false;
+                erroresReprog.value = errs;
+            },
+        },
     );
 };
 const eliminar = (puc) => {
     puntoAEliminar.value = puc;
-    mElim = mElim || new Modal(document.getElementById("mElim"));
-    mElim.show();
+    const modalEl = document.getElementById("mElim");
+    if (modalEl) {
+        mElim = Modal.getInstance(modalEl) || new Modal(modalEl);
+        mElim.show();
+    }
 };
 const confirmarEliminar = () => {
-    router.delete(`/profesor/puntos-control/${puntoAEliminar.value.puc_id}`);
-    mElim?.hide();
+    router.delete(`/profesor/puntos-control/${puntoAEliminar.value.puc_id}`, {
+        onSuccess: () => {
+            const modalEl = document.getElementById("mElim");
+            const inst = Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+            document
+                .querySelectorAll(".modal-backdrop")
+                .forEach((el) => el.remove());
+            document.body.classList.remove("modal-open");
+        },
+    });
 };
-const puntoActual = ref(null);
 </script>
 <style>
 :root {

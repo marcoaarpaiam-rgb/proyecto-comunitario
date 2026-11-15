@@ -455,8 +455,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('puntos-control/{id}/seguimiento',
         [App\Http\Controllers\Profesor\PuntoControlController::class, 'registrarSeguimiento'])
         ->name('puntos-control.seguimiento');
-    Route::post('/puntos-control/{id}/reprogramar', [PuntoControlController::class, 'reprogramar'])
-        ->name('profesor.puntos-control.reprogramar');
+    Route::post('puntos-control/{id}/reprogramar', [App\Http\Controllers\Profesor\PuntoControlController::class, 'reprogramar'])
+        ->name('puntos-control.reprogramar');
     Route::delete('puntos-control/{id}',
         [App\Http\Controllers\Profesor\PuntoControlController::class, 'destroy'])
         ->name('puntos-control.destroy');
