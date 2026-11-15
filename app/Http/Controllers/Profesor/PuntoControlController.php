@@ -137,7 +137,7 @@ class PuntoControlController extends Controller
                 'not_id_tno'           => $tnoId,
                 'not_id_equ'           => $request->puc_id_equ,
                 'not_id_puc'           => $punto->puc_id,
-                'not_mensaje'          => "Se ha programado el Punto de Control: \"{$punto->puc_nombre}\" con fecha límite: {$punto->puc_fecha_limite}.",
+                'not_mensaje'          => "Se ha programado el Punto de Control: \"{$punto->puc_nombre}\" con día de encuentro: {$punto->puc_fecha_limite}.",
                 'not_leida'            => false,
                 'not_fecha_generacion' => now(),
             ]);
@@ -273,7 +273,7 @@ class PuntoControlController extends Controller
                         'not_id_tno'           => $tnoId,
                         'not_id_equ'           => $punto->puc_id_equ,
                         'not_id_puc'           => $punto->puc_id,
-                        'not_mensaje'          => "Se ha reprogramado el Punto de Control: \"{$punto->puc_nombre}\" para el {$request->nueva_fecha}. Motivo: {$request->motivo}",
+                        'not_mensaje'          => "Se ha reprogramado el Punto de Control: \"{$punto->puc_nombre}\" para el día de encuentro: {$request->nueva_fecha}. Motivo: {$request->motivo}",
                         'not_leida'            => false,
                         'not_fecha_generacion' => now(),
                     ]);

@@ -35,7 +35,19 @@ Route::get('/home', fn() => Inertia::render('Home'))->name('home');
 
 
 Route::middleware('auth')->group(function () {
+    // GET: solo lectura — devuelve las notificaciones existentes del usuario
     Route::get('/notificaciones/lista', function () {
+        $user = auth()->user();
+        if (!$user) return response()->json([]);
+
+        return \App\Models\Notificacion::where('not_id_usu', $user->usu_id)
+            ->orderBy('not_fecha_generacion', 'desc')
+            ->take(20)
+            ->get();
+    });
+
+    // POST: genera notificaciones automáticas (polling asíncrono, no navegación web)
+    Route::post('/notificaciones/generar', function () {
         $user = auth()->user();
         if (!$user) return response()->json([]);
         $userId = $user->usu_id;
@@ -56,7 +68,7 @@ Route::middleware('auth')->group(function () {
             foreach ($puntosCercanos as $punto) {
                 $yaNotificado = \App\Models\Notificacion::where('not_id_usu', $userId)
                     ->where('not_id_puc', $punto->puc_id)
-                    ->where('not_mensaje', 'like', '%próximo a vencer%')
+                    ->where('not_mensaje', 'like', '%día de encuentro%')
                     ->exists();
 
                 if (!$yaNotificado) {
@@ -65,7 +77,7 @@ Route::middleware('auth')->group(function () {
                         'not_id_tno'           => \App\Models\TipoNotificacion::first()?->tno_id,
                         'not_id_equ'           => $punto->puc_id_equ,
                         'not_id_puc'           => $punto->puc_id,
-                        'not_mensaje'          => "Recordatorio: El punto de control \"{$punto->puc_nombre}\" está próximo a vencer el {$punto->puc_fecha_limite}.",
+                        'not_mensaje'          => "Recordatorio: El punto de control \"{$punto->puc_nombre}\" tiene su día de encuentro el {$punto->puc_fecha_limite}.",
                         'not_leida'            => false,
                         'not_fecha_generacion' => now(),
                     ]);
@@ -94,7 +106,7 @@ Route::middleware('auth')->group(function () {
                 foreach ($puntosProf as $punto) {
                     $yaNotificado = \App\Models\Notificacion::where('not_id_usu', $userId)
                         ->where('not_id_puc', $punto->puc_id)
-                        ->where('not_mensaje', 'like', '%próximo a vencer%')
+                        ->where('not_mensaje', 'like', '%día de encuentro%')
                         ->exists();
 
                     if (!$yaNotificado) {
@@ -103,7 +115,7 @@ Route::middleware('auth')->group(function () {
                             'not_id_tno'           => \App\Models\TipoNotificacion::first()?->tno_id,
                             'not_id_equ'           => $punto->puc_id_equ,
                             'not_id_puc'           => $punto->puc_id,
-                            'not_mensaje'          => "El punto de control \"{$punto->puc_nombre}\" del equipo {$punto->equipo?->equ_codigo} está próximo a vencer el {$punto->puc_fecha_limite}.",
+                            'not_mensaje'          => "El punto de control \"{$punto->puc_nombre}\" del equipo {$punto->equipo?->equ_codigo} tiene su día de encuentro el {$punto->puc_fecha_limite}.",
                             'not_leida'            => false,
                             'not_fecha_generacion' => now(),
                         ]);
@@ -112,9 +124,7 @@ Route::middleware('auth')->group(function () {
             }
         }
 
-        return \App\Models\Notificacion::where('not_id_usu', $userId)
-            ->orderBy('not_fecha_generacion', 'desc')
-            ->take(20)->get();
+        return response()->json(['ok' => true]);
     });
 
     Route::post('/notificaciones/{id}/leer', function ($id) {
@@ -154,19 +164,21 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
                 'notificaciones'   => \App\Models\Notificacion::where('not_id_usu', auth()->id())->where('not_leida', false)->count(),
                 'cartasPendientes' => \App\Models\CartaPresentacion::where('cpr_solicitada', true)->whereNull('cpr_fecha_aprobacion')->count(),
             ],
-            'secciones' => \App\Models\Seccion::with('turno')->where('sec_status', true)->orderBy('sec_codigo')->get()
+            'secciones' => \App\Models\Seccion::with([
+                    'turno',
+                    'equipos' => fn($q) => $q->where('equ_status', true)->with([
+                        'proyectoComunidad',
+                        'puntosControl.seguimientos',
+                        'entregables',
+                        'socializaciones.tipoSocializacion',
+                        'resultadoProyecto',
+                    ]),
+                ])
+                ->where('sec_status', true)
+                ->orderBy('sec_codigo')
+                ->get()
                 ->map(function ($s) {
-                    $equipos = \App\Models\Equipo::where('equ_id_sec', $s->sec_id)
-                        ->where('equ_status', true)
-                        ->with([
-                            'proyectoComunidad',
-                            'puntosControl.seguimientos',
-                            'entregables',
-                            'socializaciones.tipoSocializacion',
-                            'resultadoProyecto'
-                        ])
-                        ->get();
-
+                    $equipos = $s->equipos;
                     $total = $equipos->count();
                     $avance = 0;
                     if ($total > 0) {

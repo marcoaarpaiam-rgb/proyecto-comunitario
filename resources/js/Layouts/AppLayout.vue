@@ -328,12 +328,22 @@ const toggleNotificaciones = () => {
 
 const cargarNotificaciones = () => {
     if (!page.props.auth?.user) return;
-    fetch("/notificaciones/lista")
-        .then((r) => r.json())
-        .then((data) => {
-            listaNotificaciones.value = data;
-        })
-        .catch(() => {});
+    // Primero genera notificaciones automáticas (escritura en POST),
+    // luego carga la lista actualizada (solo lectura en GET)
+    const csrf = document.querySelector("meta[name=csrf-token]")?.content;
+    fetch("/notificaciones/generar", {
+        method: "POST",
+        headers: { "X-CSRF-TOKEN": csrf, "Content-Type": "application/json" },
+    })
+        .catch(() => {})
+        .finally(() => {
+            fetch("/notificaciones/lista")
+                .then((r) => r.json())
+                .then((data) => {
+                    listaNotificaciones.value = data;
+                })
+                .catch(() => {});
+        });
 };
 
 const marcarLeida = (not) => {

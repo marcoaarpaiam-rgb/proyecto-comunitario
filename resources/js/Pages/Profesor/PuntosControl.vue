@@ -1178,11 +1178,19 @@ let mPunto = null;
 let mSeg = null;
 let mReprog = null;
 let mElim = null;
-const estaVencido = (f) => f && new Date(f) < new Date();
+const estaVencido = (f) => {
+    if (!f) return false;
+    // Descomponer YYYY-MM-DD con hora local para evitar desfase UTC
+    const [y, m, d] = f.split('-').map(Number);
+    const fechaLocal = new Date(y, m - 1, d, 23, 59, 59);
+    return fechaLocal < new Date();
+};
 const esCercano = (f) => {
     if (!f) return false;
-    const d = new Date(f) - new Date();
-    return d > 0 && d < 3 * 86400000;
+    const [y, m, d] = f.split('-').map(Number);
+    const fechaLocal = new Date(y, m - 1, d, 23, 59, 59);
+    const diff = fechaLocal - new Date();
+    return diff > 0 && diff < 3 * 86400000;
 };
 const filtrados = computed(() => {
     if (!busqueda.value.trim()) return props.puntosControl;

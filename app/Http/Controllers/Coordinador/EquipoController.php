@@ -746,14 +746,22 @@ class EquipoController extends Controller
 
     
 
-    public function historial($equipoId)
+    public function historial(Request $request, $equipoId)
     {
         $this->autorizarEquipoId($equipoId);
         $equipo = Equipo::with([
             'historial.tipoEvento',
             'historial' => fn($q) => $q->orderBy('heq_fecha_evento', 'desc'),
         ])->findOrFail($equipoId);
-        return response()->json($equipo->historial);
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json($equipo->historial);
+        }
+
+        return Inertia::render('Coordinador/HistorialEquipo', [
+            'historial' => $equipo->historial,
+            'equipo'    => $equipo->only(['equ_id', 'equ_codigo', 'equ_titulo']),
+        ]);
     }
 
     
@@ -1166,7 +1174,7 @@ class EquipoController extends Controller
         return back()->with('success', "Equipo {$codigoOriginal} reactivado correctamente.");
     }
 
-    public function historialAcademico($id)
+    public function historialAcademico(Request $request, $id)
     {
         $user = auth()->user();
 
@@ -1192,7 +1200,11 @@ class EquipoController extends Controller
             abort_unless($seccionesProfesor->contains($equipo->equ_id_sec), 403, 'No tienes acceso a este equipo.');
         }
 
-        return response()->json([
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['equipo' => $equipo]);
+        }
+
+        return Inertia::render('Coordinador/HistorialAcademico', [
             'equipo' => $equipo,
         ]);
     }
