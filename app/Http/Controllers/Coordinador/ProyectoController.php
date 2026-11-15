@@ -125,6 +125,63 @@ class ProyectoController extends Controller
         return back()->with('success', 'Proyecto registrado correctamente.');
     }
 
+    public function update(Request $request, $id)
+    {
+        $proyecto = ProyectoComunidad::findOrFail($id);
+
+        $fechaActual = $proyecto->pco_fecha_limite
+            ? substr((string) $proyecto->pco_fecha_limite, 0, 10)
+            : null;
+
+        $reglaFecha = ['nullable', 'date'];
+        if ($request->filled('pco_fecha_limite') && $request->pco_fecha_limite !== $fechaActual) {
+            $reglaFecha = ['nullable', 'date', 'after_or_equal:today'];
+        }
+
+        $request->validate([
+            'pco_id_com'       => 'required|exists:comunidad,com_id',
+            'pco_id_tpr'       => 'required|exists:tipo_proyecto,tpr_id',
+            'pco_id_mpr'       => 'required|exists:modalidad_proyecto,mpr_id',
+            'pco_resumen'      => 'required|string|max:150',
+            'pco_fecha_limite' => $reglaFecha,
+            'beneficiarios'    => 'sometimes|array',
+            'beneficiarios.*.tbe_id'   => 'required|exists:tipo_beneficiario,tbe_id',
+            'beneficiarios.*.cantidad' => 'required|integer|min:1|max:10000',
+        ], [
+            'pco_id_com.required'             => 'La comunidad es obligatoria.',
+            'pco_id_tpr.required'             => 'El tipo de proyecto es obligatorio.',
+            'pco_id_mpr.required'             => 'La modalidad es obligatoria.',
+            'pco_resumen.required'            => 'El resumen es obligatorio.',
+            'pco_resumen.max'                 => 'El resumen no puede superar 150 caracteres.',
+            'pco_fecha_limite.after_or_equal' => 'La fecha límite no puede ser anterior a hoy.',
+            'beneficiarios.*.cantidad.max'    => 'La cantidad de beneficiarios no puede superar 10.000.',
+            'beneficiarios.*.cantidad.min'    => 'La cantidad debe ser al menos 1.',
+            'beneficiarios.*.cantidad.integer'=> 'La cantidad debe ser un número entero.',
+        ]);
+
+        $proyecto->update([
+            'pco_id_com'         => $request->pco_id_com,
+            'pco_id_tpr'         => $request->pco_id_tpr,
+            'pco_id_mpr'         => $request->pco_id_mpr,
+            'pco_resumen'        => $request->pco_resumen,
+            'pco_fecha_limite'   => $request->pco_fecha_limite ?: $proyecto->pco_fecha_limite,
+            'pco_id_usu_updated' => auth()->id(),
+        ]);
+
+        if ($request->has('beneficiarios')) {
+            ProyectoBeneficiario::where('pbe_id_pco', $proyecto->pco_id)->delete();
+            foreach ($request->beneficiarios as $ben) {
+                ProyectoBeneficiario::create([
+                    'pbe_id_pco'         => $proyecto->pco_id,
+                    'pbe_id_tbe'         => $ben['tbe_id'],
+                    'pbe_cantidad'       => $ben['cantidad'],
+                    'pbe_id_usu_created' => auth()->id(),
+                ]);
+            }
+        }
+
+        return back()->with('success', 'Proyecto actualizado correctamente.');
+    }
 
     public function destroy($id)
     {

@@ -202,7 +202,7 @@ class EquipoController extends Controller
             'proyecto.pco_fecha_limite'         => 'nullable|date|after_or_equal:today|before_or_equal:' . now()->addYear()->toDateString(),
             'proyecto.beneficiarios'            => 'nullable|array',
             'proyecto.beneficiarios.*.tbe_id'   => 'nullable|exists:tipo_beneficiario,tbe_id',
-            'proyecto.beneficiarios.*.cantidad' => 'nullable|integer|min:1|max:1000000',
+            'proyecto.beneficiarios.*.cantidad' => 'nullable|integer|min:1|max:10000',
         ], [
             'equ_id_sec.required'                       => 'La sección es obligatoria.',
             'equ_numero_grupo.required'                 => 'El número de grupo es obligatorio.',

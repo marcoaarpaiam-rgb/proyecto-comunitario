@@ -514,36 +514,6 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
         ->name('equipos.disolver');
 
-    Route::delete('equipos/{id}', [EquipoController::class, 'destroy'])
-        ->name('coordinador.equipos.destroy');
-
-    Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
-        [EquipoController::class, 'removerIntegrante'])
-        ->name('equipos.integrantes.remover');
-
-    Route::post('equipos/{equipoId}/integrantes/{integranteId}/trasladar',
-        [EquipoController::class, 'trasladarIntegrante'])
-        ->name('equipos.integrantes.trasladar');
-
-    Route::post('equipos/{equipoId}/cambiar-lider',
-        [EquipoController::class, 'cambiarLider'])
-        ->name('equipos.cambiar-lider');
-
-    Route::get('equipos/{equipoId}/historial',
-        [EquipoController::class, 'historial'])
-        ->name('equipos.historial');
-
-    Route::get('equipos/{id}/historial-academico',
-        [EquipoController::class, 'historialAcademico'])
-        ->name('equipos.historial-academico');
-    
-
-    Route::post('equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
-        ->name('equipos.reactivar');
-
-    Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
-        ->name('equipos.expediente');
-
     Route::get('/equipos/{id}/paquete-cierre', [EquipoController::class, 'generarPaqueteCierre'])
         ->name('profesor.equipos.paqueteCierre');
 
