@@ -54,7 +54,7 @@
 
                     <!-- Resultados de búsqueda rápida -->
                     <div v-if="resultadosBusqueda.length > 0" class="list-group mt-2 border rounded shadow-sm">
-                        <a
+                        <Link
                             v-for="est in resultadosBusqueda"
                             :key="est.usu_id"
                             :href="`${esCoordinador ? '/coordinador' : '/profesor'}/estudiantes/${est.usu_id}/expediente`"
@@ -66,7 +66,7 @@
                                 <span class="badge bg-light text-dark border ms-2">C.I. {{ est.usu_cedula }}</span>
                             </div>
                             <span class="btn btn-sm btn-outline-danger py-0 px-2">Ver expediente</span>
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -81,7 +81,7 @@
                 <div v-if="estudiantesLista && estudiantesLista.length > 0" class="mt-3 text-start mx-auto" style="max-width: 600px;">
                     <div class="fw-bold small text-muted mb-2">Estudiantes sugeridos:</div>
                     <div class="list-group shadow-sm">
-                        <a
+                        <Link
                             v-for="est in estudiantesLista"
                             :key="est.usu_id"
                             :href="`${esCoordinador ? '/coordinador' : '/profesor'}/estudiantes/${est.usu_id}/expediente`"
@@ -93,7 +93,7 @@
                                 <span class="badge bg-light text-dark border ms-2">C.I. {{ est.usu_cedula }}</span>
                             </div>
                             <span class="btn btn-sm btn-outline-danger py-0 px-2">Ver expediente</span>
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -131,7 +131,7 @@
                                 </span>
                             </div>
                             <div class="d-flex align-items-center gap-3 flex-wrap text-muted small mt-2">
-                                <div><i class="bi bi-envelope me-1"></i> {{ estudiante.usu_correo || 'Sin correo registrado' }}</div>
+                                <div><i class="bi bi-envelope me-1"></i> {{ (estudiante.usu_email || estudiante.usu_correo) || 'Sin correo registrado' }}</div>
                                 <div><i class="bi bi-telephone me-1"></i> {{ estudiante.usu_telefono || 'Sin teléfono' }}</div>
                                 <div v-if="seccionActual">
                                     <i class="bi bi-collection me-1 text-danger"></i>
@@ -221,7 +221,7 @@
                                         </td>
                                         <td>
                                             <span class="badge bg-danger rounded-pill px-2 py-1">
-                                                {{ ev.tipo_evento?.tev_nombre || 'Evento de Equipo' }}
+                                                {{ ev.tipo_evento?.tee_nombre || ev.tipo_evento?.tev_nombre || 'Evento de Equipo' }}
                                             </span>
                                         </td>
                                         <td class="fw-semibold">
@@ -229,7 +229,7 @@
                                         </td>
                                         <td style="max-width: 320px;">
                                             <div class="p-2 rounded bg-light border text-dark small" style="white-space: pre-wrap;">
-                                                {{ ev.heq_detalles || 'Sin detalles' }}
+                                                {{ ev.heq_detalles || ev.heq_motivo || 'Sin detalles' }}
                                             </div>
                                         </td>
                                         <td class="small text-muted">
@@ -396,6 +396,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { Link } from "@inertiajs/vue3";
 import axios from "axios";
 
 const props = defineProps({

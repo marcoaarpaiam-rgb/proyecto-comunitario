@@ -394,12 +394,12 @@ class LiderController extends Controller
         ]);
 
         // Verificar que el usuario seleccionado es profesor
-        $esProfesort = \App\Models\UsuarioRol::where('uro_id_usu', $request->tut_id_usu)
+        $esProfesor = \App\Models\UsuarioRol::where('uro_id_usu', $request->tut_id_usu)
             ->where('uro_status', true)
             ->whereHas('rol', fn($q) => $q->where('rol_nombre', 'profesor_proyecto'))
             ->exists();
 
-        if (!$esProfesort) {
+        if (!$esProfesor) {
             return back()->withErrors(['tut_id_usu' => 'El usuario seleccionado no es un profesor del PNF.']);
         }
 

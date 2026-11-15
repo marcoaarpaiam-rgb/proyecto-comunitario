@@ -28,4 +28,9 @@ class HistorialEquipo extends Model
     {
         return $this->belongsTo(TipoEventoEquipo::class, 'heq_id_tee', 'tee_id');
     }
+
+    public function usuarioModifico()
+    {
+        return $this->belongsTo(Usuario::class, 'heq_id_usu_created', 'usu_id');
+    }
 }

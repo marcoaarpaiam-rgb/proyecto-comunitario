@@ -50,7 +50,8 @@ class Usuario extends Authenticatable
 
     public function roles()
     {
-        return $this->belongsToMany(Rol::class, 'usuario_rol', 'uro_id_usu', 'uro_id_rol');
+        return $this->belongsToMany(Rol::class, 'usuario_rol', 'uro_id_usu', 'uro_id_rol')
+            ->wherePivot('uro_status', true);
     }
 
     public function usuarioRoles()
@@ -94,9 +95,23 @@ class Usuario extends Authenticatable
         return $this->hasMany(Bitacora::class, 'bit_id_usu', 'usu_id');
     }
 
+    /**
+     * Cache en memoria de la instancia para evitar queries N+1 de roles
+     * @var array<string>|null
+     */
+    protected ?array $rolesNombresCache = null;
+
     public function hasRol(string $rol): bool
     {
-        return $this->roles()->where('rol_nombre', $rol)->exists();
+        if ($this->relationLoaded('roles')) {
+            return $this->roles->contains('rol_nombre', $rol);
+        }
+
+        if ($this->rolesNombresCache === null) {
+            $this->rolesNombresCache = $this->roles()->pluck('rol_nombre')->all();
+        }
+
+        return in_array($rol, $this->rolesNombresCache, true);
     }
 
     public function esCoordinador(): bool { return $this->hasRol('coordinador'); }

@@ -54,7 +54,7 @@ class ExpedienteEstudianteController extends Controller
                 'equiposIntegrante.equipo',
             ])
             ->take(25)
-            ->get(['usu_id', 'usu_cedula', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_correo', 'usu_telefono']);
+            ->get(['usu_id', 'usu_cedula', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_email', 'usu_telefono']);
 
         // Si la petición espera JSON explícito (ej: autocompletado con axios)
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
@@ -62,10 +62,11 @@ class ExpedienteEstudianteController extends Controller
         }
 
         // Si es una navegación directa de Inertia a /estudiantes/buscar
-        // Buscamos el primer estudiante o devolvemos la vista para buscar
+        // Redirigir limpiamente a la ruta del primer estudiante encontrado
         $primerEstudianteId = $estudiantes->first()?->usu_id;
         if ($primerEstudianteId) {
-            return $this->show($primerEstudianteId);
+            $rutaExpediente = $esCoordinador ? 'coordinador.estudiantes.expediente' : 'profesor.estudiantes.expediente';
+            return redirect()->route($rutaExpediente, $primerEstudianteId);
         }
 
         return Inertia::render('Shared/ExpedienteEstudiante', [
@@ -109,15 +110,34 @@ class ExpedienteEstudianteController extends Controller
             'equiposIntegrante.equipo.proyectoComunidad.comunidad',
         ])->findOrFail($id);
 
-        // Historial de eventos en equipos (entradas, salidas, expulsiones, disoluciones)
-        $historialEventos = HistorialEquipo::where('heq_id_usu', $id)
-            ->orWhere(function ($q) use ($estudiante) {
-                $q->where('heq_detalles', 'like', "%{$estudiante->usu_cedula}%")
-                  ->orWhere('heq_detalles', 'like', "%{$estudiante->usu_primer_nombre}%");
+        // Historial de eventos en equipos (entradas, salidas, disoluciones, reactivaciones)
+        $equiposIds = $estudiante->equiposIntegrante->pluck('ein_id_equ')->filter()->unique();
+
+        $historialEventos = HistorialEquipo::where(function ($q) use ($equiposIds, $estudiante) {
+                if ($equiposIds->isNotEmpty()) {
+                    $q->whereIn('heq_id_equ', $equiposIds);
+                }
+                $q->orWhere('heq_motivo', 'like', "%{$estudiante->usu_cedula}%")
+                  ->orWhere('heq_motivo', 'like', "%{$estudiante->usu_primer_nombre}%");
             })
             ->with(['equipo', 'tipoEvento', 'usuarioModifico'])
             ->orderBy('heq_fecha_evento', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($heq) {
+                return [
+                    'heq_id'           => $heq->heq_id,
+                    'heq_fecha_evento' => $heq->heq_fecha_evento,
+                    'heq_motivo'       => $heq->heq_motivo,
+                    'heq_detalles'     => $heq->heq_motivo,
+                    'heq_id_equ'       => $heq->heq_id_equ,
+                    'equipo'           => $heq->equipo,
+                    'tipo_evento'      => [
+                        'tee_nombre' => $heq->tipoEvento?->tee_nombre,
+                        'tev_nombre' => $heq->tipoEvento?->tee_nombre,
+                    ],
+                    'usuario_modifico' => $heq->usuarioModifico,
+                ];
+            });
 
         // Asistencias y observaciones en Puntos de Control
         $asistenciasPuntos = AsistenciaPuntoControl::where('apc_id_usu', $id)

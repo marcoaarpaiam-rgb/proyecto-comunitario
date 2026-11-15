@@ -636,11 +636,11 @@
                                             v-model="formSeg.seq_cumplio_previo"
                                             :value="true"
                                             :disabled="modoSoloLecturaSeg"
-                                            id="cumplioPrevSi"
+                                            :id="'cumplioPrevSi_' + (puntoActual?.puc_id || 'item')"
                                         />
                                         <label
                                             class="form-check-label fw-semibold text-success"
-                                            for="cumplioPrevSi"
+                                            :for="'cumplioPrevSi_' + (puntoActual?.puc_id || 'item')"
                                             >Sí, cumplió</label
                                         >
                                     </div>
@@ -651,11 +651,11 @@
                                             v-model="formSeg.seq_cumplio_previo"
                                             :value="false"
                                             :disabled="modoSoloLecturaSeg"
-                                            id="cumplioPrevNo"
+                                            :id="'cumplioPrevNo_' + (puntoActual?.puc_id || 'item')"
                                         />
                                         <label
                                             class="form-check-label fw-semibold text-danger"
-                                            for="cumplioPrevNo"
+                                            :for="'cumplioPrevNo_' + (puntoActual?.puc_id || 'item')"
                                             >No cumplió</label
                                         >
                                     </div>
@@ -683,10 +683,10 @@
                                             v-model="formSeg.seq_cumplido"
                                             :value="true"
                                             :disabled="modoSoloLecturaSeg"
-                                            id="si"
+                                            :id="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
                                         /><label
                                             class="form-check-label fw-semibold"
-                                            for="si"
+                                            :for="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
                                             style="color: #198754"
                                             >Sí, cumplido</label
                                         >
@@ -698,14 +698,17 @@
                                             v-model="formSeg.seq_cumplido"
                                             :value="false"
                                             :disabled="modoSoloLecturaSeg"
-                                            id="no"
+                                            :id="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
                                         /><label
                                             class="form-check-label fw-semibold"
-                                            for="no"
+                                            :for="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
                                             style="color: #dc3545"
                                             >No cumplido</label
                                         >
                                     </div>
+                                </div>
+                                <div v-if="erroresSeg.seq_cumplido" class="text-danger small mt-1">
+                                    {{ erroresSeg.seq_cumplido }}
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -1162,7 +1165,7 @@ const errores = ref({});
 const erroresSeg = ref({});
 const loading = ref(false);
 const formSeg = ref({
-    seq_cumplido: true,
+    seq_cumplido: null,
     seq_observaciones: "",
     asistencias: {},
 });
@@ -1267,14 +1270,14 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
 
     formSeg.value = {
         seq_cumplido:
-            prevSeg?.seq_cumplido !== undefined
+            prevSeg?.seq_cumplido !== undefined && prevSeg?.seq_cumplido !== null
                 ? Boolean(prevSeg.seq_cumplido)
-                : true,
+                : null,
         seq_cumplio_previo:
             prevSeg?.seq_cumplio_previo !== undefined &&
             prevSeg?.seq_cumplio_previo !== null
                 ? Boolean(prevSeg.seq_cumplio_previo)
-                : true,
+                : null,
         seq_obs_previas_verificacion:
             prevSeg?.seq_obs_previas_verificacion || "",
         seq_observaciones: prevSeg?.seq_observaciones || "",
@@ -1286,6 +1289,10 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
 };
 const guardarSeguimiento = () => {
     if (modoSoloLecturaSeg.value || estaEvaluado(puntoActual.value)) return;
+    if (formSeg.value.seq_cumplido === null || formSeg.value.seq_cumplido === undefined) {
+        erroresSeg.value = { seq_cumplido: "Debe indicar si el equipo cumplió o no con este punto de control." };
+        return;
+    }
     loadingSeg.value = true;
     router.post(
         `/profesor/puntos-control/${puntoActual.value.puc_id}/seguimiento`,

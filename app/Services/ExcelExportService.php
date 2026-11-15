@@ -250,7 +250,7 @@ class ExcelExportService
                     $sheet->setCellValue("E{$intRow}", $u?->usu_primer_apellido ?? '');
                     $sheet->setCellValue("F{$intRow}", $u?->usu_cedula ?? '');
                     $sheet->setCellValue("G{$intRow}", $u?->usu_telefono ?? 'N/A');
-                    $sheet->setCellValue("H{$intRow}", $u?->usu_correo ?? 'N/A');
+                    $sheet->setCellValue("H{$intRow}", $u?->usu_email ?? 'N/A');
                 }
 
                 $sheet->setCellValue("I{$row}", $comunidad?->com_nombre ?? 'Comunidad');

@@ -164,6 +164,19 @@
                     </p>
                 </div>
 
+                <!-- Alertas de errores y mensajes flash -->
+                <div v-if="$page.props.flash?.error || Object.keys($page.props.errors || {}).length" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span v-if="$page.props.flash?.error">{{ $page.props.flash.error }}</span>
+                    <ul v-else class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
+                </div>
+                <div v-if="$page.props.flash?.success" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    {{ $page.props.flash.success }}
+                </div>
+
                 <div v-if="!proyecto" class="sc">
                     <div class="estado-box" style="color: var(--text-muted)">
                         <i class="bi bi-file-earmark-x estado-icono"></i>

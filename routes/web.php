@@ -350,9 +350,6 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
         ->name('equipos.disolver');
 
-    Route::delete('equipos/{id}', [EquipoController::class, 'destroy'])
-        ->name('coordinador.equipos.destroy');
-
     Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
         [EquipoController::class, 'removerIntegrante'])
         ->name('equipos.integrantes.remover');
@@ -373,19 +370,18 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         [EquipoController::class, 'historialAcademico'])
         ->name('equipos.historial-academico');
 
-    
     Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
         ->name('equipos.expediente');
     
     Route::get('/equipos/{id}/paquete-cierre', [EquipoController::class, 'generarPaqueteCierre'])
-        ->name('coordinador.equipos.paqueteCierre');
+        ->name('equipos.paqueteCierre');
     
     Route::post('configuracion/reset-lider',
         [ConfiguracionController::class, 'resetPasswordLider'])
         ->name('configuracion.reset-lider');
 
     Route::post('/equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
-        ->name('coordinador.equipos.reactivar');
+        ->name('equipos.reactivar');
     
 });
 
@@ -525,15 +521,34 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
         ->name('equipos.disolver');
-
+    Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
+        [EquipoController::class, 'removerIntegrante'])
+        ->name('equipos.integrantes.remover');
+    Route::post('equipos/{equipoId}/integrantes/{integranteId}/trasladar',
+        [EquipoController::class, 'trasladarIntegrante'])
+        ->name('equipos.integrantes.trasladar');
+    Route::post('equipos/{equipoId}/cambiar-lider',
+        [EquipoController::class, 'cambiarLider'])
+        ->name('equipos.cambiar-lider');
+    Route::get('equipos/{equipoId}/historial',
+        [EquipoController::class, 'historial'])
+        ->name('equipos.historial');
+    Route::get('equipos/{id}/historial-academico',
+        [EquipoController::class, 'historialAcademico'])
+        ->name('equipos.historial-academico');
+    Route::post('equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
+        ->name('equipos.reactivar');
+    Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
+        ->name('equipos.expediente');
     Route::get('/equipos/{id}/paquete-cierre', [EquipoController::class, 'generarPaqueteCierre'])
-        ->name('profesor.equipos.paqueteCierre');
+        ->name('equipos.paqueteCierre');
 
     // Dentro del grupo profesor:
     Route::post('/comunidades', [\App\Http\Controllers\Coordinador\ComunidadController::class, 'store'])
-        ->name('profesor.comunidades.store');
+        ->name('comunidades.store');
 
-    Route::post('tipos-proyecto', [MaestraController::class, 'store']);
+    Route::post('tipos-proyecto', [MaestraController::class, 'store'])
+        ->name('tipos-proyecto.store');
 });
 // Grupo Líder 
 Route::middleware(['auth', 'rol:lider'])
@@ -582,16 +597,16 @@ Route::middleware(['auth', 'rol:lider'])
 
     
     Route::get('/carta/{id}/descargar', [LiderController::class, 'descargarCarta'])
-        ->name('lider.carta.descargar');
+        ->name('carta.descargar');
 
     Route::post('/responsable', [LiderController::class, 'registrarResponsable'])
-        ->name('lider.responsable.store');
+        ->name('responsable.store');
         
     Route::delete('/responsable/{id}', [LiderController::class, 'eliminarResponsable'])
-        ->name('lider.responsable.destroy');
+        ->name('responsable.destroy');
     
     Route::post('/tutor', [LiderController::class, 'registrarTutor'])
-        ->name('lider.tutor.store');
+        ->name('tutor.store');
 });
 
 
