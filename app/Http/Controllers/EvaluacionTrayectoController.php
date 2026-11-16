@@ -5,15 +5,20 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\EvaluacionTrayectoService;
+use App\Services\TransicionSemestralService;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class EvaluacionTrayectoController extends Controller
 {
     protected EvaluacionTrayectoService $evaluacionService;
+    protected TransicionSemestralService $transicionService;
 
-    public function __construct(EvaluacionTrayectoService $evaluacionService)
-    {
+    public function __construct(
+        EvaluacionTrayectoService $evaluacionService,
+        TransicionSemestralService $transicionService
+    ) {
         $this->evaluacionService = $evaluacionService;
+        $this->transicionService = $transicionService;
     }
 
     /**
@@ -30,10 +35,12 @@ class EvaluacionTrayectoController extends Controller
             ->select([
                 'p.pco_id as id_proyecto',
                 'p.pco_resumen as resumen',
+                'p.pin_defensa',
                 'e.equ_id as id_equipo',
                 'e.equ_codigo as codigo_equipo',
                 'e.equ_titulo as titulo_proyecto',
                 't.tra_nombre as trayecto_nombre',
+                's.sec_id as id_seccion',
                 's.sec_codigo as seccion_codigo',
                 'c.com_nombre as comunidad_nombre',
                 'a.id_acta',
@@ -96,6 +103,20 @@ class EvaluacionTrayectoController extends Controller
     }
 
     /**
+     * Regenera el PIN de defensa (6 dígitos) para el proyecto.
+     */
+    public function generarPin(int $id_proyecto)
+    {
+        $nuevoPin = $this->evaluacionService->generarPinDefensa($id_proyecto);
+
+        if (request()->wantsJson()) {
+            return response()->json(['pin' => $nuevoPin, 'mensaje' => 'PIN de defensa generado exitosamente.']);
+        }
+
+        return redirect()->back()->with('success', "Nuevo PIN de defensa generado: {$nuevoPin}");
+    }
+
+    /**
      * Formulario interactivo de evaluación por rúbrica.
      */
     public function evaluar(int $id_recorrido, string $rol_evaluador)
@@ -125,7 +146,13 @@ class EvaluacionTrayectoController extends Controller
         $rubrica = DB::table('rubricas')
             ->where('id_trayecto', $recorrido->id_trayecto)
             ->where('semestre', $recorrido->semestre)
-            ->where('rol_evaluador', $rol_evaluador)
+            ->where(function ($q) use ($rol_evaluador) {
+                if (in_array($rol_evaluador, ['docente_proyecto', 'tutor'])) {
+                    $q->whereIn('rol_evaluador', ['docente_proyecto', 'tutor']);
+                } else {
+                    $q->where('rol_evaluador', $rol_evaluador);
+                }
+            })
             ->where('activo', true)
             ->first();
 
@@ -142,8 +169,14 @@ class EvaluacionTrayectoController extends Controller
         // Buscar si el usuario actual o el rol ya emitieron una evaluación
         $evaluacionPrevia = DB::table('evaluaciones_emitidas')
             ->where('id_recorrido', $id_recorrido)
-            ->where('rol_evaluador', $rol_evaluador)
-            ->when($rol_evaluador !== 'comunidad', function ($q) {
+            ->where(function ($q) use ($rol_evaluador) {
+                if (in_array($rol_evaluador, ['docente_proyecto', 'tutor'])) {
+                    $q->whereIn('rol_evaluador', ['docente_proyecto', 'tutor']);
+                } else {
+                    $q->where('rol_evaluador', $rol_evaluador);
+                }
+            })
+            ->when(!in_array($rol_evaluador, ['comunidad', 'estudiante']) && auth()->check(), function ($q) {
                 $q->where('id_profesor', auth()->id());
             })
             ->first();
@@ -185,7 +218,7 @@ class EvaluacionTrayectoController extends Controller
         $request->validate([
             'id_recorrido'            => 'required|integer|exists:recorrido_evaluacion_semestral,id_recorrido',
             'id_proyecto'             => 'required|integer|exists:proyecto_comunidad,pco_id',
-            'rol_evaluador'           => 'required|in:tutor,comunidad,jurado',
+            'rol_evaluador'           => 'required|in:docente_proyecto,tutor,comunidad,jurado,estudiante',
             'id_profesor'             => 'nullable|integer|exists:usuario,usu_id',
             'observacion_cualitativa' => 'required|string|min:15|max:2000',
             'nivel_logro_cualitativo' => 'required|in:Logrado con Excelencia,Logrado,En Proceso,No Logrado',
@@ -198,7 +231,11 @@ class EvaluacionTrayectoController extends Controller
         ]);
 
         $idProfesor = $request->id_profesor;
-        if ($request->rol_evaluador !== 'comunidad' && empty($idProfesor)) {
+        $idEstudiante = null;
+
+        if ($request->rol_evaluador === 'estudiante') {
+            $idEstudiante = auth()->id();
+        } elseif ($request->rol_evaluador !== 'comunidad' && empty($idProfesor)) {
             $idProfesor = auth()->id();
         }
 
@@ -206,6 +243,7 @@ class EvaluacionTrayectoController extends Controller
             'id_recorrido'            => (int) $request->id_recorrido,
             'id_proyecto'             => (int) $request->id_proyecto,
             'id_profesor'             => $idProfesor ? (int) $idProfesor : null,
+            'id_estudiante'           => $idEstudiante ? (int) $idEstudiante : null,
             'rol_evaluador'           => $request->rol_evaluador,
             'observacion_cualitativa' => trim($request->observacion_cualitativa),
             'nivel_logro_cualitativo' => $request->nivel_logro_cualitativo,
@@ -216,6 +254,79 @@ class EvaluacionTrayectoController extends Controller
 
         return redirect()->route('evaluaciones.recorrido', $request->id_proyecto)
             ->with('success', "Evaluación de {$request->rol_evaluador} registrada y consolidada exitosamente.");
+    }
+
+    /**
+     * TAREA 1.3: Vista pública para acceso con PIN para Comunidad y Jurados.
+     */
+    public function mostrarAccesoInvitado()
+    {
+        return view('evaluaciones.invitado');
+    }
+
+    /**
+     * Procesa la validación de PIN + Cédula para el invitado.
+     */
+    public function procesarAccesoInvitado(Request $request)
+    {
+        $request->validate([
+            'pin'    => 'required|string|size:6',
+            'cedula' => 'required|string',
+            'tipo'   => 'required|in:comunidad,jurado',
+        ], [
+            'pin.required'    => 'Debe ingresar el PIN de defensa de 6 dígitos.',
+            'pin.size'        => 'El PIN debe tener exactamente 6 dígitos.',
+            'cedula.required' => 'Debe ingresar su cédula de identidad.',
+        ]);
+
+        $acceso = $this->evaluacionService->validarAccesoInvitado($request->pin, $request->cedula, $request->tipo);
+
+        if (!$acceso) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Cédula o PIN no coinciden con ningún registro activo para este proyecto.');
+        }
+
+        // Guardar sesión de invitado temporal
+        session(['invitado_evaluacion' => [
+            'id_proyecto'  => $acceso->proyecto->id_proyecto,
+            'id_recorrido' => $acceso->recorrido->id_recorrido,
+            'rol'          => $acceso->rol,
+            'id_usuario'   => $acceso->evaluador->usu_id ?? null,
+            'nombre'       => $acceso->nombre,
+            'cedula'       => $acceso->cedula,
+        ]]);
+
+        return redirect()->route('evaluaciones.evaluar', [
+            'id_recorrido'  => $acceso->recorrido->id_recorrido,
+            'rol_evaluador' => $acceso->rol,
+        ])->with('success', "Bienvenido(a) {$acceso->nombre}. Puede emitir su evaluación.");
+    }
+
+    /**
+     * TAREA 2: Transición de Semestre Impar a Semestre Par (ej. 331 -> 431).
+     */
+    public function transicionSemestre(int $id_equipo)
+    {
+        try {
+            $resultado = $this->transicionService->transicionSemestreImparAPar($id_equipo, auth()->id());
+            return redirect()->back()->with('success', $resultado['mensaje']);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * TAREA 2: Enviar proyecto culminado al Repositorio Institucional.
+     */
+    public function enviarRepositorio(int $id_equipo)
+    {
+        try {
+            $resultado = $this->transicionService->transicionSemestreParARepositorio($id_equipo, auth()->id());
+            return redirect()->back()->with('success', $resultado['mensaje']);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     /**

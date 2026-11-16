@@ -26,6 +26,7 @@ use App\Http\Controllers\Coordinador\SeccionDetalleController;
 use App\Http\Controllers\Coordinador\ConfiguracionController;
 use App\Http\Controllers\Coordinador\ExpedienteController;
 use App\Http\Controllers\EvaluacionTrayectoController;
+use App\Http\Controllers\InventarioPstExcelController;
 
 
 // Rutas públicas
@@ -619,11 +620,32 @@ Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->grou
     Route::get('/evaluar/{id_recorrido}/{rol_evaluador}', [EvaluacionTrayectoController::class, 'evaluar'])->name('evaluar');
     Route::post('/guardar', [EvaluacionTrayectoController::class, 'guardarEvaluacion'])->name('guardar');
     Route::get('/pdf/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarActaPdf'])->name('pdf');
+    Route::post('/pin/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarPin'])->name('pin.generar');
+    Route::post('/transicion/{id_equipo}', [EvaluacionTrayectoController::class, 'transicionSemestre'])->name('transicion.semestre');
+    Route::post('/repositorio/{id_equipo}', [EvaluacionTrayectoController::class, 'enviarRepositorio'])->name('repositorio.enviar');
 });
+
+// Portal público para evaluación en vivo con PIN (Vocero Comunitario y Jurados)
+Route::get('/evaluacion-invitado', [EvaluacionTrayectoController::class, 'mostrarAccesoInvitado'])
+    ->name('evaluaciones.invitado');
+Route::post('/evaluacion-invitado', [EvaluacionTrayectoController::class, 'procesarAccesoInvitado'])
+    ->name('evaluaciones.invitado.acceder');
 
 // Ruta pública de verificación de autenticidad de acta mediante Hash SHA-256
 Route::get('/evaluaciones/verificar/{hash}', [EvaluacionTrayectoController::class, 'verificarActa'])
     ->name('evaluaciones.verificar');
+
+// =========================================================================
+// EXPORTACIONES DINÁMICAS EN EXCEL (INVENTARIO PST Y VINCULACIÓN UPTP)
+// =========================================================================
+Route::prefix('inventario')->name('inventario.')->group(function () {
+    Route::get('/excel/punto-control/{id_puc}', [InventarioPstExcelController::class, 'exportarPuntoControl'])
+        ->name('excel.punto');
+    Route::get('/excel/libro-seccion/{id_sec}', [InventarioPstExcelController::class, 'exportarLibroCompleto'])
+        ->name('excel.libro');
+    Route::match(['get', 'post'], '/excel/vinculacion/{id_proyecto}', [InventarioPstExcelController::class, 'exportarPlanillaVinculacion'])
+        ->name('excel.vinculacion');
+});
 
 
 

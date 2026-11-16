@@ -89,7 +89,21 @@
                         </div>
                         <div class="col-md-4 text-end">
                             <span class="badge bg-info text-dark fs-6 px-3 py-2">
-                                <i class="bi bi-people-fill me-1"></i> Tutor / Vocero Comunitario
+                                <i class="bi bi-people-fill me-1"></i> Representante de la Comunidad (20%)
+                            </span>
+                        </div>
+                    </div>
+                @elseif ($rol_evaluador === 'estudiante')
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <p class="mb-1"><strong>Colectivo de Estudiantes / Equipo:</strong> {{ $recorrido->codigo_equipo }} - {{ $recorrido->titulo_proyecto }}</p>
+                            <p class="text-muted small mb-0">
+                                La autoevaluación y coevaluación estudiantil permite al equipo reflexionar sobre su autogestión, equidad en el trabajo, puntualidad y cumplimiento de metas.
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-success fs-6 px-3 py-2">
+                                <i class="bi bi-person-check-fill me-1"></i> Autoevaluación Estudiantil (10%)
                             </span>
                         </div>
                     </div>
@@ -113,8 +127,8 @@
                         <div class="col-md-6 d-flex align-items-center">
                             <div class="p-3 bg-light rounded w-100 border">
                                 <span class="fw-bold text-secondary d-block mb-1">Rol en esta evaluación:</span>
-                                <span class="badge {{ $rol_evaluador === 'tutor' ? 'bg-primary' : 'bg-warning text-dark' }} fs-6">
-                                    {{ $rol_evaluador === 'tutor' ? 'Tutor Académico del PST' : 'Miembro del Jurado Evaluador' }}
+                                <span class="badge {{ in_array($rol_evaluador, ['tutor', 'docente_proyecto']) ? 'bg-primary' : 'bg-warning text-dark' }} fs-6">
+                                    {{ in_array($rol_evaluador, ['tutor', 'docente_proyecto']) ? 'Docente de Proyecto (40%)' : 'Jurado Evaluador (30%)' }}
                                 </span>
                                 <span class="ms-2 small text-muted">Peso asignado: {{ number_format($rubrica->peso_porcentual, 0) }}% del Semestre</span>
                             </div>

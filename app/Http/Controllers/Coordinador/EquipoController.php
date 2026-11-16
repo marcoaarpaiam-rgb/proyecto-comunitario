@@ -765,10 +765,9 @@ class EquipoController extends Controller
             return response()->json($equipo->historial);
         }
 
-        return Inertia::render('Coordinador/HistorialEquipo', [
-            'historial' => $equipo->historial,
-            'equipo'    => $equipo->only(['equ_id', 'equ_codigo', 'equ_titulo']),
-        ]);
+        $user = auth()->user();
+        $prefix = $user && $user->esProfesor() ? 'profesor' : 'coordinador';
+        return redirect()->to("/{$prefix}/equipos/{$equipoId}/expediente");
     }
 
     
@@ -1211,8 +1210,7 @@ class EquipoController extends Controller
             return response()->json(['equipo' => $equipo]);
         }
 
-        return Inertia::render('Coordinador/HistorialAcademico', [
-            'equipo' => $equipo,
-        ]);
+        $prefix = $user && $user->esProfesor() ? 'profesor' : 'coordinador';
+        return redirect()->to("/{$prefix}/equipos/{$id}/expediente");
     }
 }

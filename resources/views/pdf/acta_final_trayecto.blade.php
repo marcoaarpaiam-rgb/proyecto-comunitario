@@ -254,10 +254,22 @@
                             </td>
                         @endif
                         <td>
-                            <strong>{{ ucfirst($ev->rol_evaluador) }}</strong>
+                            <strong>
+                                @if ($ev->rol_evaluador === 'comunidad')
+                                    Representante de la Comunidad
+                                @elseif ($ev->rol_evaluador === 'estudiante')
+                                    Autoevaluación Estudiantil
+                                @elseif (in_array($ev->rol_evaluador, ['docente_proyecto', 'tutor']))
+                                    Docente de Proyecto
+                                @else
+                                    Jurado Evaluador
+                                @endif
+                            </strong>
                             <div style="font-size: 7.5pt; color: #666;">
                                 @if ($ev->rol_evaluador === 'comunidad')
                                     Tutor / Vocero Comunitario
+                                @elseif ($ev->rol_evaluador === 'estudiante')
+                                    Colectivo de Estudiantes del PST
                                 @else
                                     {{ $ev->evaluador_nombre }} {{ $ev->evaluador_apellido }}
                                 @endif
@@ -287,10 +299,22 @@
                             </td>
                         @endif
                         <td>
-                            <strong>{{ ucfirst($ev->rol_evaluador) }}</strong>
+                            <strong>
+                                @if ($ev->rol_evaluador === 'comunidad')
+                                    Representante de la Comunidad
+                                @elseif ($ev->rol_evaluador === 'estudiante')
+                                    Autoevaluación Estudiantil
+                                @elseif (in_array($ev->rol_evaluador, ['docente_proyecto', 'tutor']))
+                                    Docente de Proyecto
+                                @else
+                                    Jurado Evaluador
+                                @endif
+                            </strong>
                             <div style="font-size: 7.5pt; color: #666;">
                                 @if ($ev->rol_evaluador === 'comunidad')
                                     Tutor / Vocero Comunitario
+                                @elseif ($ev->rol_evaluador === 'estudiante')
+                                    Colectivo de Estudiantes del PST
                                 @else
                                     {{ $ev->evaluador_nombre }} {{ $ev->evaluador_apellido }}
                                 @endif

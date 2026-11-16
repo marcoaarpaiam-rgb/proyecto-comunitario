@@ -8,11 +8,18 @@ use Illuminate\Support\Str;
 class EvaluacionTrayectoService
 {
     /**
-     * Inicializa los 2 semestres de recorrido de evaluación para un proyecto.
+     * Inicializa el recorrido de evaluación semestral para un proyecto (Semestre 1 y Semestre 2).
      */
     public function inicializarRecorridoProyecto(int $id_proyecto, int $id_equipo, int $id_trayecto): void
     {
         DB::transaction(function () use ($id_proyecto, $id_equipo, $id_trayecto) {
+            // Asegurar PIN de defensa de 6 dígitos
+            $pin = DB::table('proyecto_comunidad')->where('pco_id', $id_proyecto)->value('pin_defensa');
+            if (empty($pin)) {
+                $pin = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+                DB::table('proyecto_comunidad')->where('pco_id', $id_proyecto)->update(['pin_defensa' => $pin]);
+            }
+
             $semestre1 = DB::table('recorrido_evaluacion_semestral')
                 ->where('id_proyecto', $id_proyecto)
                 ->where('semestre', 'Semestre 1')
@@ -24,11 +31,14 @@ class EvaluacionTrayectoService
                     'id_equipo'         => $id_equipo,
                     'id_trayecto'       => $id_trayecto,
                     'semestre'          => 'Semestre 1',
+                    'pin_defensa'       => $pin,
                     'peso_en_trayecto'  => 40.00,
                     'estado_semestre'   => 'En Curso',
                     'created_at'        => now(),
                     'updated_at'        => now(),
                 ]);
+            } else if (empty($semestre1->pin_defensa)) {
+                DB::table('recorrido_evaluacion_semestral')->where('id_recorrido', $semestre1->id_recorrido)->update(['pin_defensa' => $pin]);
             }
 
             $semestre2 = DB::table('recorrido_evaluacion_semestral')
@@ -42,13 +52,142 @@ class EvaluacionTrayectoService
                     'id_equipo'         => $id_equipo,
                     'id_trayecto'       => $id_trayecto,
                     'semestre'          => 'Semestre 2',
+                    'pin_defensa'       => $pin,
                     'peso_en_trayecto'  => 60.00,
                     'estado_semestre'   => 'En Curso',
                     'created_at'        => now(),
                     'updated_at'        => now(),
                 ]);
+            } else if (empty($semestre2->pin_defensa)) {
+                DB::table('recorrido_evaluacion_semestral')->where('id_recorrido', $semestre2->id_recorrido)->update(['pin_defensa' => $pin]);
             }
         });
+    }
+
+    /**
+     * Genera o regenera un PIN de defensa de 6 dígitos para el proyecto.
+     */
+    public function generarPinDefensa(int $id_proyecto): string
+    {
+        $pin = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        DB::table('proyecto_comunidad')->where('pco_id', $id_proyecto)->update(['pin_defensa' => $pin]);
+        DB::table('recorrido_evaluacion_semestral')->where('id_proyecto', $id_proyecto)->update(['pin_defensa' => $pin]);
+        return $pin;
+    }
+
+    /**
+     * Valida el acceso público de un invitado (Comunidad o Jurado) mediante Cédula + PIN.
+     */
+    public function validarAccesoInvitado(string $pin, string $cedula, string $tipo): ?object
+    {
+        $pin = trim($pin);
+        $cedula = trim(preg_replace('/[^0-9]/', '', $cedula));
+
+        $proyecto = DB::table('proyecto_comunidad as p')
+            ->join('equipo as e', 'e.equ_id', '=', 'p.pco_id_equ')
+            ->leftJoin('trayecto as t', 't.tra_id', '=', 'e.equ_id_tra')
+            ->leftJoin('seccion as s', 's.sec_id', '=', 'e.equ_id_sec')
+            ->leftJoin('comunidad as c', 'c.com_id', '=', 'p.pco_id_com')
+            ->where('p.pin_defensa', $pin)
+            ->select([
+                'p.pco_id as id_proyecto',
+                'p.pco_resumen as resumen',
+                'p.pco_id_com',
+                'p.pin_defensa',
+                'e.equ_id as id_equipo',
+                'e.equ_codigo as codigo_equipo',
+                'e.equ_titulo as titulo_proyecto',
+                'e.equ_id_tra as id_trayecto',
+                't.tra_nombre as trayecto_nombre',
+                's.sec_codigo as seccion_codigo',
+                'c.com_nombre as comunidad_nombre',
+            ])
+            ->first();
+
+        if (!$proyecto) {
+            return null;
+        }
+
+        // Obtener el recorrido del Semestre 2 (defensa/socialización final) o Semestre 1
+        $recorrido = DB::table('recorrido_evaluacion_semestral')
+            ->where('id_proyecto', $proyecto->id_proyecto)
+            ->orderBy('semestre', 'desc')
+            ->first();
+
+        if (!$recorrido) {
+            $this->inicializarRecorridoProyecto((int)$proyecto->id_proyecto, (int)$proyecto->id_equipo, (int)$proyecto->id_trayecto);
+            $recorrido = DB::table('recorrido_evaluacion_semestral')
+                ->where('id_proyecto', $proyecto->id_proyecto)
+                ->orderBy('semestre', 'desc')
+                ->first();
+        }
+
+        if ($tipo === 'comunidad') {
+            // Verificar contra el ResponsableComunidad registrado para esta comunidad
+            $responsable = DB::table('responsable_comunidad as rc')
+                ->join('usuario as u', 'u.usu_id', '=', 'rc.rco_id_usu')
+                ->where('rc.rco_id_com', $proyecto->pco_id_com)
+                ->where('rc.rco_status', true)
+                ->where(function ($q) use ($cedula) {
+                    $q->where('u.usu_cedula', $cedula)
+                      ->orWhere('u.usu_cedula', 'like', "%{$cedula}%");
+                })
+                ->select('u.*', 'rc.rco_id', 'rc.rco_id_com')
+                ->first();
+
+            // Si no está registrado formalmente en responsable_comunidad, buscar cualquier usuario de la comunidad con esa cédula
+            if (!$responsable) {
+                $responsable = DB::table('usuario')
+                    ->where('usu_cedula', $cedula)
+                    ->where('usu_status', true)
+                    ->first();
+            }
+
+            if (!$responsable) {
+                return null;
+            }
+
+            return (object) [
+                'valido'     => true,
+                'rol'        => 'comunidad',
+                'proyecto'   => $proyecto,
+                'recorrido'  => $recorrido,
+                'evaluador'  => $responsable,
+                'nombre'     => "{$responsable->usu_primer_nombre} {$responsable->usu_primer_apellido}",
+                'cedula'     => $responsable->usu_cedula,
+            ];
+        }
+
+        if ($tipo === 'jurado') {
+            // Verificar profesor con esa cédula
+            $profesor = DB::table('usuario as u')
+                ->join('usuario_rol as ur', 'ur.uro_id_usu', '=', 'u.usu_id')
+                ->join('rol as r', 'r.rol_id', '=', 'ur.uro_id_rol')
+                ->where('r.rol_nombre', 'profesor_proyecto')
+                ->where('u.usu_status', true)
+                ->where(function ($q) use ($cedula) {
+                    $q->where('u.usu_cedula', $cedula)
+                      ->orWhere('u.usu_cedula', 'like', "%{$cedula}%");
+                })
+                ->select('u.*')
+                ->first();
+
+            if (!$profesor) {
+                return null;
+            }
+
+            return (object) [
+                'valido'     => true,
+                'rol'        => 'jurado',
+                'proyecto'   => $proyecto,
+                'recorrido'  => $recorrido,
+                'evaluador'  => $profesor,
+                'nombre'     => "Prof. {$profesor->usu_primer_nombre} {$profesor->usu_primer_apellido}",
+                'cedula'     => $profesor->usu_cedula,
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -64,14 +203,26 @@ class EvaluacionTrayectoService
             }
             $subtotalCuantitativo = min(20.00, max(0.00, round($subtotalCuantitativo, 2)));
 
-            // Si ya existe una evaluación previa para este recorrido, proyecto, rol y profesor (o comunidad)
+            // Estandarizar alias: si es 'tutor' o 'docente_proyecto'
+            $rol = $datos['rol_evaluador'];
+
+            // Si ya existe una evaluación previa para este recorrido, proyecto y rol
             $queryExistente = DB::table('evaluaciones_emitidas')
                 ->where('id_recorrido', $datos['id_recorrido'])
                 ->where('id_proyecto', $datos['id_proyecto'])
-                ->where('rol_evaluador', $datos['rol_evaluador']);
+                ->where(function ($q) use ($rol) {
+                    if (in_array($rol, ['docente_proyecto', 'tutor'])) {
+                        $q->whereIn('rol_evaluador', ['docente_proyecto', 'tutor']);
+                    } else {
+                        $q->where('rol_evaluador', $rol);
+                    }
+                });
 
             if (!empty($datos['id_profesor'])) {
                 $queryExistente->where('id_profesor', $datos['id_profesor']);
+            }
+            if (!empty($datos['id_estudiante'])) {
+                $queryExistente->where('id_estudiante', $datos['id_estudiante']);
             }
 
             $evalExistente = $queryExistente->first();
@@ -95,7 +246,8 @@ class EvaluacionTrayectoService
                     'id_recorrido'            => $datos['id_recorrido'],
                     'id_proyecto'             => $datos['id_proyecto'],
                     'id_profesor'             => $datos['id_profesor'] ?? null,
-                    'rol_evaluador'           => $datos['rol_evaluador'],
+                    'id_estudiante'           => $datos['id_estudiante'] ?? null,
+                    'rol_evaluador'           => $rol,
                     'subtotal_cuantitativo'   => $subtotalCuantitativo,
                     'observacion_cualitativa' => $datos['observacion_cualitativa'],
                     'nivel_logro_cualitativo' => $datos['nivel_logro_cualitativo'],
@@ -122,7 +274,9 @@ class EvaluacionTrayectoService
     }
 
     /**
-     * Calcula la nota del semestre cuando los evaluadores requeridos han consolidado sus notas.
+     * Calcula la nota del semestre con las ponderaciones oficiales de la UPTP:
+     * - Semestre 1: Docente (60%) + Comunidad (40%)
+     * - Semestre 2: Docente de Proyecto (40%) + Jurado (30%) + Comunidad (20%) + Estudiante (10%) = 100%
      */
     public function calcularConsolidadoSemestre(int $id_recorrido): ?array
     {
@@ -140,12 +294,14 @@ class EvaluacionTrayectoService
                 ->where('estado', 'consolidado')
                 ->get();
 
-            $evalTutor = $evaluaciones->firstWhere('rol_evaluador', 'tutor');
+            $evalDocente = $evaluaciones->first(fn($e) => in_array($e->rol_evaluador, ['docente_proyecto', 'tutor']));
             $evalComunidad = $evaluaciones->firstWhere('rol_evaluador', 'comunidad');
             $evalJurados = $evaluaciones->where('rol_evaluador', 'jurado');
+            $evalEstudiante = $evaluaciones->firstWhere('rol_evaluador', 'estudiante');
 
-            $notaTutor = $evalTutor ? (float) $evalTutor->subtotal_cuantitativo : null;
+            $notaDocente = $evalDocente ? (float) $evalDocente->subtotal_cuantitativo : null;
             $notaComunidad = $evalComunidad ? (float) $evalComunidad->subtotal_cuantitativo : null;
+            $notaEstudiante = $evalEstudiante ? (float) $evalEstudiante->subtotal_cuantitativo : null;
             $notaJurado = null;
 
             if ($evalJurados->isNotEmpty()) {
@@ -153,15 +309,17 @@ class EvaluacionTrayectoService
             }
 
             $updateData = [
-                'nota_tutor'     => $notaTutor,
-                'nota_comunidad' => $notaComunidad,
-                'nota_jurado'    => $notaJurado,
-                'updated_at'     => now(),
+                'nota_tutor'      => $notaDocente,
+                'nota_docente'    => $notaDocente,
+                'nota_comunidad'  => $notaComunidad,
+                'nota_jurado'     => $notaJurado,
+                'nota_estudiante' => $notaEstudiante,
+                'updated_at'      => now(),
             ];
 
             $sintesis = [];
-            if ($evalTutor) {
-                $sintesis[] = "TUTOR ({$evalTutor->nivel_logro_cualitativo}): {$evalTutor->observacion_cualitativa}";
+            if ($evalDocente) {
+                $sintesis[] = "DOCENTE DE PROYECTO ({$evalDocente->nivel_logro_cualitativo}): {$evalDocente->observacion_cualitativa}";
             }
             if ($evalComunidad) {
                 $sintesis[] = "COMUNIDAD ({$evalComunidad->nivel_logro_cualitativo}): {$evalComunidad->observacion_cualitativa}";
@@ -170,27 +328,43 @@ class EvaluacionTrayectoService
                 $numJ = $idx + 1;
                 $sintesis[] = "JURADO #{$numJ} ({$j->nivel_logro_cualitativo}): {$j->observacion_cualitativa}";
             }
+            if ($evalEstudiante) {
+                $sintesis[] = "AUTOEVALUACIÓN ESTUDIANTIL ({$evalEstudiante->nivel_logro_cualitativo}): {$evalEstudiante->observacion_cualitativa}";
+            }
 
-            // Regla de cálculo Semestre 1 (40% del Trayecto): Requiere Tutor (60%) y Comunidad (40%)
+            // Regla Semestre 1 (40% del Trayecto): Docente (60%) y Comunidad (40%)
             if ($recorrido->semestre === 'Semestre 1') {
-                if ($notaTutor !== null && $notaComunidad !== null) {
-                    $notaSemestre1 = round(($notaTutor * 0.60) + ($notaComunidad * 0.40), 2);
+                if ($notaDocente !== null && $notaComunidad !== null) {
+                    $notaSemestre1 = round(($notaDocente * 0.60) + ($notaComunidad * 0.40), 2);
                     $updateData['nota_cuantitativa_semestre'] = $notaSemestre1;
                     $updateData['valoracion_cualitativa_semestre'] = implode("\n\n", $sintesis);
                     $updateData['estado_semestre'] = 'Culminado';
-                } elseif ($notaTutor !== null || $notaComunidad !== null) {
+                } elseif ($notaDocente !== null || $notaComunidad !== null) {
                     $updateData['estado_semestre'] = 'En Evaluacion';
                 }
             }
 
-            // Regla de cálculo Semestre 2 (60% del Trayecto): Requiere Tutor (30%), Comunidad (20%) y Jurado (50%)
+            // Regla Semestre 2: Oficial UPTP (4 Actores: Docente 40%, Jurado 30%, Comunidad 20%, Estudiante 10%)
             if ($recorrido->semestre === 'Semestre 2') {
-                if ($notaTutor !== null && $notaComunidad !== null && $notaJurado !== null) {
-                    $notaSemestre2 = round(($notaTutor * 0.30) + ($notaComunidad * 0.20) + ($notaJurado * 0.50), 2);
+                // Si están los 4 actores oficiales
+                if ($notaDocente !== null && $notaJurado !== null && $notaComunidad !== null && $notaEstudiante !== null) {
+                    $notaSemestre2 = round(
+                        ($notaDocente * 0.40) +
+                        ($notaJurado * 0.30) +
+                        ($notaComunidad * 0.20) +
+                        ($notaEstudiante * 0.10),
+                        2
+                    );
                     $updateData['nota_cuantitativa_semestre'] = $notaSemestre2;
                     $updateData['valoracion_cualitativa_semestre'] = implode("\n\n", $sintesis);
                     $updateData['estado_semestre'] = 'Culminado';
-                } elseif ($notaTutor !== null || $notaComunidad !== null || $notaJurado !== null) {
+                } elseif ($notaDocente !== null && $notaJurado !== null && $notaComunidad !== null) {
+                    // Fallback transitorio si estudiante no ha emitido aún (recalcula con proporciones base)
+                    $notaSemestre2 = round(($notaDocente * 0.40) + ($notaJurado * 0.35) + ($notaComunidad * 0.25), 2);
+                    $updateData['nota_cuantitativa_semestre'] = $notaSemestre2;
+                    $updateData['valoracion_cualitativa_semestre'] = implode("\n\n", $sintesis);
+                    $updateData['estado_semestre'] = 'En Evaluacion';
+                } elseif ($notaDocente !== null || $notaComunidad !== null || $notaJurado !== null || $notaEstudiante !== null) {
                     $updateData['estado_semestre'] = 'En Evaluacion';
                 }
             }
@@ -260,6 +434,9 @@ class EvaluacionTrayectoService
             }
             $sintesisIntegral = implode("\n\n", $sintesis);
 
+            // Notas específicas de los 4 actores en Semestre 2
+            $s2 = $recorridos->firstWhere('semestre', 'Semestre 2');
+
             // Generar hash único de verificación
             $hashString = "UPTP-PST-ACTA-PROYECTO-{$id_proyecto}-EQUIPO-{$id_equipo}-NOTA-{$calificacionDefinitiva}-" . now()->format('YmdHis') . '-' . Str::random(12);
             $hashVerificacion = hash('sha256', $hashString);
@@ -273,6 +450,10 @@ class EvaluacionTrayectoService
                 'id_equipo'                           => $id_equipo,
                 'nota_semestre_1'                     => $notaSemestre1,
                 'nota_semestre_2'                     => $notaSemestre2,
+                'nota_docente'                        => $s2 ? $s2->nota_docente : null,
+                'nota_jurado'                         => $s2 ? $s2->nota_jurado : null,
+                'nota_comunidad'                      => $s2 ? $s2->nota_comunidad : null,
+                'nota_estudiante'                     => $s2 ? $s2->nota_estudiante : null,
                 'calificacion_definitiva_cuantitativa' => $calificacionDefinitiva,
                 'calificacion_definitiva_cualitativa' => $veredictoCualitativo,
                 'sintesis_cualitativa_integral'       => $sintesisIntegral,
@@ -320,6 +501,9 @@ class EvaluacionTrayectoService
                 'p.pco_resumen as resumen',
                 'p.pco_linea_investigacion as linea_investigacion',
                 'p.pco_fecha_aprobacion as fecha_aprobacion',
+                'p.pco_localidad as localidad',
+                'p.pco_entrega_cd as entrega_cd',
+                'p.pin_defensa',
                 'e.equ_id as id_equipo',
                 'e.equ_codigo as codigo_equipo',
                 'e.equ_titulo as titulo_proyecto',
@@ -341,8 +525,13 @@ class EvaluacionTrayectoService
             return null;
         }
 
-        // Asegurar que el recorrido esté inicializado
+        // Asegurar que el recorrido y el PIN estén inicializados
         $this->inicializarRecorridoProyecto((int) $proyecto->id_proyecto, (int) $proyecto->id_equipo, (int) $proyecto->id_trayecto);
+
+        // Recargar PIN por si fue generado en la inicialización
+        if (empty($proyecto->pin_defensa)) {
+            $proyecto->pin_defensa = DB::table('proyecto_comunidad')->where('pco_id', $id_proyecto)->value('pin_defensa');
+        }
 
         $semestres = DB::table('recorrido_evaluacion_semestral')
             ->where('id_proyecto', $id_proyecto)
@@ -351,6 +540,7 @@ class EvaluacionTrayectoService
             ->map(function ($sem) use ($id_proyecto, $proyecto) {
                 $sem->evaluaciones = DB::table('evaluaciones_emitidas as ee')
                     ->leftJoin('usuario as u', 'u.usu_id', '=', 'ee.id_profesor')
+                    ->leftJoin('usuario as u_est', 'u_est.usu_id', '=', 'ee.id_estudiante')
                     ->leftJoin('rubricas as rub', function ($j) use ($sem, $proyecto) {
                         $j->on('rub.id_trayecto', '=', DB::raw((int) $proyecto->id_trayecto))
                           ->on('rub.semestre', '=', DB::raw("'" . $sem->semestre . "'"))
@@ -364,9 +554,9 @@ class EvaluacionTrayectoService
                         'u.usu_primer_nombre as prof_nombre',
                         'u.usu_primer_apellido as prof_apellido',
                         'u.usu_cedula as prof_cedula',
-                        'u.usu_primer_nombre as evaluador_nombre',
-                        'u.usu_primer_apellido as evaluador_apellido',
-                        DB::raw("COALESCE(rub.peso_porcentual, CASE WHEN ee.rol_evaluador = 'tutor' THEN (CASE WHEN '{$sem->semestre}' = 'Semestre 1' THEN 60.00 ELSE 30.00 END) WHEN ee.rol_evaluador = 'comunidad' THEN (CASE WHEN '{$sem->semestre}' = 'Semestre 1' THEN 40.00 ELSE 20.00 END) ELSE 50.00 END) as peso_porcentual"),
+                        DB::raw("COALESCE(u.usu_primer_nombre, u_est.usu_primer_nombre) as evaluador_nombre"),
+                        DB::raw("COALESCE(u.usu_primer_apellido, u_est.usu_primer_apellido) as evaluador_apellido"),
+                        DB::raw("COALESCE(rub.peso_porcentual, CASE WHEN ee.rol_evaluador IN ('docente_proyecto', 'tutor') THEN (CASE WHEN '{$sem->semestre}' = 'Semestre 1' THEN 60.00 ELSE 40.00 END) WHEN ee.rol_evaluador = 'jurado' THEN 30.00 WHEN ee.rol_evaluador = 'comunidad' THEN (CASE WHEN '{$sem->semestre}' = 'Semestre 1' THEN 40.00 ELSE 20.00 END) WHEN ee.rol_evaluador = 'estudiante' THEN 10.00 ELSE 25.00 END) as peso_porcentual"),
                     ])
                     ->get();
 
@@ -390,6 +580,8 @@ class EvaluacionTrayectoService
                 'u.usu_primer_nombre as usu_primer_nombre',
                 'u.usu_primer_apellido as primer_apellido',
                 'u.usu_primer_apellido as usu_primer_apellido',
+                'u.usu_telefono as telefono',
+                'u.usu_email as email',
                 'ei.ein_es_lider as es_lider',
                 'ei.ein_es_lider',
             ])

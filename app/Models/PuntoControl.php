@@ -52,6 +52,11 @@ class PuntoControl extends Model
         return $this->hasMany(SeguimientoEquipo::class, 'seq_id_puc', 'puc_id');
     }
 
+    public function seguimiento()
+    {
+        return $this->hasOne(SeguimientoEquipo::class, 'seq_id_puc', 'puc_id');
+    }
+
     public function entregables()
     {
         return $this->hasMany(Entregable::class, 'entr_id_puc', 'puc_id');

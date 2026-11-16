@@ -617,6 +617,106 @@
                         </div>
                     </div>
 
+                    <!-- Calificaciones y Recorrido de Evaluación por Semestre (Motor Oficial UPTP) -->
+                    <div class="col-12" v-if="evaluaciones?.length || actaFinal">
+                        <div class="sc mb-2">
+                            <div class="sh d-flex justify-content-between align-items-center">
+                                <h6 class="m-0">
+                                    <i class="bi bi-award-fill text-danger me-2"></i>Calificaciones Acumuladas del Trayecto (UPTP)
+                                </h6>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <a
+                                        v-if="equipo.proyecto_comunidad"
+                                        :href="`/evaluaciones/recorrido/${equipo.proyecto_comunidad.pco_id}`"
+                                        class="btn btn-sm btn-outline-danger"
+                                        style="font-size: 0.78rem; font-weight: 600;"
+                                    >
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Ver Rúbricas Oficiales
+                                    </a>
+                                    <a
+                                        v-if="actaFinal"
+                                        :href="`/evaluaciones/pdf/${actaFinal.id_proyecto}`"
+                                        class="btn btn-sm btn-danger"
+                                        style="font-size: 0.78rem; font-weight: 600;"
+                                        target="_blank"
+                                    >
+                                        <i class="bi bi-file-earmark-pdf-fill me-1"></i>Acta Final PDF
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="p-3">
+                                <div class="row g-3">
+                                    <!-- Semestres -->
+                                    <div class="col-md-6" v-for="sem in evaluaciones" :key="sem.id_recorrido">
+                                        <div class="p-3 rounded border" :style="sem.estado_semestre === 'Culminado' ? 'background: #f8fff9; border-color: #badbcc !important;' : 'background: #fff;'">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <span class="badge bg-danger rounded-pill px-2 py-1 mb-1" style="font-size: 0.72rem;">{{ sem.semestre }}</span>
+                                                    <h6 class="fw-bold m-0 text-dark">
+                                                        {{ sem.semestre === 'Semestre 1' ? 'Semestre Impar (40% Trayecto)' : 'Semestre Par (60% Trayecto)' }}
+                                                    </h6>
+                                                </div>
+                                                <span class="bs" :class="sem.estado_semestre === 'Culminado' ? 'ba' : 'bw'" style="font-size: 0.75rem;">
+                                                    {{ sem.estado_semestre }}
+                                                </span>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-baseline p-2 rounded mb-2" style="background: rgba(0,0,0,0.03);">
+                                                <span class="text-muted" style="font-size: 0.85rem; font-weight: 600;">Calificación Semestral:</span>
+                                                <span class="fw-bold" style="font-size: 1.25rem;" :style="Number(sem.nota_cuantitativa_semestre) >= 16 ? 'color: #198754;' : 'color: #dc3545;'">
+                                                    {{ Number(sem.nota_cuantitativa_semestre).toFixed(2) }} <small class="text-muted" style="font-size: 0.75rem;">/ 20 pts</small>
+                                                </span>
+                                            </div>
+
+                                            <!-- Desglose de Actores si es Semestre 2 -->
+                                            <div v-if="sem.semestre === 'Semestre 2'" class="mt-2 pt-2 border-top">
+                                                <div class="small fw-bold text-muted mb-1" style="font-size: 0.74rem;">Ponderación 4 Actores UPTP:</div>
+                                                <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
+                                                    <span>Docente de Proyecto (40%):</span>
+                                                    <strong class="text-dark">{{ Number(sem.nota_docente || 0).toFixed(2) }} pts</strong>
+                                                </div>
+                                                <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
+                                                    <span>Jurado Evaluador (30%):</span>
+                                                    <strong class="text-dark">{{ Number(sem.nota_jurado || 0).toFixed(2) }} pts</strong>
+                                                </div>
+                                                <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
+                                                    <span>Comunidad Beneficiaria (20%):</span>
+                                                    <strong class="text-dark">{{ Number(sem.nota_comunidad || 0).toFixed(2) }} pts</strong>
+                                                </div>
+                                                <div class="d-flex justify-content-between small text-muted py-1" style="font-size: 0.78rem;">
+                                                    <span>Autoevaluación Estudiante (10%):</span>
+                                                    <strong class="text-dark">{{ Number(sem.nota_estudiante || 0).toFixed(2) }} pts</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Acta Final Resumen -->
+                                    <div class="col-12" v-if="actaFinal">
+                                        <div class="p-3 rounded border" style="background: #eef7ff; border-color: #b6d4fe !important;">
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                <div>
+                                                    <div class="fw-bold text-primary" style="font-size: 0.95rem;">
+                                                        <i class="bi bi-shield-check me-1"></i>Acta Final de Trayecto Cerrada
+                                                    </div>
+                                                    <div class="small text-muted">
+                                                        Hash Oficial SHA-256: <code>{{ actaFinal.hash_verificacion }}</code>
+                                                    </div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge bg-primary px-3 py-2 rounded-pill fw-bold" style="font-size: 0.88rem;">
+                                                        Definitiva: {{ Number(actaFinal.calificacion_definitiva_cuantitativa).toFixed(2) }} / 20 pts ({{ actaFinal.calificacion_definitiva_cualitativa }})
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Puntos de Control -->
                     <div class="col-12" v-if="equipo.puntos_control?.length">
                         <div class="sc">
@@ -659,8 +759,7 @@
                                             <td>
                                                 <span
                                                     :style="
-                                                        !puc.seguimiento
-                                                            ?.seq_cumplido &&
+                                                        !esCumplido(puc) &&
                                                         estaVencido(
                                                             puc.puc_fecha_limite,
                                                         )
@@ -688,10 +787,7 @@
                                             </td>
                                             <td>
                                                 <span
-                                                    v-if="
-                                                        puc.seguimiento
-                                                            ?.seq_cumplido
-                                                    "
+                                                    v-if="esCumplido(puc)"
                                                     class="bs ba"
                                                     style="font-size: 0.72rem"
                                                     >✓ Cumplido</span
@@ -719,11 +815,7 @@
                                                     color: var(--text-muted);
                                                 "
                                             >
-                                                {{
-                                                    puc.seguimiento
-                                                        ?.seq_observaciones ||
-                                                    "—"
-                                                }}
+                                                {{ obtenerObservacion(puc) }}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -1034,7 +1126,17 @@ import { Link } from "@inertiajs/vue3";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
-const props = defineProps({ equipo: Object });
+const props = defineProps({
+    equipo: Object,
+    evaluaciones: {
+        type: Array,
+        default: () => [],
+    },
+    actaFinal: {
+        type: Object,
+        default: () => null,
+    },
+});
 // Detectar si viene del profesor o del coordinador
 const rutaBase = computed(() => {
     return window.location.pathname.startsWith("/profesor")
@@ -1063,11 +1165,12 @@ const iniciales = computed(() => {
     );
 });
 const estaVencido = (f) => f && new Date(f) < new Date();
+const obtenerSeguimiento = (puc) => puc.seguimiento || (puc.seguimientos && puc.seguimientos[0]) || null;
+const esCumplido = (puc) => Boolean(obtenerSeguimiento(puc)?.seq_cumplido);
+const obtenerObservacion = (puc) => obtenerSeguimiento(puc)?.seq_observaciones || "—";
 const cumplidos = computed(
     () =>
-        (props.equipo.puntos_control || []).filter(
-            (p) => p.seguimiento?.seq_cumplido,
-        ).length,
+        (props.equipo.puntos_control || []).filter(esCumplido).length,
 );
 const badgeRes = (n) => {
     if (n === "Aprobado") return "ba";
@@ -1078,12 +1181,16 @@ const colorEvt = (n) => {
     if (n === "Disuelto") return "background:#f8d7da;color:#842029";
     if (n === "Líder Cambiado") return "background:#fff3cd;color:#664d03";
     if (n === "Integrante Removido") return "background:#ffe5d0;color:#984c0c";
+    if (n === "Transición Semestral") return "background:#d1e7dd;color:#0f5132";
+    if (n === "Envío a Repositorio") return "background:#cff4fc;color:#055160";
     return "background:#e2e3e5;color:#41464b";
 };
 const iconEvt = (n) => {
     if (n === "Disuelto") return "bi-x-circle";
     if (n === "Líder Cambiado") return "bi-arrow-repeat";
     if (n === "Integrante Removido") return "bi-person-dash";
+    if (n === "Transición Semestral") return "bi-arrow-right-circle-fill";
+    if (n === "Envío a Repositorio") return "bi-archive-fill";
     return "bi-circle";
 };
 </script>

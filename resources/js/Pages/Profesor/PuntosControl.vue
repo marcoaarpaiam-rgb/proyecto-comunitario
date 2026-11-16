@@ -53,20 +53,20 @@
             <div class="sb-nav">
                 <div class="sb-sec">Principal</div>
                 <Link href="/profesor" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Dashboard</Link
+                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard</Link
                 >
                 <Link href="/profesor/secciones" class="sb-lnk"
-                    ><i class="bi bi-collection"></i> Mis Secciones</Link
+                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Mis Secciones</Link
                 >
                 <div class="sb-sec">Gestión</div>
                 <Link href="/profesor/puntos-control" class="sb-lnk active"
-                    ><i class="bi bi-flag"></i> Puntos de Control</Link
+                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg> Puntos de Control</Link
                 >
                 <Link href="/profesor/socializaciones" class="sb-lnk"
-                    ><i class="bi bi-mic"></i> Socializaciones</Link
+                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg> Socializaciones</Link
                 >
                 <Link href="/profesor/entregables" class="sb-lnk"
-                    ><i class="bi bi-file-earmark-check"></i> Entregables</Link
+                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg> Entregables</Link
                 >
                 <div style="padding: 0.75rem 1.4rem">
                     <form @submit.prevent="logout">
@@ -103,6 +103,32 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <!-- Botón Exportar Libro INVENTARIO (XLSX) -->
+                    <div class="dropdown" v-if="props.secciones && props.secciones.length > 0">
+                        <button
+                            class="btn btn-outline-success btn-sm fw-bold rounded-pill px-3 dropdown-toggle d-inline-flex align-items-center gap-1"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            Exportar Libro INVENTARIO (.xlsx)
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 260px;">
+                            <li class="dropdown-header text-uppercase small fw-bold text-success">Plantilla Oficial UPTP (7 Hojas)</li>
+                            <li v-for="sec in props.secciones" :key="sec.sec_id">
+                                <a
+                                    class="dropdown-item d-flex align-items-center justify-content-between py-2"
+                                    :href="`/inventario/excel/libro-seccion/${sec.sec_id}`"
+                                    target="_blank"
+                                >
+                                    <span><strong>Sección:</strong> {{ sec.sec_codigo }}</span>
+                                    <span class="badge bg-success-subtle text-success ms-2">Descargar</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
                     <button
                         class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
                         @click="abrirModal()"
@@ -255,8 +281,17 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <!-- Si ya fue evaluado: sólo ver y candado -->
+                                        <!-- Si ya fue evaluado: corte Excel, ver y candado -->
                                         <template v-if="estaEvaluado(puc)">
+                                            <a
+                                                :href="`/inventario/excel/punto-control/${puc.puc_id}`"
+                                                class="btn btn-sm btn-outline-success me-1 d-inline-flex align-items-center gap-1"
+                                                title="Descargar Corte Oficial Excel (Semana real)"
+                                                target="_blank"
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                                Excel
+                                            </a>
                                             <button
                                                 class="btn btn-sm btn-outline-primary me-1"
                                                 @click="

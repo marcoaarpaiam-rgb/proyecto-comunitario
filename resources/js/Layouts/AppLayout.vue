@@ -67,7 +67,8 @@
                             :class="{ active: openMenu === item.label }"
                             @click="toggleMenu(item.label)"
                         >
-                            <i :class="item.icon + ' sidebar-icon'"></i>
+                            <span v-if="item.svg" class="sidebar-icon d-inline-flex align-items-center" v-html="item.svg"></span>
+                            <i v-else :class="item.icon + ' sidebar-icon'"></i>
                             <span class="sidebar-label">{{ item.label }}</span>
                             <i
                                 class="bi ms-auto sidebar-label"
@@ -89,7 +90,9 @@
                                 :href="child.href"
                                 class="sidebar-subitem d-flex align-items-center gap-2"
                             >
+                                <span v-if="child.svg" class="d-inline-flex align-items-center" style="width: 16px; height: 16px" v-html="child.svg"></span>
                                 <i
+                                    v-else
                                     :class="child.icon"
                                     style="font-size: 0.8rem; width: 16px"
                                 ></i>
@@ -106,7 +109,8 @@
                         class="sidebar-item d-flex align-items-center"
                         :class="{ active: isActive(item.href) }"
                     >
-                        <i :class="item.icon + ' sidebar-icon'"></i>
+                        <span v-if="item.svg" class="sidebar-icon d-inline-flex align-items-center" v-html="item.svg"></span>
+                        <i v-else :class="item.icon + ' sidebar-icon'"></i>
                         <span class="sidebar-label">{{ item.label }}</span>
                     </a>
                 </template>
@@ -442,49 +446,85 @@ const menuItems = computed(() => {
     return [];
 });
 
+const svgs = {
+    dashboard: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>',
+    table: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>',
+    tag: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>',
+    layers: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+    personBadge: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11h5"/><path d="M19 9v4"/></svg>',
+    people: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    file: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>',
+    calendar: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>',
+    clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    award: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/></svg>',
+    secciones: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+    building: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>',
+    proyectos: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>',
+    puntosControl: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',
+    socializaciones: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg>',
+    entregables: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>',
+    reportes: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>',
+    cartas: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+    expediente: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>',
+    bitacora: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    configuracion: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    evaluaciones: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/></svg>',
+    autoevaluacion: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+    upload: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>'
+};
+
 const menuCoordinador = [
-    { label: "Dashboard", icon: "bi bi-grid-fill", href: "/coordinador" },
+    { label: "Dashboard", svg: svgs.dashboard, icon: "bi bi-grid-fill", href: "/coordinador" },
     {
         label: "Tablas Maestras",
+        svg: svgs.table,
         icon: "bi bi-table",
         children: [
             {
                 label: "Tipos de Proyecto",
+                svg: svgs.tag,
                 icon: "bi bi-tag",
                 href: "/coordinador/tipos-proyecto",
             },
             {
                 label: "Modalidades",
+                svg: svgs.layers,
                 icon: "bi bi-layers",
                 href: "/coordinador/maestras/modalidades",
             },
             {
                 label: "Tipos de Jurado",
+                svg: svgs.personBadge,
                 icon: "bi bi-person-badge",
                 href: "/coordinador/maestras/tipos-jurado",
             },
             {
                 label: "Tipos de Beneficiario",
+                svg: svgs.people,
                 icon: "bi bi-people",
                 href: "/coordinador/maestras/tipos-beneficiario",
             },
             {
                 label: "Tipos de Entregable",
+                svg: svgs.file,
                 icon: "bi bi-file-earmark",
                 href: "/coordinador/maestras/tipos-entregable",
             },
             {
                 label: "Tipos Evento Equipo",
+                svg: svgs.calendar,
                 icon: "bi bi-calendar-event",
                 href: "/coordinador/maestras/tipos-evento-equipo",
             },
             {
                 label: "Turnos",
+                svg: svgs.clock,
                 icon: "bi bi-clock",
                 href: "/coordinador/maestras/turnos",
             },
             {
                 label: "Estados de Proyecto",
+                svg: svgs.award,
                 icon: "bi bi-award",
                 href: "/coordinador/maestras/estados-proyecto",
             },
@@ -492,113 +532,134 @@ const menuCoordinador = [
     },
     {
         label: "Secciones",
+        svg: svgs.secciones,
         icon: "bi bi-collection-fill",
         href: "/coordinador/secciones",
     },
     {
         label: "Comunidades",
+        svg: svgs.building,
         icon: "bi bi-building",
         href: "/coordinador/comunidades",
     },
     {
         label: "Equipos",
+        svg: svgs.people,
         icon: "bi bi-people-fill",
         href: "/coordinador/equipos",
     },
     {
         label: "Proyectos",
+        svg: svgs.proyectos,
         icon: "bi bi-folder-fill",
         href: "/coordinador/proyectos",
     },
     {
-        label: "Evaluación Trayecto (S1/S2)",
+        label: "Evaluación Cualitativa/Cuantitativa",
+        svg: svgs.evaluaciones,
         icon: "bi bi-journal-check",
         href: "/evaluaciones",
     },
     {
         label: "Socializaciones",
+        svg: svgs.socializaciones,
         icon: "bi bi-mic-fill",
         href: "/coordinador/socializaciones",
     },
     {
         label: "Resultados",
+        svg: svgs.award,
         icon: "bi bi-award-fill",
         href: "/coordinador/resultados",
     },
     {
         label: "Reportes",
+        svg: svgs.reportes,
         icon: "bi bi-bar-chart-fill",
         href: "/coordinador/reportes",
     },
     {
         label: "Cartas de Presentación",
+        svg: svgs.cartas,
         icon: "bi bi-file-earmark-text-fill",
         href: "/coordinador/cartas",
     },
     {
         label: "Expediente Estudiantes",
+        svg: svgs.expediente,
         icon: "bi bi-person-badge-fill",
         href: "/coordinador/estudiantes/buscar",
     },
     {
         label: "Bitácora",
+        svg: svgs.bitacora,
         icon: "bi bi-journal-text",
         href: "/coordinador/bitacora",
     },
     {
         label: "Configuración",
+        svg: svgs.configuracion,
         icon: "bi bi-gear-fill",
         href: "/coordinador/configuracion",
     },
 ];
 const menuProfesor = [
-    { label: "Dashboard", icon: "bi bi-grid-fill", href: "/profesor" },
+    { label: "Dashboard", svg: svgs.dashboard, icon: "bi bi-grid-fill", href: "/profesor" },
     {
         label: "Mis Equipos",
+        svg: svgs.people,
         icon: "bi bi-people-fill",
         href: "/profesor/equipos",
     },
     {
         label: "Puntos de Control",
+        svg: svgs.puntosControl,
         icon: "bi bi-flag-fill",
         href: "/profesor/puntos-control",
     },
     {
         label: "Socializaciones",
+        svg: svgs.socializaciones,
         icon: "bi bi-mic-fill",
         href: "/profesor/socializaciones",
     },
     {
         label: "Entregables",
+        svg: svgs.entregables,
         icon: "bi bi-file-earmark-check-fill",
         href: "/profesor/entregables",
     },
     {
-        label: "Evaluación Trayecto (S1/S2)",
-        icon: "bi bi-journal-check",
-        href: "/evaluaciones",
-    },
-    {
         label: "Expediente Estudiantes",
+        svg: svgs.expediente,
         icon: "bi bi-person-badge-fill",
         href: "/profesor/estudiantes/buscar",
     },
 ];
 const menuLider = [
-    { label: "Dashboard", icon: "bi bi-grid-fill", href: "/lider" },
-    { label: "Mi Equipo", icon: "bi bi-people-fill", href: "/lider/equipo" },
+    { label: "Dashboard", svg: svgs.dashboard, icon: "bi bi-grid-fill", href: "/lider" },
+    { label: "Mi Equipo", svg: svgs.people, icon: "bi bi-people-fill", href: "/lider/equipo" },
     {
         label: "Mi Proyecto",
+        svg: svgs.proyectos,
         icon: "bi bi-folder-fill",
         href: "/lider/proyecto",
     },
     {
         label: "Entregables",
+        svg: svgs.upload,
         icon: "bi bi-cloud-upload-fill",
         href: "/lider/entregables",
     },
     {
+        label: "Autoevaluación PST (10%)",
+        svg: svgs.autoevaluacion,
+        icon: "bi bi-check-circle",
+        href: "/evaluaciones",
+    },
+    {
         label: "Carta de Presentación",
+        svg: svgs.cartas,
         icon: "bi bi-file-earmark-text-fill",
         href: "/lider/carta",
     },
