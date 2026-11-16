@@ -11,6 +11,7 @@ use App\Models\ModalidadProyecto;
 use App\Models\TipoBeneficiario;
 use App\Models\ProyectoBeneficiario;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ProyectoController extends Controller
@@ -95,34 +96,45 @@ class ProyectoController extends Controller
             }
         }
 
-        $proyecto = ProyectoComunidad::create([
-            'pco_id_equ'          => $request->pco_id_equ,
-            'pco_id_com'          => $request->pco_id_com,
-            'pco_id_tpr'          => $request->pco_id_tpr,
-            'pco_id_mpr'          => $request->pco_id_mpr,
-            'pco_id_pco_previo'   => $request->pco_id_pco_previo,
-            'pco_resumen'         => $request->pco_resumen,
-            'pco_area_comunidad'  => $request->pco_area_comunidad,
-            'pco_linea_investigacion' => $request->pco_linea_investigacion ?? 'Desarrollo de Software - Web',
-            'pco_fecha_limite'    => $request->pco_fecha_limite,
-            'pco_fecha_aprobacion' => now()->toDateString(),
-            'pco_id_usu_aprobado'  => auth()->id(),
-            'pco_status'          => true,
-            'pco_id_usu_created'  => auth()->id(),
-        ]);
+        DB::transaction(function () use ($request, $equipoActual, &$proyecto) {
+            $proyecto = ProyectoComunidad::create([
+                'pco_id_equ'          => $request->pco_id_equ,
+                'pco_id_com'          => $request->pco_id_com,
+                'pco_id_tpr'          => $request->pco_id_tpr,
+                'pco_id_mpr'          => $request->pco_id_mpr,
+                'pco_id_pco_previo'   => $request->pco_id_pco_previo,
+                'pco_resumen'         => $request->pco_resumen,
+                'pco_area_comunidad'  => $request->pco_area_comunidad,
+                'pco_linea_investigacion' => $request->pco_linea_investigacion ?? 'Desarrollo de Software - Web',
+                'pco_fecha_limite'    => $request->pco_fecha_limite,
+                'pco_fecha_aprobacion' => now()->toDateString(),
+                'pco_id_usu_aprobado'  => auth()->id(),
+                'pco_status'          => true,
+                'pco_id_usu_created'  => auth()->id(),
+            ]);
 
-        if ($request->beneficiarios) {
-            foreach ($request->beneficiarios as $ben) {
-                ProyectoBeneficiario::create([
-                    'pbe_id_pco'         => $proyecto->pco_id,
-                    'pbe_id_tbe'         => $ben['tbe_id'],
-                    'pbe_cantidad'       => $ben['cantidad'],
-                    'pbe_id_usu_created' => auth()->id(),
-                ]);
+            if ($request->beneficiarios) {
+                foreach ($request->beneficiarios as $ben) {
+                    ProyectoBeneficiario::create([
+                        'pbe_id_pco'         => $proyecto->pco_id,
+                        'pbe_id_tbe'         => $ben['tbe_id'],
+                        'pbe_cantidad'       => $ben['cantidad'],
+                        'pbe_id_usu_created' => auth()->id(),
+                    ]);
+                }
             }
-        }
 
-        return back()->with('success', 'Proyecto registrado correctamente.');
+            // Automatización: Inicializar los 2 semestres de evaluación del Trayecto
+            if ($equipoActual) {
+                app(\App\Services\EvaluacionTrayectoService::class)->inicializarRecorridoProyecto(
+                    (int) $proyecto->pco_id,
+                    (int) $equipoActual->equ_id,
+                    (int) $equipoActual->equ_id_tra
+                );
+            }
+        });
+
+        return back()->with('success', 'Proyecto registrado correctamente y recorrido de evaluación inicializado.');
     }
 
     public function update(Request $request, $id)

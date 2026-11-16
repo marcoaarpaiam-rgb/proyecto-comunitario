@@ -511,6 +511,11 @@ const menuCoordinador = [
         href: "/coordinador/proyectos",
     },
     {
+        label: "Evaluación Trayecto (S1/S2)",
+        icon: "bi bi-journal-check",
+        href: "/evaluaciones",
+    },
+    {
         label: "Socializaciones",
         icon: "bi bi-mic-fill",
         href: "/coordinador/socializaciones",
@@ -567,6 +572,11 @@ const menuProfesor = [
         label: "Entregables",
         icon: "bi bi-file-earmark-check-fill",
         href: "/profesor/entregables",
+    },
+    {
+        label: "Evaluación Trayecto (S1/S2)",
+        icon: "bi bi-journal-check",
+        href: "/evaluaciones",
     },
     {
         label: "Expediente Estudiantes",

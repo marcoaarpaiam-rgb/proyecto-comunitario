@@ -448,6 +448,13 @@ class EquipoController extends Controller
                         'heq_fecha_evento'   => now()->toDateString(),
                         'heq_id_usu_created' => auth()->id(),
                     ]);
+
+                    // Inicializar recorrido de evaluación del trayecto (Semestres 1 y 2)
+                    app(\App\Services\EvaluacionTrayectoService::class)->inicializarRecorridoProyecto(
+                        (int) $proyecto->pco_id,
+                        (int) $equipo->equ_id,
+                        (int) $equipo->equ_id_tra
+                    );
                 }
                 return;
             }

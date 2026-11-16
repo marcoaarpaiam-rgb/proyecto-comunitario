@@ -71,6 +71,9 @@
                 <Link href="/coordinador/resultados" class="sb-lnk">
                     <i class="bi bi-trophy"></i> Resultados
                 </Link>
+                <a href="/evaluaciones" class="sb-lnk">
+                    <i class="bi bi-award"></i> Evaluación Trayecto (S1/S2)
+                </a>
 
                 <!-- Tablas Maestras — desplegable -->
                 <div
@@ -377,12 +380,22 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <button
-                                            class="btn btn-sm btn-outline-danger"
-                                            @click="desactivar(pco)"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <div class="d-inline-flex gap-1 align-items-center">
+                                            <a
+                                                :href="'/evaluaciones/recorrido/' + pco.pco_id"
+                                                class="btn btn-sm btn-danger text-white d-inline-flex align-items-center"
+                                                title="Evaluación Cualitativa / Cuantitativa (Semestres 1 y 2)"
+                                            >
+                                                <i class="bi bi-award-fill me-1"></i> Evaluar S1/S2
+                                            </a>
+                                            <button
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Desactivar"
+                                                @click="desactivar(pco)"
+                                            >
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>

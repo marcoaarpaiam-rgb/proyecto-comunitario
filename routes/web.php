@@ -25,6 +25,7 @@ use App\Http\Controllers\Coordinador\SocializacionCoordController;
 use App\Http\Controllers\Coordinador\SeccionDetalleController;
 use App\Http\Controllers\Coordinador\ConfiguracionController;
 use App\Http\Controllers\Coordinador\ExpedienteController;
+use App\Http\Controllers\EvaluacionTrayectoController;
 
 
 // Rutas públicas
@@ -608,5 +609,21 @@ Route::middleware(['auth', 'rol:lider'])
     Route::post('/tutor', [LiderController::class, 'registrarTutor'])
         ->name('tutor.store');
 });
+
+// =========================================================================
+// MOTOR DE EVALUACIÓN CUALITATIVA Y CUANTITATIVA POR TRAYECTO (SEMESTRES 1 Y 2)
+// =========================================================================
+Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->group(function () {
+    Route::get('/', [EvaluacionTrayectoController::class, 'index'])->name('index');
+    Route::get('/recorrido/{id_proyecto}', [EvaluacionTrayectoController::class, 'recorrido'])->name('recorrido');
+    Route::get('/evaluar/{id_recorrido}/{rol_evaluador}', [EvaluacionTrayectoController::class, 'evaluar'])->name('evaluar');
+    Route::post('/guardar', [EvaluacionTrayectoController::class, 'guardarEvaluacion'])->name('guardar');
+    Route::get('/pdf/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarActaPdf'])->name('pdf');
+});
+
+// Ruta pública de verificación de autenticidad de acta mediante Hash SHA-256
+Route::get('/evaluaciones/verificar/{hash}', [EvaluacionTrayectoController::class, 'verificarActa'])
+    ->name('evaluaciones.verificar');
+
 
 
