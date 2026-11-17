@@ -63,6 +63,10 @@ class EvaluacionTrayectoController extends Controller
                 (int) DB::table('equipo')->where('equ_id', $proy->id_equipo)->value('equ_id_tra')
             );
 
+            if (!$proy->pin_defensa) {
+                $proy->pin_defensa = DB::table('proyecto_comunidad')->where('pco_id', $proy->id_proyecto)->value('pin_defensa');
+            }
+
             $recorridos = DB::table('recorrido_evaluacion_semestral')
                 ->where('id_proyecto', $proy->id_proyecto)
                 ->get()

@@ -624,7 +624,16 @@
                                 <h6 class="m-0">
                                     <i class="bi bi-award-fill text-danger me-2"></i>Calificaciones Acumuladas del Trayecto (UPTP)
                                 </h6>
-                                <div class="d-flex gap-2 align-items-center">
+                                <div class="d-flex gap-2 align-items-center flex-wrap">
+                                    <a
+                                        href="/evaluacion-invitado"
+                                        target="_blank"
+                                        class="btn btn-sm btn-warning text-dark fw-bold"
+                                        style="font-size: 0.78rem;"
+                                        title="Abrir portal para jurados y vocero comunitario"
+                                    >
+                                        <i class="bi bi-key-fill me-1"></i>Portal Jurado / Comunidad
+                                    </a>
                                     <a
                                         v-if="equipo.proyecto_comunidad"
                                         :href="`/evaluaciones/recorrido/${equipo.proyecto_comunidad.pco_id}`"
@@ -647,6 +656,24 @@
 
                             <div class="p-3">
                                 <div class="row g-3">
+                                    <!-- Banner de PIN de defensa para Jurado y Comunidad -->
+                                    <div class="col-12" v-if="equipo.proyecto_comunidad?.pin_defensa || evaluaciones?.[0]?.pin_defensa">
+                                        <div class="p-2 px-3 rounded border d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: #fff9db; border-color: #ffe066 !important;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-key-fill text-danger fs-5"></i>
+                                                <div>
+                                                    <span class="small text-muted fw-bold d-block">PIN de Defensa Oficial (Jurado y Vocero Comunitario):</span>
+                                                    <span class="fs-5 fw-bold font-monospace text-dark tracking-wider">
+                                                        {{ equipo.proyecto_comunidad?.pin_defensa || evaluaciones?.[0]?.pin_defensa }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="small text-muted">
+                                                Ingrese al <a href="/evaluacion-invitado" target="_blank" class="fw-bold text-danger text-decoration-underline">Portal Invitado</a> con este PIN y la Cédula correspondiente.
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Semestres -->
                                     <div class="col-md-6" v-for="sem in evaluaciones" :key="sem.id_recorrido">
                                         <div class="p-3 rounded border" :style="sem.estado_semestre === 'Culminado' ? 'background: #f8fff9; border-color: #badbcc !important;' : 'background: #fff;'">

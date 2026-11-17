@@ -65,6 +65,12 @@
                 </a>
                 <div class="d-none d-md-flex align-items-center gap-3">
                     <a
+                        href="/evaluacion-invitado"
+                        class="btn btn-warning btn-lg fw-bold rounded-pill px-4 shadow-sm text-dark"
+                    >
+                        <i class="bi bi-key-fill me-2"></i>Portal Jurado / Comunidad
+                    </a>
+                    <a
                         href="/"
                         class="btn btn-danger btn-lg fw-bold rounded-pill px-4 shadow-sm"
                     >

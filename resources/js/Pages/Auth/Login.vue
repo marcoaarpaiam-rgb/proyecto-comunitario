@@ -67,6 +67,12 @@
                     <span class="d-inline d-sm-none">Gestión de Proyectos</span>
                 </span>
                 <div class="d-flex align-items-center gap-2">
+                    <a
+                        href="/evaluacion-invitado"
+                        class="btn btn-warning btn-sm rounded-pill px-3 fw-bold text-dark shadow-sm"
+                    >
+                        <i class="bi bi-key-fill me-1"></i>Portal Jurado / Comunidad
+                    </a>
                     <Link href="/home" class="btn btn-outline-light btn-sm rounded-pill px-3">
                         <i class="bi bi-house-door me-1"></i>Inicio
                     </Link>
@@ -193,6 +199,17 @@
                                 <i v-else class="bi bi-box-arrow-in-right me-2"></i>
                                 {{ loading ? "Verificando..." : "Ingresar al Sistema" }}
                             </button>
+
+                            <!-- Acceso en vivo para Jurado y Vocero Comunitario con PIN -->
+                            <div class="mt-4 pt-3 border-top text-center">
+                                <p class="small text-muted mb-2">¿Eres Jurado Evaluador o Vocero Comunitario?</p>
+                                <a
+                                    href="/evaluacion-invitado"
+                                    class="btn btn-outline-danger btn-sm w-100 fw-bold py-2 rounded-pill shadow-sm"
+                                >
+                                    <i class="bi bi-shield-lock-fill me-1"></i> Acceso con PIN de Defensa
+                                </a>
+                            </div>
                         </form>
                     </div>
                 </div>

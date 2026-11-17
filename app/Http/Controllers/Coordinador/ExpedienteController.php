@@ -35,6 +35,15 @@ class ExpedienteController extends Controller
 
         $idProyecto = $equipo->proyectoComunidad?->pco_id;
 
+        // Inicializar automáticamente recorrido y PIN si no existen
+        if ($idProyecto) {
+            app(\App\Services\EvaluacionTrayectoService::class)->inicializarRecorridoProyecto(
+                (int) $idProyecto,
+                (int) $equipo->equ_id,
+                (int) $equipo->equ_id_tra
+            );
+        }
+
         // Evaluaciones semestrales acumuladas
         $evaluaciones = DB::table('recorrido_evaluacion_semestral')
             ->where(function ($q) use ($id, $idProyecto) {

@@ -24,6 +24,24 @@
     </div>
 </div>
 
+<!-- Banner del Portal de Jurado y Vocero Comunitario -->
+<div class="card card-custom mb-4 shadow-sm border-0" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+    <div class="card-body p-4 text-white d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <span class="badge bg-danger px-3 py-1 mb-2 text-uppercase fw-bold" style="letter-spacing: 1px;">Evaluación en Vivo (Defensa / Socialización)</span>
+            <h5 class="fw-bold mb-1 text-white">Portal de Acceso para Jurado y Vocero Comunitario</h5>
+            <p class="text-white-50 small mb-0">
+                Los jurados y el vocero comunitario pueden ingresar a evaluar en tiempo real sin credenciales de usuario, utilizando su <strong>Cédula</strong> y el <strong>PIN de Defensa</strong> asignado a cada proyecto.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ route('evaluaciones.invitado') }}" target="_blank" class="btn btn-danger fw-bold px-4 py-2 shadow rounded-pill">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Abrir Portal de Evaluación con PIN
+            </a>
+        </div>
+    </div>
+</div>
+
 <div class="card card-custom">
     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="m-0 fw-bold text-dark">
@@ -37,6 +55,7 @@
                 <thead class="table-light small text-uppercase">
                     <tr>
                         <th>Código / Equipo</th>
+                        <th>PIN Defensa</th>
                         <th>Título del Proyecto</th>
                         <th>Trayecto / Sección</th>
                         <th>Comunidad</th>
@@ -52,6 +71,15 @@
                             <td>
                                 <strong class="text-danger d-block">{{ $p->codigo_equipo }}</strong>
                                 <span class="badge bg-secondary-subtle text-secondary small">ID: #{{ $p->id_proyecto }}</span>
+                            </td>
+                            <td>
+                                @if ($p->pin_defensa)
+                                    <span class="badge bg-warning-subtle text-dark border border-warning font-monospace px-2 py-1 fs-6 fw-bold" title="PIN de defensa para evaluación en vivo">
+                                        <i class="bi bi-key-fill text-danger me-1"></i>{{ $p->pin_defensa }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-light text-muted border">Pendiente</span>
+                                @endif
                             </td>
                             <td style="max-width: 250px;">
                                 <div class="fw-semibold text-truncate" title="{{ $p->titulo_proyecto }}">

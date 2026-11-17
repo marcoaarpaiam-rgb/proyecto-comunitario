@@ -618,6 +618,12 @@ const menuProfesor = [
         href: "/profesor/puntos-control",
     },
     {
+        label: "Evaluación Trayecto (Rúbricas)",
+        svg: svgs.evaluaciones,
+        icon: "bi bi-journal-check",
+        href: "/evaluaciones",
+    },
+    {
         label: "Socializaciones",
         svg: svgs.socializaciones,
         icon: "bi bi-mic-fill",
