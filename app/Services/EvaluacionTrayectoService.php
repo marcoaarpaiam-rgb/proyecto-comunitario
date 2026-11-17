@@ -504,6 +504,8 @@ class EvaluacionTrayectoService
                 'p.pco_localidad as localidad',
                 'p.pco_entrega_cd as entrega_cd',
                 'p.pin_defensa',
+                'p.token_jurado',
+                'p.token_jurado_expira_at',
                 'e.equ_id as id_equipo',
                 'e.equ_codigo as codigo_equipo',
                 'e.equ_titulo as titulo_proyecto',
@@ -593,5 +595,193 @@ class EvaluacionTrayectoService
             'acta'        => $acta,
             'integrantes' => $integrantes,
         ];
+    }
+
+    /**
+     * Candado de Prelación Académica (Reglamento PNF):
+     * Valida que un estudiante no pueda ser inscrito en un trayecto superior (Trayecto II, III, IV)
+     * si su expediente del trayecto anterior no está aprobado con calificación definitiva >= 16.00 puntos.
+     *
+     * Retorna null si cumple la prelación, o un mensaje descriptivo si está bloqueado.
+     */
+    public function verificarPrelacionEstudiante(int $idEstudiante, int $numeroTrayectoDestino): ?string
+    {
+        // En Trayecto 1 no aplica prelación de trayecto anterior
+        if ($numeroTrayectoDestino <= 1) {
+            return null;
+        }
+
+        $numeroTrayectoPrevio = $numeroTrayectoDestino - 1;
+
+        $usuario = DB::table('usuario')->where('usu_id', $idEstudiante)->first();
+        $nombreCompleto = $usuario ? trim("{$usuario->usu_primer_nombre} {$usuario->usu_primer_apellido} (C.I. {$usuario->usu_cedula})") : "Estudiante ID {$idEstudiante}";
+
+        // Buscar si el estudiante tiene expediente o equipo en el trayecto previo
+        $equipoPrevio = DB::table('equipo_integrante as ei')
+            ->join('equipo as e', 'e.equ_id', '=', 'ei.ein_id_equ')
+            ->join('trayecto as t', 't.tra_id', '=', 'e.equ_id_tra')
+            ->where('ei.ein_id_usu', $idEstudiante)
+            ->where('t.tra_numero', $numeroTrayectoPrevio)
+            ->select('e.equ_id', 'e.equ_codigo', 't.tra_nombre')
+            ->first();
+
+        // Si el estudiante tiene historial registrado en el trayecto previo:
+        if ($equipoPrevio) {
+            // 1. Verificar si el proyecto de su equipo previo tiene Acta Final cerrada con >= 16.00
+            $acta = DB::table('actas_finales_trayecto as aft')
+                ->join('proyecto_comunidad as pco', 'pco.pco_id', '=', 'aft.id_proyecto')
+                ->where('pco.pco_id_equ', $equipoPrevio->equ_id)
+                ->select('aft.calificacion_definitiva_cuantitativa', 'aft.calificacion_definitiva_cualitativa', 'aft.cerrada')
+                ->first();
+
+            if ($acta) {
+                $nota = (float) $acta->calificacion_definitiva_cuantitativa;
+                if ($nota < 16.00) {
+                    return "El estudiante {$nombreCompleto} no cumple con el candado de prelación: su expediente en {$equipoPrevio->tra_nombre} (Equipo {$equipoPrevio->equ_codigo}) fue calificado con {$nota}/20 pts. La normativa del PNF exige una calificación mínima aprobatoria de 16.00 puntos para avanzar al siguiente trayecto.";
+                }
+                return null; // Aprobado con nota >= 16.00
+            }
+
+            // 2. Verificar si tiene calificación individual registrada por jurado
+            $califIndiv = DB::table('evaluaciones_jurado_estudiante as eje')
+                ->join('proyecto_comunidad as pco', 'pco.pco_id', '=', 'eje.id_proyecto')
+                ->where('pco.pco_id_equ', $equipoPrevio->equ_id)
+                ->where('eje.id_estudiante', $idEstudiante)
+                ->avg('eje.calificacion');
+
+            if ($califIndiv !== null) {
+                $notaInd = round((float) $califIndiv, 2);
+                if ($notaInd < 16.00) {
+                    return "El estudiante {$nombreCompleto} no cumple con el candado de prelación: su calificación en {$equipoPrevio->tra_nombre} es de {$notaInd}/20 pts (mínimo aprobatorio reglamentario: 16.00 puntos).";
+                }
+                return null;
+            }
+
+            // 3. Verificar si el resultado_proyecto está aprobado
+            $resultadoAprobado = DB::table('resultado_proyecto as rp')
+                ->join('estado_proyecto as ep', 'ep.epr_id', '=', 'rp.rpr_id_epr')
+                ->where('rp.rpr_id_equ', $equipoPrevio->equ_id)
+                ->where('ep.epr_nombre', 'like', '%Aprobado%')
+                ->exists();
+
+            if ($resultadoAprobado) {
+                return null;
+            }
+
+            // Si estuvo en el trayecto previo pero su proyecto no ha sido culminado o no tiene acta aprobada
+            return "El estudiante {$nombreCompleto} no cumple con el candado de prelación: su expediente en {$equipoPrevio->tra_nombre} (Equipo {$equipoPrevio->equ_codigo}) aún no cuenta con Acta de Evaluación Final aprobada con al menos 16.00 puntos.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Calcula métricas individuales por integrante (por cédula) según Reglamento PNF:
+     * - Mínimo aprobatorio reglamentario: 16.00 puntos.
+     * - Asistencia mínima reglamentaria: 75% (más de 25% de inasistencias conlleva reprobación individual
+     *   sin afectar las notas del resto de compañeros del equipo).
+     */
+    public function calcularMetricasIndividualesEquipo(int $idEquipo, ?int $idProyecto = null): array
+    {
+        $seguimientosIds = DB::table('seguimiento_equipo')
+            ->where('seq_id_equ', $idEquipo)
+            ->pluck('seq_id');
+
+        $totalCortes = $seguimientosIds->count();
+
+        $integrantes = DB::table('equipo_integrante as ei')
+            ->join('usuario as u', 'u.usu_id', '=', 'ei.ein_id_usu')
+            ->where('ei.ein_id_equ', $idEquipo)
+            ->where('ei.ein_status', true)
+            ->select(
+                'u.usu_id',
+                'u.usu_cedula',
+                'u.usu_primer_nombre',
+                'u.usu_primer_apellido',
+                'ei.ein_es_lider'
+            )
+            ->get();
+
+        // Nota grupal de acta final si existe
+        $actaNota = null;
+        if ($idProyecto) {
+            $acta = DB::table('actas_finales_trayecto')->where('id_proyecto', $idProyecto)->first();
+            $actaNota = $acta ? (float) $acta->calificacion_definitiva_cuantitativa : null;
+        }
+
+        $resultado = [];
+
+        foreach ($integrantes as $est) {
+            $asistidos = 0;
+            $inasistencias = 0;
+
+            if ($totalCortes > 0) {
+                $registrosAsist = DB::table('asistencia_punto_control')
+                    ->whereIn('apc_id_seq', $seguimientosIds)
+                    ->where('apc_id_usu', $est->usu_id)
+                    ->get();
+
+                $asistidos = $registrosAsist->filter(fn($r) => (bool) $r->apc_asistio || (bool) $r->apc_justificado)->count();
+                $inasistencias = $registrosAsist->filter(fn($r) => !(bool) $r->apc_asistio && !(bool) $r->apc_justificado)->count();
+
+                // Si hubo cortes evaluados donde el registro no existía, contabilizarlos sobre los registros reales
+                $baseCortes = max(1, $registrosAsist->count());
+                if ($registrosAsist->count() === 0) {
+                    $porcAsist = 100.0;
+                    $porcInasist = 0.0;
+                } else {
+                    $porcAsist = round(($asistidos / $baseCortes) * 100, 1);
+                    $porcInasist = round(($inasistencias / $baseCortes) * 100, 1);
+                }
+            } else {
+                $porcAsist = 100.0;
+                $porcInasist = 0.0;
+            }
+
+            $reprobadoInasistencia = $totalCortes > 0 && $porcInasist > 25.0;
+
+            // Nota individual del estudiante (si existe evaluación individual de jurado)
+            $notaIndiv = null;
+            if ($idProyecto) {
+                $avgIndiv = DB::table('evaluaciones_jurado_estudiante')
+                    ->where('id_proyecto', $idProyecto)
+                    ->where('id_estudiante', $est->usu_id)
+                    ->avg('calificacion');
+                if ($avgIndiv !== null) {
+                    $notaIndiv = round((float) $avgIndiv, 2);
+                }
+            }
+
+            $notaFinal = $notaIndiv ?? $actaNota;
+
+            if ($reprobadoInasistencia) {
+                $condicion = 'Reprobado por Inasistencia (>25% faltas)';
+                $aprobado = false;
+            } elseif ($notaFinal !== null) {
+                $aprobado = $notaFinal >= 16.00;
+                $condicion = $aprobado ? 'Aprobado' : 'Reprobado (Nota < 16.00 pts)';
+            } else {
+                $aprobado = null;
+                $condicion = 'En Curso';
+            }
+
+            $resultado[$est->usu_id] = [
+                'usu_id'                 => $est->usu_id,
+                'cedula'                 => $est->usu_cedula,
+                'nombre_completo'        => trim("{$est->usu_primer_nombre} {$est->usu_primer_apellido}"),
+                'es_lider'               => (bool) $est->ein_es_lider,
+                'total_cortes'           => $totalCortes,
+                'asistidos'              => $asistidos,
+                'inasistencias'          => $inasistencias,
+                'porcentaje_asistencia'  => $porcAsist,
+                'porcentaje_inasistencia'=> $porcInasist,
+                'reprobado_inasistencia' => $reprobadoInasistencia,
+                'nota_individual'        => $notaFinal,
+                'aprobado_individual'    => $aprobado,
+                'condicion_pnf'          => $condicion,
+            ];
+        }
+
+        return $resultado;
     }
 }

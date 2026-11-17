@@ -12,6 +12,9 @@ class ProyectoComunidad extends Model
 
     protected $fillable = [
         'pco_resumen',
+        'pin_defensa',
+        'token_jurado',
+        'token_jurado_expira_at',
         'pco_area_comunidad',
         'pco_linea_investigacion',
         'pco_fecha_limite',

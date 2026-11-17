@@ -72,6 +72,9 @@
                 <Link href="/coordinador/resultados" class="sb-link">
                     <i class="bi bi-trophy"></i> Resultados
                 </Link>
+                <Link href="/coordinador/transicion-semestral" class="sb-link">
+                    <i class="bi bi-arrow-left-right"></i> Transición Semestral
+                </Link>
 
                 <!-- Tablas Maestras — desplegable -->
                 <div

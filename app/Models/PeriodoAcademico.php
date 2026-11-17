@@ -27,4 +27,14 @@ class PeriodoAcademico extends Model
     {
         return static::where('activo', true)->orderBy('id_periodo', 'desc')->first();
     }
+
+    public static function lapsoActivoTexto(): string
+    {
+        $activo = static::periodoActivo();
+        if ($activo && !empty($activo->lapso_academico)) {
+            return $activo->lapso_academico;
+        }
+
+        return date('Y') . '-I';
+    }
 }

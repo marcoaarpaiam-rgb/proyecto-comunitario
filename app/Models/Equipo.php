@@ -120,4 +120,37 @@ class Equipo extends Model
     {
         return str_replace(['/', '\\'], '-', $this->equ_codigo);
     }
+
+    /**
+     * Obtiene el número de semestre del equipo (1 al 8) según la sección.
+     */
+    public function getSemestreNumero(): int
+    {
+        if ($this->seccion) {
+            return $this->seccion->getSemestreNumero();
+        }
+
+        if (!empty($this->equ_codigo) && preg_match('/-(\d{3})-/', (string) $this->equ_codigo, $m)) {
+            $digito = (int) substr($m[1], 0, 1);
+            if ($digito >= 1 && $digito <= 8) {
+                return $digito;
+            }
+        }
+
+        if (!empty($this->equ_id_tra)) {
+            return (int) $this->equ_id_tra;
+        }
+
+        return 1;
+    }
+
+    public function esSemestreImpar(): bool
+    {
+        return $this->getSemestreNumero() % 2 !== 0;
+    }
+
+    public function esSemestrePar(): bool
+    {
+        return $this->getSemestreNumero() % 2 === 0;
+    }
 }

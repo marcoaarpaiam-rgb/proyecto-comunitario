@@ -201,7 +201,11 @@
                                         >
                                     </td>
                                     <td style="font-size: 0.88rem">
-                                        {{ soc.soc_fecha }}
+                                        <div v-if="soc.soc_fecha" class="fw-bold text-dark">
+                                            {{ soc.soc_fecha }}
+                                            <div v-if="soc.soc_hora" class="small text-muted">{{ soc.soc_hora }}</div>
+                                        </div>
+                                        <span v-else class="badge bg-warning text-dark">Sin fecha</span>
                                     </td>
                                     <td
                                         style="
@@ -209,7 +213,7 @@
                                             color: var(--text-muted);
                                         "
                                     >
-                                        {{ soc.soc_lugar }}
+                                        {{ soc.soc_lugar || 'Por definir' }}
                                     </td>
                                     <td>
                                         <template v-if="soc.tipo_socializacion?.tso_orden === 1">
@@ -248,6 +252,64 @@
                                         </template>
                                     </td>
                                     <td class="text-end pe-4">
+                                        <!-- Enlace al Módulo de Evaluación de los 4 Actores (Solo habilitado si ya tiene fecha de socialización final) -->
+                                        <template v-if="soc.tipo_socializacion?.tso_orden === 2">
+                                            <!-- Si tiene token de jurado activo -->
+                                            <template v-if="soc.soc_fecha && (soc.equipo?.proyecto_comunidad?.token_jurado || soc.equipo?.proyectoComunidad?.token_jurado)">
+                                                <a
+                                                    :href="'/evaluacion-jurado/' + (soc.equipo?.proyecto_comunidad?.token_jurado || soc.equipo?.proyectoComunidad?.token_jurado)"
+                                                    target="_blank"
+                                                    class="btn btn-sm btn-dark text-white fw-bold me-1"
+                                                    title="Abrir panel de jurado (12 horas)"
+                                                >
+                                                    <i class="bi bi-box-arrow-up-right me-1"></i>Ver Link
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-danger text-white fw-bold me-1"
+                                                    @click="copiarLinkJuradoSoc(soc.equipo?.proyecto_comunidad?.token_jurado || soc.equipo?.proyectoComunidad?.token_jurado)"
+                                                    title="Copiar URL de 12 horas para enviar al Jurado"
+                                                >
+                                                    <i class="bi bi-clipboard me-1"></i>Copiar Link
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-outline-secondary me-1"
+                                                    @click="generarLinkDirecto(soc.equipo.equ_id)"
+                                                    title="Regenerar enlace de evaluación (12 horas nuevas)"
+                                                    :disabled="generandoLinkId === soc.equipo.equ_id"
+                                                >
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                            </template>
+                                            <button
+                                                v-else-if="soc.soc_fecha && soc.equipo?.equ_id"
+                                                type="button"
+                                                class="btn btn-sm btn-outline-dark fw-bold me-1"
+                                                @click="generarLinkDirecto(soc.equipo.equ_id)"
+                                                title="Generar enlace temporal de 12 horas para el jurado"
+                                                :disabled="generandoLinkId === soc.equipo.equ_id"
+                                            >
+                                                <span v-if="generandoLinkId === soc.equipo.equ_id" class="spinner-border spinner-border-sm me-1"></span>
+                                                <i v-else class="bi bi-link-45deg me-1"></i>Generar Link Jurado
+                                            </button>
+                                            <a
+                                                v-if="soc.soc_fecha && (soc.equipo?.proyecto_comunidad?.pco_id || soc.equipo?.proyectoComunidad?.pco_id)"
+                                                :href="'/evaluaciones/recorrido/' + (soc.equipo?.proyecto_comunidad?.pco_id || soc.equipo?.proyectoComunidad?.pco_id)"
+                                                class="btn btn-sm btn-outline-danger me-1"
+                                                title="Módulo de Evaluación de los 4 Actores y Rúbricas Oficiales"
+                                            >
+                                                <i class="bi bi-award-fill me-1"></i>Evaluación 4 Actores
+                                            </a>
+                                            <span
+                                                v-else-if="!soc.soc_fecha"
+                                                class="badge bg-warning text-dark border px-2 py-1 me-1"
+                                                title="Debe programar la fecha de socialización para habilitar la evaluación final"
+                                            >
+                                                <i class="bi bi-calendar-x me-1"></i>Fecha requerida
+                                            </span>
+                                        </template>
+
                                         <!-- Si ya tiene resultado: botón ver y candado -->
                                         <template v-if="estaEvaluada(soc)">
                                             <button
@@ -337,7 +399,7 @@
 
                             <div v-if="esEquipoSemestreImpar" class="alert alert-warning py-2 px-3 small mb-3">
                                 <i class="bi bi-info-circle-fill me-1"></i>
-                                <strong>Semestre Impar (Evaluación Cualitativa):</strong> La sección de este equipo cursa semestre impar. Solo corresponde <strong>Pre-Socialización</strong>. La Socialización Final con jurados se evalúa en el semestre par.
+                                <strong>Semestre Impar (Semestre {{ obtenerSemestreSeccion(equipoSeleccionado?.seccion) }} - Evaluación Cualitativa):</strong> La sección de este equipo cursa semestre impar. Solo corresponde <strong>Pre-Socialización</strong>. La Socialización Final con jurados se evalúa en el semestre par.
                             </div>
 
                             <div class="mb-3">
@@ -680,12 +742,49 @@ const equipoSeleccionado = computed(() => {
     return props.equipos?.find(e => e.equ_id == form.value.soc_id_equ) || null;
 });
 
+const obtenerSemestreSeccion = (sec) => {
+    if (!sec) return 1;
+    // 1. Regla oficial UPTP: El primer número de la sección es el semestre del equipo (ej: 431 -> Semestre 4)
+    if (sec.sec_codigo) {
+        const codigo = String(sec.sec_codigo).trim();
+        const match = codigo.match(/\d/);
+        if (match) {
+            const digito = parseInt(match[0]);
+            if (digito >= 1 && digito <= 8) return digito;
+        }
+    }
+    // 2. Si sec_semestre viene definido en BD
+    if (sec.sec_semestre && !isNaN(parseInt(sec.sec_semestre))) {
+        return parseInt(sec.sec_semestre);
+    }
+    // 3. Fallback
+    return sec.sec_id_tra ? parseInt(sec.sec_id_tra) : 1;
+};
+
 const esEquipoSemestreImpar = computed(() => {
     const sec = equipoSeleccionado.value?.seccion;
     if (!sec) return false;
-    const sem = sec.sec_semestre ?? (sec.sec_id_tra ? sec.sec_id_tra * 2 - 1 : 1);
+    const sem = obtenerSemestreSeccion(sec);
     return sem % 2 !== 0;
 });
+
+const generandoLinkId = ref(null);
+const generarLinkDirecto = (equId) => {
+    generandoLinkId.value = equId;
+    router.post(`/profesor/equipos/${equId}/generar-link-jurado`, {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            generandoLinkId.value = null;
+        }
+    });
+};
+
+const copiarLinkJuradoSoc = (token) => {
+    if (!token) return;
+    const url = window.location.origin + '/evaluacion-jurado/' + token;
+    navigator.clipboard.writeText(url);
+    alert('¡Enlace copiado exitosamente al portapapeles!\n\n' + url + '\n\nComparte este link con el Jurado Evaluador y Vocero Comunitario (Vigencia: 12 Horas).');
+};
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("prof-theme") || "light");

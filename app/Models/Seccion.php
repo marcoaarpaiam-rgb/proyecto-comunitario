@@ -43,16 +43,45 @@ class Seccion extends Model
         return $this->hasOne(ProfesorSeccion::class, 'pse_id_sec', 'sec_id')->where('pse_status', true);
     }
 
+    /**
+     * Obtiene el número de semestre oficial de la sección (1 al 8).
+     * Regla oficial UPTP: El primer número del código de la sección es el semestre del equipo.
+     * Ejemplo: 131 -> Semestre 1, 231 -> Semestre 2, 331 -> Semestre 3, 431/441 -> Semestre 4.
+     */
+    public function getSemestreNumero(): int
+    {
+        // 1. Regla oficial: Primer dígito del código de la sección
+        if (!empty($this->sec_codigo)) {
+            $codigo = trim((string) $this->sec_codigo);
+            if (preg_match('/\d/', $codigo, $matches)) {
+                $primerDigito = (int) $matches[0];
+                if ($primerDigito >= 1 && $primerDigito <= 8) {
+                    return $primerDigito;
+                }
+            }
+        }
+
+        // 2. Si sec_semestre está en base de datos
+        if (!empty($this->sec_semestre) && is_numeric($this->sec_semestre)) {
+            return (int) $this->sec_semestre;
+        }
+
+        // 3. Fallback por trayecto
+        if (!empty($this->sec_id_tra)) {
+            return (int) $this->sec_id_tra;
+        }
+
+        return 1;
+    }
+
     public function esSemestreImpar(): bool
     {
-        $sem = $this->sec_semestre ?? (($this->sec_id_tra ? ($this->sec_id_tra * 2 - 1) : 1));
-        return $sem % 2 !== 0;
+        return $this->getSemestreNumero() % 2 !== 0;
     }
 
     public function esSemestrePar(): bool
     {
-        $sem = $this->sec_semestre ?? (($this->sec_id_tra ? ($this->sec_id_tra * 2) : 2));
-        return $sem % 2 === 0;
+        return $this->getSemestreNumero() % 2 === 0;
     }
 
     public function esAlfabetizacion(): bool

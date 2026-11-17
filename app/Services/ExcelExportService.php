@@ -91,7 +91,7 @@ class ExcelExportService
         $profesor = $seccion->profesorActual?->usuario;
         $nombreProf = $profesor ? "{$profesor->usu_primer_nombre} {$profesor->usu_primer_apellido}" : 'Dexia Colmenarez';
         $trayectoRomano = self::romano($seccion->sec_id_tra ?? 1);
-        $semestreRomano = self::romano($seccion->sec_semestre ?? ($seccion->sec_id_tra ? $seccion->sec_id_tra * 2 : 2));
+        $semestreRomano = self::romano($seccion->getSemestreNumero());
 
         $startRow = 2;
         // Limpiar filas previas si vienen del template
@@ -152,7 +152,16 @@ class ExcelExportService
         $sheet->getStyle("A1:X1")->getFont()->setBold(true);
         $sheet->getStyle("A1:X1")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF2F2F2');
 
-        $fileName = "Planilla_Vinculacion_Sec_{$seccion->sec_codigo}_" . date('Ymd_His') . ".xlsx";
+        $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
+        $sheet->getHeaderFooter()->setOddHeader('&C&B&13UNIVERSIDAD POLITÉCNICA TERRITORIAL DE PORTUGUESA JJ MONTILLA' . "\n" . 'PLANILLA DE VINCULACIÓN COMUNITARIA — LAPSO ACADÉMICO ' . $lapsoActivo);
+        $sheet->getHeaderFooter()->setOddFooter('&LPNF Informática - Sección ' . $seccion->sec_codigo . '&RPágina &P de &N');
+
+        $spreadsheet->getProperties()
+            ->setTitle("Planilla de Vinculación - Lapso {$lapsoActivo} - Sección {$seccion->sec_codigo}")
+            ->setSubject("Lapso Académico {$lapsoActivo}");
+
+        $lapsoSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', $lapsoActivo);
+        $fileName = "Planilla_Vinculacion_{$lapsoSafe}_Sec_{$seccion->sec_codigo}_" . date('Ymd_His') . ".xlsx";
         $tempFile = tempnam(sys_get_temp_dir(), 'vinculacion_') . '.xlsx';
 
         $writer = new Xlsx($spreadsheet);
@@ -203,6 +212,7 @@ class ExcelExportService
         // Contar estudiantes únicos
         $todosIntegrantes = $seccion->equipos->flatMap(fn($e) => $e->integrantes)->pluck('usuario')->filter()->unique('usu_id');
         $totalEstudiantes = $todosIntegrantes->count();
+        $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
 
         foreach ($semanas as $sem) {
             $sheetName = (string)$sem;
@@ -214,7 +224,8 @@ class ExcelExportService
 
             // Encabezado general del inventario
             $sheet->setCellValue('A5', 'INVENTARIO DE PROYECTO SOCIO TECNOLÓGICO — PNF INFORMÁTICA');
-            $sheet->setCellValue('A6', 'LAPSO ACADÉMICO ' . date('Y') . '-' . ($seccion->esSemestrePar() ? 'II' : 'I'));
+            $sheet->setCellValue('A6', "LAPSO ACADÉMICO {$lapsoActivo}");
+            $sheet->getHeaderFooter()->setOddHeader('&C&BLAPSO ACADÉMICO ' . $lapsoActivo);
             $sheet->setCellValue('C9', $nombreProf);
             $sheet->setCellValue('H8', "SEMANA {$sem}");
             $sheet->setCellValue('C10', $seccion->sec_codigo);
@@ -273,7 +284,8 @@ class ExcelExportService
             }
         }
 
-        $fileName = "Inventario_PST_Sec_{$seccion->sec_codigo}_" . date('Ymd_His') . ".xlsx";
+        $lapsoSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', $lapsoActivo);
+        $fileName = "Inventario_PST_{$lapsoSafe}_Sec_{$seccion->sec_codigo}_" . date('Ymd_His') . ".xlsx";
         $tempFile = tempnam(sys_get_temp_dir(), 'inventario_') . '.xlsx';
 
         $writer = new Xlsx($spreadsheet);

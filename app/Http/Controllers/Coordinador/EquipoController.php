@@ -80,6 +80,8 @@ class EquipoController extends Controller
             'trayecto',
             'integrantes.usuario',
             'proyectoComunidad.comunidad',
+            'socializaciones.tipoSocializacion',
+            'resultadoProyecto',
         ])->where('equ_status', true)->orderBy('equ_codigo');
 
         if ($esProfesor && $seccionesIds) {
@@ -292,6 +294,17 @@ class EquipoController extends Controller
         if ($ocupado) {
             $n = $ocupado->usuario->usu_primer_nombre . ' ' . $ocupado->usuario->usu_primer_apellido;
             return back()->withErrors(['integrantes' => "El estudiante {$n} ya pertenece a otro equipo activo."]);
+        }
+
+        // Candado de Prelación: ningún estudiante puede inscribirse en trayecto superior si su trayecto anterior no está aprobado con >= 16.00
+        $evalService = app(\App\Services\EvaluacionTrayectoService::class);
+        if ($traNum > 1) {
+            foreach ($integrantes as $integ) {
+                $errorPrelacion = $evalService->verificarPrelacionEstudiante((int) $integ['usu_id'], (int) $traNum);
+                if ($errorPrelacion) {
+                    return back()->withErrors(['integrantes' => $errorPrelacion]);
+                }
+            }
         }
 
         // Proyecto opcional: si se eligen comunidad y tipo, se crea el proyecto; beneficiarios son opcionales
@@ -675,6 +688,16 @@ class EquipoController extends Controller
             return back()->withErrors(['integrante' => 'El estudiante ya pertenece al equipo de destino.']);
         }
 
+        // Candado de Prelación al trasladar a un equipo de trayecto superior
+        $traDestinoNum = (int) ($equipoDestino->trayecto?->tra_numero ?? 1);
+        if ($traDestinoNum > 1) {
+            $evalService = app(\App\Services\EvaluacionTrayectoService::class);
+            $errorPrelacion = $evalService->verificarPrelacionEstudiante((int) $integrante->ein_id_usu, $traDestinoNum);
+            if ($errorPrelacion) {
+                return back()->withErrors(['integrante' => $errorPrelacion]);
+            }
+        }
+
         DB::transaction(function () use ($integrante, $equipoOrigen, $equipoDestino) {
             $integrante->update([
                 'ein_status'         => false,
@@ -837,6 +860,7 @@ class EquipoController extends Controller
                                     'seccion.trayecto','trayecto','integrantes.usuario',
                                     'proyectoComunidad.comunidad',
                                     'proyectoComunidad.tipoProyecto',
+                                    'socializaciones.tipoSocializacion',
                                     'resultadoProyecto',
                                 ])->where('equ_id_sec', $id)
                                 ->where('equ_status', true)

@@ -71,6 +71,9 @@
                 <Link href="/coordinador/resultados" class="sb-lnk">
                     <i class="bi bi-trophy"></i> Resultados
                 </Link>
+                <Link href="/coordinador/transicion-semestral" class="sb-lnk">
+                    <i class="bi bi-arrow-left-right"></i> Transición Semestral
+                </Link>
                 <a href="/evaluaciones" class="sb-lnk">
                     <i class="bi bi-award"></i> Evaluación Trayecto (S1/S2)
                 </a>
@@ -509,6 +512,69 @@
                                         {{ errores.pco_id_com }}
                                     </div>
                                 </div>
+
+                                <!-- RADAR DE COMUNIDAD Y DETECTOR ANTI-DUPLICIDAD EN VIVO -->
+                                <div class="col-12" v-if="form.pco_id_com">
+                                    <div class="p-3 rounded-3 border bg-light">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="fw-bold text-dark small text-uppercase">
+                                                <i class="bi bi-radar text-danger me-1"></i>
+                                                Radar de Comunidad: {{ radarData?.comunidad?.com_nombre || 'Consultando...' }}
+                                            </span>
+                                            <span v-if="loadingRadar" class="spinner-border spinner-border-sm text-danger"></span>
+                                            <span v-else-if="radarData" class="badge bg-dark">
+                                                {{ radarData.proyectos_activos?.length || 0 }} activos &bull; {{ radarData.proyectos_culminados?.length || 0 }} culminados
+                                            </span>
+                                        </div>
+
+                                        <!-- Alerta de Similitud de Títulos -->
+                                        <div
+                                            v-if="radarData?.alerta_similitud?.existe"
+                                            class="alert p-3 mb-2 rounded-3"
+                                            :class="radarData.alerta_similitud.es_critico ? 'alert-danger border-danger' : 'alert-warning border-warning'"
+                                        >
+                                            <div class="fw-bold mb-1">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                Posible Duplicidad Detectada (Similitud del {{ radarData.alerta_similitud.porcentaje }}%)
+                                            </div>
+                                            <p class="small mb-2">{{ radarData.alerta_similitud.mensaje }}</p>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-dark fw-bold"
+                                                @click="marcarComoContinuacion"
+                                            >
+                                                <i class="bi bi-diagram-2-fill text-danger me-1"></i>
+                                                Indicar como Continuación / Escalamiento del Proyecto Previo
+                                            </button>
+                                        </div>
+
+                                        <!-- Lista de proyectos activos y culminados -->
+                                        <div v-if="radarData && radarData.total_historico > 0" class="row g-2 small">
+                                            <div class="col-md-6" v-if="radarData.proyectos_activos?.length">
+                                                <div class="fw-bold text-danger mb-1">En desarrollo actual:</div>
+                                                <ul class="list-unstyled mb-0">
+                                                    <li v-for="pa in radarData.proyectos_activos" :key="pa.pco_id" class="mb-1 p-2 bg-white border rounded">
+                                                        <strong class="text-dark">{{ pa.equ_codigo }}</strong>: {{ pa.equ_titulo }}
+                                                        <div class="text-muted" style="font-size: 0.75rem;">{{ pa.tipo_proyecto }} &bull; {{ pa.trayecto }}</div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6" v-if="radarData.proyectos_culminados?.length">
+                                                <div class="fw-bold text-success mb-1">Culminados en lapsos anteriores:</div>
+                                                <ul class="list-unstyled mb-0">
+                                                    <li v-for="pc in radarData.proyectos_culminados" :key="pc.pco_id" class="mb-1 p-2 bg-white border rounded">
+                                                        <strong class="text-dark">{{ pc.equ_codigo }}</strong>: {{ pc.equ_titulo }}
+                                                        <div class="text-muted" style="font-size: 0.75rem;">Nota: {{ pc.calificacion ? pc.calificacion + ' pts' : 'Archivado' }}</div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div v-else-if="radarData && !loadingRadar" class="small text-success fw-semibold">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Comunidad sin proyectos previos registrados en el historial.
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold"
                                         >Tipo de Proyecto
@@ -835,6 +901,7 @@ import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
+import axios from "axios";
 import SelectBuscableComunidad from "@/Components/SelectBuscableComunidad.vue";
 import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
 const menuMaestras = ref(false);
@@ -878,6 +945,50 @@ const form = ref({
 const errores = ref({});
 const loading = ref(false);
 const itemSeleccionado = ref(null);
+const radarData = ref(null);
+const loadingRadar = ref(false);
+
+const consultarRadarComunidad = async () => {
+    const comId = form.value.pco_id_com;
+    if (!comId) {
+        radarData.value = null;
+        return;
+    }
+    loadingRadar.value = true;
+    try {
+        const equipoSel = (props.equipos || []).find((e) => e.equ_id == form.value.pco_id_equ);
+        const titulo = equipoSel?.equ_titulo || "";
+        const res = await axios.get(`/api/comunidades/${comId}/radar-proyectos`, {
+            params: {
+                titulo: titulo,
+                equipo_id: form.value.pco_id_equ || "",
+            },
+        });
+        radarData.value = res.data;
+    } catch (e) {
+        console.error("Error consultando radar de comunidad:", e);
+    } finally {
+        loadingRadar.value = false;
+    }
+};
+
+watch(
+    () => [form.value.pco_id_com, form.value.pco_id_equ],
+    () => {
+        consultarRadarComunidad();
+    }
+);
+
+const marcarComoContinuacion = () => {
+    const modCont = (props.modalidades || []).find((m) =>
+        ["continuación", "continuacion", "reingeniería", "reingenieria"].includes(
+            (m.mpr_nombre || "").toLowerCase()
+        )
+    );
+    if (modCont) {
+        form.value.pco_id_mpr = modCont.mpr_id;
+    }
+};
 let modal = null;
 let modalAp = null;
 let modalDes = null;

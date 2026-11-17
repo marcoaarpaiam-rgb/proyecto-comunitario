@@ -70,6 +70,9 @@
                 <Link href="/coordinador/resultados" class="sb-lnk">
                     <i class="bi bi-trophy"></i> Resultados
                 </Link>
+                <Link href="/coordinador/transicion-semestral" class="sb-lnk">
+                    <i class="bi bi-arrow-left-right"></i> Transición Semestral
+                </Link>
 
                 <!-- Tablas Maestras — desplegable -->
                 <div
@@ -165,6 +168,9 @@
                     <Link href="/coordinador/cartas" class="sb-lnk">
                         <i class="bi bi-file-earmark-text"></i> Cartas
                     </Link>
+                    <Link href="/coordinador/estudiantes/buscar" class="sb-lnk">
+                        <i class="bi bi-person-badge"></i> Expediente Estudiantes
+                    </Link>
                     <Link href="/coordinador/bitacora" class="sb-lnk">
                         <i class="bi bi-journal-text"></i> Bitácora
                     </Link>
@@ -237,6 +243,152 @@
                 </div>
 
                 <div class="row g-3">
+                    <!-- Lapso Académico Activo -->
+                    <div class="col-12">
+                        <div class="sc">
+                            <div class="sh d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <h6 class="m-0">
+                                    <i class="bi bi-calendar-event-fill text-danger me-2"></i>
+                                    Lapso Académico Activo del Sistema
+                                </h6>
+                                <span v-if="periodoActivo" class="badge bg-danger fs-6 px-3 py-2 rounded-pill">
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    Activo: {{ periodoActivo.lapso_academico }} (Semestre {{ periodoActivo.tipo_semestre }})
+                                </span>
+                                <span v-else class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    Sin Lapso Activo Configurado
+                                </span>
+                            </div>
+                            <div class="p-3">
+                                <div class="alert alert-light border d-flex align-items-start gap-3 mb-3">
+                                    <i class="bi bi-info-circle-fill text-danger fs-4 mt-1"></i>
+                                    <div class="small">
+                                        <strong>Configuración Institucional de Lapsos:</strong> El lapso académico activo seleccionado aquí se inyecta de forma dinámica en todo el sistema y en los encabezados oficiales de los reportes descargables en Excel (<strong>INVENTARIO PST</strong> y <strong>PLANILLA DE VINCULACIÓN</strong>).
+                                    </div>
+                                </div>
+
+                                <form @submit.prevent="guardarLapso">
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">
+                                                Código / Nombre del Lapso <span class="text-danger">*</span>
+                                            </label>
+                                            <input
+                                                v-model="formLapso.lapso_academico"
+                                                type="text"
+                                                class="form-control"
+                                                :class="{ 'is-invalid': erroresLapso.lapso_academico }"
+                                                placeholder="Ej: 2026-I ó 2026-II"
+                                            />
+                                            <div v-if="erroresLapso.lapso_academico" class="invalid-feedback">
+                                                {{ erroresLapso.lapso_academico }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">
+                                                Tipo de Semestre <span class="text-danger">*</span>
+                                            </label>
+                                            <select
+                                                v-model="formLapso.tipo_semestre"
+                                                class="form-select"
+                                                :class="{ 'is-invalid': erroresLapso.tipo_semestre }"
+                                            >
+                                                <option value="Impar">Semestre Impar (Cualitativo)</option>
+                                                <option value="Par">Semestre Par (Cuantitativo / Socialización Final)</option>
+                                            </select>
+                                            <div v-if="erroresLapso.tipo_semestre" class="invalid-feedback">
+                                                {{ erroresLapso.tipo_semestre }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fw-bold">
+                                                Fecha Inicio <span class="text-danger">*</span>
+                                            </label>
+                                            <input
+                                                v-model="formLapso.fecha_inicio"
+                                                type="date"
+                                                class="form-control"
+                                                :class="{ 'is-invalid': erroresLapso.fecha_inicio }"
+                                            />
+                                            <div v-if="erroresLapso.fecha_inicio" class="invalid-feedback">
+                                                {{ erroresLapso.fecha_inicio }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fw-bold">
+                                                Fecha Culminación <span class="text-danger">*</span>
+                                            </label>
+                                            <input
+                                                v-model="formLapso.fecha_fin"
+                                                type="date"
+                                                class="form-control"
+                                                :class="{ 'is-invalid': erroresLapso.fecha_fin }"
+                                            />
+                                            <div v-if="erroresLapso.fecha_fin" class="invalid-feedback">
+                                                {{ erroresLapso.fecha_fin }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-danger w-100 fw-bold rounded-pill"
+                                                style="min-height: 48px;"
+                                                :disabled="loadingLapso"
+                                            >
+                                                <span v-if="loadingLapso" class="spinner-border spinner-border-sm me-1"></span>
+                                                <i v-else class="bi bi-check-circle me-1"></i>
+                                                Guardar Lapso
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <!-- Historial de Lapsos Registrados -->
+                                <div v-if="periodos?.length" class="mt-4 pt-3 border-top">
+                                    <div class="fw-bold small text-muted text-uppercase mb-2">
+                                        <i class="bi bi-clock-history me-1"></i> Lapsos Académicos Registrados en Base de Datos
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover align-middle mb-0">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Lapso</th>
+                                                    <th>Tipo</th>
+                                                    <th>Período de Fechas</th>
+                                                    <th>Estatus</th>
+                                                    <th class="text-end">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="p in periodos" :key="p.id_periodo">
+                                                    <td><strong>{{ p.lapso_academico }}</strong></td>
+                                                    <td>Semestre {{ p.tipo_semestre }}</td>
+                                                    <td class="small text-muted">{{ p.fecha_inicio }} al {{ p.fecha_fin }}</td>
+                                                    <td>
+                                                        <span v-if="p.activo" class="badge bg-success">Activo Oficial</span>
+                                                        <span v-else class="badge bg-secondary">Inactivo</span>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <button
+                                                            v-if="!p.activo"
+                                                            type="button"
+                                                            class="btn btn-outline-danger btn-sm rounded-pill fw-bold"
+                                                            @click="activarLapso(p.id_periodo)"
+                                                        >
+                                                            <i class="bi bi-toggle-on me-1"></i>Activar
+                                                        </button>
+                                                        <span v-else class="text-success small fw-bold">✓ En uso</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Perfil -->
                     <div class="col-lg-7">
                         <div class="sc">
@@ -609,6 +761,8 @@ const menuAcademico = ref(false);
 const menuSistema = ref(false);
 const props = defineProps({
     coordinador: Object,
+    periodoActivo: Object,
+    periodos: { type: Array, default: () => [] },
     lideres: { type: Array, default: () => [] },
 });
 const page = usePage();
@@ -645,6 +799,35 @@ const loadingPass = ref(false);
 const loadingFirma = ref(false);
 const firmaFile = ref(null);
 const liderId = ref("");
+
+// Lapso Académico
+const formLapso = ref({
+    lapso_academico: props.periodoActivo?.lapso_academico || "",
+    tipo_semestre: props.periodoActivo?.tipo_semestre || "Impar",
+    fecha_inicio: props.periodoActivo?.fecha_inicio ? String(props.periodoActivo.fecha_inicio).substring(0, 10) : "",
+    fecha_fin: props.periodoActivo?.fecha_fin ? String(props.periodoActivo.fecha_fin).substring(0, 10) : "",
+});
+const erroresLapso = ref({});
+const loadingLapso = ref(false);
+
+const guardarLapso = () => {
+    loadingLapso.value = true;
+    router.post("/coordinador/configuracion/lapso-academico", formLapso.value, {
+        onError: (e) => {
+            erroresLapso.value = e;
+            loadingLapso.value = false;
+        },
+        onSuccess: () => {
+            loadingLapso.value = false;
+            erroresLapso.value = {};
+        },
+    });
+};
+
+const activarLapso = (id) => {
+    if (!confirm("¿Deseas activar este período académico para todo el sistema y sus reportes?")) return;
+    router.post(`/coordinador/configuracion/lapso-academico/${id}/activar`);
+};
 const guardarPerfil = () => {
     loadingPerfil.value = true;
     router.post("/coordinador/configuracion/perfil", formPerfil.value, {

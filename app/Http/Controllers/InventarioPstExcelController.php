@@ -140,6 +140,14 @@ class InventarioPstExcelController extends Controller
         $plantillaPath = $this->getPlantillaInventarioPath();
         $spreadsheet = IOFactory::load($plantillaPath);
 
+        $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
+        foreach ($spreadsheet->getAllSheets() as $sh) {
+            if ($sh->getCell('A6')->getValue() !== null) {
+                $sh->setCellValue('A6', "LAPSO ACADÉMICO {$lapsoActivo}");
+            }
+            $sh->getHeaderFooter()->setOddHeader('&C&BLAPSO ACADÉMICO ' . $lapsoActivo);
+        }
+
         // Determinar hoja según el orden del punto de control
         $orden = (int) ($puc->puc_orden ?? 1);
         $targetSheetName = match($orden) {
@@ -160,6 +168,9 @@ class InventarioPstExcelController extends Controller
         $corteRomano = match($orden) { 1 => 'I', 2 => 'II', 3 => 'III', default => 'IV' };
 
         // Modificar celdas institucionales del encabezado
+        $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
+        $sheet->setCellValue('A6', "LAPSO ACADÉMICO {$lapsoActivo}");
+        $sheet->getHeaderFooter()->setOddHeader('&C&BLAPSO ACADÉMICO ' . $lapsoActivo);
         $sheet->setCellValue('T1', "SEMANA:  {$semanaReal}");
         $sheet->setCellValue('W1', "CORTE DE NOTAS:  {$corteRomano}");
         $sheet->setCellValue('C9', $docenteNombre);
@@ -213,8 +224,9 @@ class InventarioPstExcelController extends Controller
         }
         $spreadsheet->setActiveSheetIndex(0);
 
+        $lapsoSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', $lapsoActivo);
         $safeCodigo = preg_replace('/[^A-Za-z0-9_\-]/', '_', $puc->equ_codigo ?? 'EQUIPO');
-        $filename = "INVENTARIO_PST_CORTE_{$corteRomano}_SEMANA_{$semanaReal}_{$safeCodigo}.xlsx";
+        $filename = "INVENTARIO_PST_{$lapsoSafe}_CORTE_{$corteRomano}_SEMANA_{$semanaReal}_{$safeCodigo}.xlsx";
 
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);
@@ -322,6 +334,14 @@ class InventarioPstExcelController extends Controller
         // Cargar plantilla oficial
         $plantillaPath = $this->getPlantillaInventarioPath();
         $spreadsheet = IOFactory::load($plantillaPath);
+
+        $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
+        foreach ($spreadsheet->getAllSheets() as $sh) {
+            if ($sh->getCell('A6')->getValue() !== null) {
+                $sh->setCellValue('A6', "LAPSO ACADÉMICO {$lapsoActivo}");
+            }
+            $sh->getHeaderFooter()->setOddHeader('&C&BLAPSO ACADÉMICO ' . $lapsoActivo);
+        }
 
         // =========================================================================
         // 1. RELLENAR HOJA IMPRIMIR-18-II_SEMESTRE (Ponderación Oficial UPTP: 4 Actores)
@@ -505,8 +525,9 @@ class InventarioPstExcelController extends Controller
             }
         }
 
+        $lapsoSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', $lapsoActivo);
         $safeSecCodigo = preg_replace('/[^A-Za-z0-9_\-]/', '_', $seccion->sec_codigo ?? 'SECCION');
-        $filename = "INVENTARIO_PST_LIBRO_OFICIAL_SECCION_{$safeSecCodigo}.xlsx";
+        $filename = "INVENTARIO_PST_{$lapsoSafe}_LIBRO_OFICIAL_SECCION_{$safeSecCodigo}.xlsx";
 
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);
@@ -590,13 +611,18 @@ class InventarioPstExcelController extends Controller
         // Conversión a números romanos de Trayecto y Semestre
         $romanos = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII'];
         $traRomano = $romanos[$proyecto->tra_id] ?? ($proyecto->tra_nombre ?? 'II');
-        $semRomano = $romanos[$proyecto->sec_semestre] ?? 'IV';
+        $numSem = !empty($proyecto->sec_semestre) ? (int)$proyecto->sec_semestre : (preg_match('/\d/', (string)($proyecto->sec_codigo ?? ''), $m) ? (int)$m[0] : 4);
+        $semRomano = $romanos[$numSem] ?? 'IV';
 
         // Cargar plantilla oficial de Vinculación
         $plantillaPath = $this->getPlantillaVinculacionPath();
         $spreadsheet = IOFactory::load($plantillaPath);
 
+        $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
         $sheet = $spreadsheet->getSheetByName('Proyectos uptp') ?? $spreadsheet->getActiveSheet();
+        $sheet->getHeaderFooter()->setOddHeader('&C&B&13UNIVERSIDAD POLITÉCNICA TERRITORIAL DE PORTUGUESA JJ MONTILLA' . "\n" . 'PLANILLA DE VINCULACIÓN COMUNITARIA — LAPSO ACADÉMICO ' . $lapsoActivo);
+        $spreadsheet->getProperties()->setTitle("Planilla de Vinculación - Lapso {$lapsoActivo}");
+        $spreadsheet->getProperties()->setSubject("Lapso Académico {$lapsoActivo}");
 
         // Limpiar filas de ejemplo (filas 2 a 10)
         for ($r = 2; $r <= 10; $r++) {
@@ -631,8 +657,9 @@ class InventarioPstExcelController extends Controller
         $sheet->setCellValue('W2', $proyecto->com_nombre ?: 'Comunidad Beneficiada');
         $sheet->setCellValue('X2', $proyecto->calificacion_definitiva_cualitativa ?: 'En Desarrollo');
 
+        $lapsoSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', $lapsoActivo);
         $safeCodigo = preg_replace('/[^A-Za-z0-9_\-]/', '_', $proyecto->equ_codigo ?? 'EQUIPO');
-        $filename = "PLANILLA_VINCULACION_UPTP_PNFI_{$safeCodigo}.xlsx";
+        $filename = "PLANILLA_VINCULACION_UPTP_{$lapsoSafe}_{$safeCodigo}.xlsx";
 
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);

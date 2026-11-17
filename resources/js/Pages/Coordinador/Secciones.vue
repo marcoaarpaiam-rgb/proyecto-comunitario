@@ -71,6 +71,9 @@
                 <Link href="/coordinador/resultados" class="sb-lnk">
                     <i class="bi bi-trophy"></i> Resultados
                 </Link>
+                <Link href="/coordinador/transicion-semestral" class="sb-lnk">
+                    <i class="bi bi-arrow-left-right"></i> Transición Semestral
+                </Link>
 
                 <!-- Tablas Maestras — desplegable -->
                 <div
@@ -228,16 +231,21 @@
                     "
                 >
                     <div>
-                        <h4
-                            style="
-                                font-weight: 800;
-                                font-size: 1.25rem;
-                                color: var(--text-main);
-                                margin: 0;
-                            "
-                        >
-                            Secciones
-                        </h4>
+                        <div class="d-flex align-items-center gap-2">
+                            <h4
+                                style="
+                                    font-weight: 800;
+                                    font-size: 1.25rem;
+                                    color: var(--text-main);
+                                    margin: 0;
+                                "
+                            >
+                                Secciones Académicas
+                            </h4>
+                            <span v-if="periodoActivo?.lapso_academico" class="badge bg-dark text-white fw-bold px-3 py-1 rounded-pill">
+                                <i class="bi bi-calendar-event text-danger me-1"></i>Lapso Activo: {{ periodoActivo.lapso_academico }}
+                            </span>
+                        </div>
                         <p
                             style="
                                 color: var(--text-muted);
@@ -245,7 +253,7 @@
                                 margin-top: 2px;
                             "
                         >
-                            Secciones académicas del PNF Informática
+                            Gestión académica del PNF Informática &bull; Inicio en Semestre Impar y Cierre en Semestre Par
                         </p>
                     </div>
                     <button
@@ -257,6 +265,59 @@
                 </div>
 
                 <div class="sc">
+                    <!-- Barra de Separación Diferenciada Impar vs Par -->
+                    <div
+                        style="
+                            padding: 0.8rem 1rem;
+                            border-bottom: 1px solid var(--border);
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            flex-wrap: wrap;
+                            gap: 10px;
+                            background: rgba(0, 0, 0, 0.02);
+                        "
+                    >
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="small fw-bold text-uppercase text-muted me-1">Filtrar Semestre:</span>
+                            <button
+                                type="button"
+                                class="btn btn-sm fw-bold px-3 rounded-pill"
+                                :class="filtroTipoSemestre === 'todos' ? 'btn-dark text-white' : 'btn-outline-dark bg-white'"
+                                @click="filtroTipoSemestre = 'todos'"
+                            >
+                                Todas ({{ (secciones || []).length }})
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-sm fw-bold px-3 rounded-pill"
+                                :class="filtroTipoSemestre === 'impar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark bg-white'"
+                                @click="filtroTipoSemestre = 'impar'"
+                                title="Secciones que inician proyecto en semestre impar"
+                            >
+                                <i class="bi bi-rocket-takeoff me-1"></i>
+                                Semestre Impar: 131, 331, 531... ({{ conteoImpares }})
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-sm fw-bold px-3 rounded-pill"
+                                :class="filtroTipoSemestre === 'par' ? 'btn-danger text-white' : 'btn-outline-danger bg-white'"
+                                @click="filtroTipoSemestre = 'par'"
+                                title="Secciones que cierran proyecto en semestre par"
+                            >
+                                <i class="bi bi-cloud-arrow-up me-1"></i>
+                                Semestre Par: 231, 431, 631... ({{ conteoPares }})
+                            </button>
+                        </div>
+
+                        <div class="small text-muted">
+                            <i class="bi bi-arrow-left-right text-danger me-1"></i>
+                            <a href="/coordinador/transicion-semestral" class="fw-bold text-danger text-decoration-none">
+                                Abrir Módulo de Transición y Cierre &rarr;
+                            </a>
+                        </div>
+                    </div>
+
                     <div
                         style="
                             padding: 0.9rem 1rem;
@@ -320,19 +381,12 @@
                                         <span
                                             class="badge"
                                             :class="
-                                                (sec.sec_semestre ?? 1) % 2 !==
-                                                0
+                                                semestreDeSeccion(sec) % 2 !== 0
                                                     ? 'bg-warning text-dark'
                                                     : 'bg-primary'
                                             "
                                         >
-                                            Semestre
-                                            {{
-                                                sec.sec_semestre ||
-                                                (sec.sec_id_tra
-                                                    ? sec.sec_id_tra * 2 - 1
-                                                    : "—")
-                                            }}
+                                            Semestre {{ semestreDeSeccion(sec) }}
                                         </span>
                                     </td>
                                     <td>
@@ -388,6 +442,23 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4 text-nowrap">
+                                        <!-- Gestión Diferenciada Impar vs Par -->
+                                        <a
+                                            v-if="semestreDeSeccion(sec) % 2 !== 0"
+                                            href="/coordinador/transicion-semestral?tab=impar"
+                                            class="btn btn-sm btn-outline-warning text-dark fw-bold me-1"
+                                            title="Promover equipos al semestre par (Transición Semestral)"
+                                        >
+                                            <i class="bi bi-rocket-takeoff-fill me-1"></i>Transición Par
+                                        </a>
+                                        <a
+                                            v-else
+                                            href="/coordinador/transicion-semestral?tab=par"
+                                            class="btn btn-sm btn-outline-dark fw-bold me-1"
+                                            title="Cierre Definitivo de Trayecto y Envío al Repositorio"
+                                        >
+                                            <i class="bi bi-cloud-arrow-up-fill text-danger me-1"></i>Cierre y Repositorio
+                                        </a>
                                         <a
                                             :href="`/coordinador/secciones/${sec.sec_id}/detalle`"
                                             class="btn btn-sm btn-outline-info me-1"
@@ -713,6 +784,7 @@ const props = defineProps({
     secciones: Array,
     trayectos: Array,
     turnos: Array,
+    periodoActivo: Object,
     profesores: { type: Array, default: () => [] },
 });
 const page = usePage();
@@ -739,7 +811,8 @@ const editando = ref(null);
 const itemAEliminar = ref(null);
 let modal = null;
 let modalConf = null;
-watch(busqueda, () => {
+const filtroTipoSemestre = ref("todos");
+watch([busqueda, filtroTipoSemestre], () => {
     pagina.value = 1;
 });
 const badgeTurno = (t) => {
@@ -747,11 +820,25 @@ const badgeTurno = (t) => {
     if (t === "Tarde") return "bp";
     return "ba";
 };
+
+const conteoImpares = computed(() => {
+    return (props.secciones || []).filter((s) => semestreDeSeccion(s) % 2 !== 0).length;
+});
+const conteoPares = computed(() => {
+    return (props.secciones || []).filter((s) => semestreDeSeccion(s) % 2 === 0).length;
+});
+
 const filtradas = computed(() => {
-    if (!busqueda.value.trim()) return props.secciones;
-    const q = busqueda.value.toLowerCase();
-    return props.secciones.filter(
-        (s) =>
+    return (props.secciones || []).filter((s) => {
+        const sem = semestreDeSeccion(s);
+        const esImpar = sem % 2 !== 0;
+        if (filtroTipoSemestre.value === "impar" && !esImpar) return false;
+        if (filtroTipoSemestre.value === "par" && esImpar) return false;
+
+        const q = busqueda.value.toLowerCase().trim();
+        if (!q) return true;
+
+        return (
             s.sec_codigo.toLowerCase().includes(q) ||
             s.trayecto?.tra_nombre?.toLowerCase().includes(q) ||
             s.turno?.tur_nombre?.toLowerCase().includes(q) ||
@@ -760,8 +847,9 @@ const filtradas = computed(() => {
                 .includes(q) ||
             s.profesor_actual?.usuario?.usu_primer_apellido
                 ?.toLowerCase()
-                .includes(q),
-    );
+                .includes(q)
+        );
+    });
 });
 const totalPaginas = computed(() =>
     Math.ceil(filtradas.value.length / porPagina),
@@ -780,6 +868,16 @@ const paginasV = computed(() => {
     for (let x = i; x <= f; x++) p.push(x);
     return p;
 });
+const semestreDeSeccion = (sec) => {
+    if (!sec) return 1;
+    if (sec.sec_semestre) return parseInt(sec.sec_semestre);
+    if (sec.sec_codigo) {
+        const m = String(sec.sec_codigo).match(/\d/);
+        if (m) return parseInt(m[0]);
+    }
+    return sec.sec_id_tra || 1;
+};
+
 const abrirModal = (sec = null) => {
     editando.value = sec;
     form.value = {

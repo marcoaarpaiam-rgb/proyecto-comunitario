@@ -407,6 +407,22 @@
                                             "
                                         >
                                             CI: {{ int.usuario?.usu_cedula }}
+                                            <span
+                                                v-if="metricasIndividuales?.[int.usuario?.usu_id]"
+                                                class="ms-2 fw-bold"
+                                                :class="metricasIndividuales[int.usuario.usu_id].reprobado_inasistencia ? 'text-danger' : 'text-success'"
+                                            >
+                                                &bull; Asistencia: {{ metricasIndividuales[int.usuario.usu_id].porcentaje_asistencia }}%
+                                            </span>
+                                        </div>
+                                        <!-- Alerta individual por inasistencia (>25% faltas PNF) sin afectar al resto del equipo -->
+                                        <div
+                                            v-if="metricasIndividuales?.[int.usuario?.usu_id]?.reprobado_inasistencia"
+                                            class="alert alert-danger py-1 px-2 mt-1 mb-0 small fw-bold"
+                                            style="font-size: 0.74rem;"
+                                        >
+                                            <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                                            ALERTA PNF: Reprobación individual por inasistencia ({{ metricasIndividuales[int.usuario.usu_id].porcentaje_inasistencia }}% faltas &gt; 25% máx.). No afecta a sus compañeros.
                                         </div>
                                     </div>
                                     <div
@@ -424,6 +440,14 @@
                                                     : "Integrante"
                                             }}</span
                                         >
+                                        <span
+                                            v-if="metricasIndividuales?.[int.usuario?.usu_id]?.nota_individual !== null && metricasIndividuales?.[int.usuario?.usu_id]?.nota_individual !== undefined"
+                                            class="badge"
+                                            :class="metricasIndividuales[int.usuario.usu_id].aprobado_individual ? 'bg-success' : 'bg-danger'"
+                                            style="font-size: 0.7rem"
+                                        >
+                                            {{ Number(metricasIndividuales[int.usuario.usu_id].nota_individual).toFixed(2) }} pts ({{ metricasIndividuales[int.usuario.usu_id].aprobado_individual ? 'Aprob.' : 'Reprob.' }})
+                                        </span>
                                         <span
                                             v-if="!int.ein_status"
                                             style="
@@ -618,35 +642,36 @@
                     </div>
 
                     <!-- Calificaciones y Recorrido de Evaluación por Semestre (Motor Oficial UPTP) -->
-                    <div class="col-12" v-if="evaluaciones?.length || actaFinal">
+                    <div class="col-12" v-if="evaluaciones?.length || actaFinal || equipo.proyecto_comunidad">
                         <div class="sc mb-2">
-                            <div class="sh d-flex justify-content-between align-items-center">
+                            <div class="sh d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h6 class="m-0">
-                                    <i class="bi bi-award-fill text-danger me-2"></i>Calificaciones Acumuladas del Trayecto (UPTP)
+                                    <i class="bi bi-award-fill text-danger me-2"></i>Socialización Final y Evaluación del Trayecto (UPTP)
                                 </h6>
                                 <div class="d-flex gap-2 align-items-center flex-wrap">
                                     <a
-                                        href="/evaluacion-invitado"
+                                        v-if="socFinalProgramada && equipo.proyecto_comunidad?.token_jurado"
+                                        :href="`/evaluacion-jurado/${equipo.proyecto_comunidad.token_jurado}`"
                                         target="_blank"
                                         class="btn btn-sm btn-warning text-dark fw-bold"
-                                        style="font-size: 0.78rem;"
-                                        title="Abrir portal para jurados y vocero comunitario"
+                                        style="font-size: 0.82rem; min-height: 44px; display: inline-flex; align-items: center;"
+                                        title="Abrir panel temporal de 12 horas para jurados y vocero comunitario"
                                     >
-                                        <i class="bi bi-key-fill me-1"></i>Portal Jurado / Comunidad
+                                        <i class="bi bi-link-45deg me-1"></i>Panel Jurado (12h)
                                     </a>
                                     <a
-                                        v-if="equipo.proyecto_comunidad"
+                                        v-if="socFinalProgramada && equipo.proyecto_comunidad"
                                         :href="`/evaluaciones/recorrido/${equipo.proyecto_comunidad.pco_id}`"
                                         class="btn btn-sm btn-outline-danger"
-                                        style="font-size: 0.78rem; font-weight: 600;"
+                                        style="font-size: 0.82rem; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center;"
                                     >
-                                        <i class="bi bi-box-arrow-up-right me-1"></i>Ver Rúbricas Oficiales
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Ver Rúbricas 4 Actores
                                     </a>
                                     <a
                                         v-if="actaFinal"
                                         :href="`/evaluaciones/pdf/${actaFinal.id_proyecto}`"
                                         class="btn btn-sm btn-danger"
-                                        style="font-size: 0.78rem; font-weight: 600;"
+                                        style="font-size: 0.82rem; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center;"
                                         target="_blank"
                                     >
                                         <i class="bi bi-file-earmark-pdf-fill me-1"></i>Acta Final PDF
@@ -656,8 +681,118 @@
 
                             <div class="p-3">
                                 <div class="row g-3">
-                                    <!-- Banner de PIN de defensa para Jurado y Comunidad -->
-                                    <div class="col-12" v-if="equipo.proyecto_comunidad?.pin_defensa || evaluaciones?.[0]?.pin_defensa">
+                                    <!-- Control de Fecha de Socialización Final y Entrega de CD/Informe -->
+                                    <div class="col-12" v-if="socFinalProgramada">
+                                        <div class="p-3 rounded border d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: #f0fdf4; border-color: #198754 !important; border-left: 5px solid #198754 !important;">
+                                            <div>
+                                                <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2">
+                                                    <span class="badge bg-success">Socialización Final Programada</span>
+                                                    <span v-if="cdEntregado" class="badge bg-dark text-white">
+                                                        <i class="bi bi-disc-fill me-1"></i>CD / Informe Entregado
+                                                    </span>
+                                                    <span v-else class="badge bg-warning text-dark">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>CD / Informe Pendiente
+                                                    </span>
+                                                </div>
+                                                <div class="small text-dark mt-1">
+                                                    <strong>Fecha:</strong> {{ socFinalProgramada.soc_fecha }}
+                                                    <span v-if="socFinalProgramada.soc_hora"> &bull; <strong>Hora:</strong> {{ socFinalProgramada.soc_hora }}</span>
+                                                    &bull; <strong>Lugar:</strong> {{ socFinalProgramada.soc_lugar || 'Por definir' }}
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-dark fw-bold"
+                                                style="min-height: 44px;"
+                                                @click="abrirEditorSocExp"
+                                            >
+                                                <i class="bi bi-calendar2-event me-1"></i>{{ mostrarFormSocExp ? 'Ocultar Formulario' : 'Editar Fecha / CD' }}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Candado Estricto: PIN y Evaluación Final Ocultos si no hay Fecha Programada -->
+                                    <div class="col-12" v-if="!socFinalProgramada">
+                                        <div class="p-3 rounded border" style="background: #fffdf5; border-color: #d97706 !important; border-left: 5px solid #d97706 !important;">
+                                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                                <div>
+                                                    <span class="badge bg-warning text-dark fw-bold text-uppercase mb-1">
+                                                        <i class="bi bi-lock-fill me-1"></i>Módulo de Evaluación Final y PIN Bloqueados
+                                                    </span>
+                                                    <div class="fw-bold text-dark">
+                                                        Debe programar la Fecha de Socialización Final para habilitar el PIN de Defensa y la Evaluación de 4 Actores
+                                                    </div>
+                                                    <div class="small text-muted">
+                                                        Regla institucional PNF: El PIN de 6 dígitos (Jurado 30% y Comunidad 20%), la ponderación de 4 actores y la entrega de CD/Informe solo se habilitan una vez guardada la fecha de defensa.
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <form @submit.prevent="guardarSocFinalExpediente" class="mt-3 p-3 bg-white rounded border">
+                                                <div class="row g-3 align-items-end">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label fw-bold text-dark small">Fecha de Socialización *</label>
+                                                        <input v-model="formSocFinalExp.fecha" type="date" class="form-control" style="min-height: 46px;" required />
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label fw-bold text-dark small">Hora</label>
+                                                        <input v-model="formSocFinalExp.hora" type="time" class="form-control" style="min-height: 46px;" />
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-bold text-dark small">Lugar del Acto *</label>
+                                                        <input v-model="formSocFinalExp.lugar" type="text" class="form-control" style="min-height: 46px;" placeholder="Ej: Auditorio UPTP / Aula 4" required />
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check p-2 border rounded bg-light" style="min-height: 46px; display: flex; align-items: center; gap: 8px; padding-left: 2rem !important;">
+                                                            <input v-model="formSocFinalExp.entrega_cd_informe" class="form-check-input" type="checkbox" id="chkCdExpLock" />
+                                                            <label class="form-check-label fw-bold small text-dark" for="chkCdExpLock">Entregó CD / Informe</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 text-end">
+                                                        <button type="submit" class="btn btn-danger fw-bold px-4" style="min-height: 46px;" :disabled="loadingSocExp">
+                                                            <i class="bi bi-calendar-check-fill me-1"></i>
+                                                            {{ loadingSocExp ? 'Guardando...' : 'Guardar Fecha y Habilitar Evaluación Final' }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <!-- Formulario inline para editar fecha/CD cuando ya está programada -->
+                                    <div class="col-12" v-if="socFinalProgramada && mostrarFormSocExp">
+                                        <form @submit.prevent="guardarSocFinalExpediente" class="p-3 bg-light rounded border">
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-3">
+                                                    <label class="form-label fw-bold text-dark small">Fecha de Socialización *</label>
+                                                    <input v-model="formSocFinalExp.fecha" type="date" class="form-control" style="min-height: 46px;" required />
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-bold text-dark small">Hora</label>
+                                                    <input v-model="formSocFinalExp.hora" type="time" class="form-control" style="min-height: 46px;" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label fw-bold text-dark small">Lugar del Acto *</label>
+                                                    <input v-model="formSocFinalExp.lugar" type="text" class="form-control" style="min-height: 46px;" required />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check p-2 border rounded bg-white" style="min-height: 46px; display: flex; align-items: center; gap: 8px; padding-left: 2rem !important;">
+                                                        <input v-model="formSocFinalExp.entrega_cd_informe" class="form-check-input" type="checkbox" id="chkCdExpEdit" />
+                                                        <label class="form-check-label fw-bold small text-dark" for="chkCdExpEdit">Entregó CD / Informe</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 text-end">
+                                                    <button type="submit" class="btn btn-danger fw-bold px-4" style="min-height: 46px;" :disabled="loadingSocExp">
+                                                        <i class="bi bi-save me-1"></i>
+                                                        {{ loadingSocExp ? 'Actualizando...' : 'Actualizar Programación y CD' }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    <!-- Banner de PIN de defensa para Jurado y Comunidad (SOLO visible si hay fecha guardada) -->
+                                    <div class="col-12" v-if="socFinalProgramada && (equipo.proyecto_comunidad?.pin_defensa || evaluaciones?.[0]?.pin_defensa)">
                                         <div class="p-2 px-3 rounded border d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: #fff9db; border-color: #ffe066 !important;">
                                             <div class="d-flex align-items-center gap-2">
                                                 <i class="bi bi-key-fill text-danger fs-5"></i>
@@ -669,7 +804,12 @@
                                                 </div>
                                             </div>
                                             <div class="small text-muted">
-                                                Ingrese al <a href="/evaluacion-invitado" target="_blank" class="fw-bold text-danger text-decoration-underline">Portal Invitado</a> con este PIN y la Cédula correspondiente.
+                                                <span v-if="equipo.proyecto_comunidad?.token_jurado">
+                                                    Acceso activo: <a :href="'/evaluacion-jurado/' + equipo.proyecto_comunidad.token_jurado" target="_blank" class="fw-bold text-danger text-decoration-underline">Panel Temporal de Evaluación</a>
+                                                </span>
+                                                <span v-else>
+                                                    Genere el enlace temporal de 12 horas en la gestión de Socializaciones.
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -690,30 +830,36 @@
                                             </div>
 
                                             <div class="d-flex justify-content-between align-items-baseline p-2 rounded mb-2" style="background: rgba(0,0,0,0.03);">
-                                                <span class="text-muted" style="font-size: 0.85rem; font-weight: 600;">Calificación Semestral:</span>
+                                                <span class="text-muted" style="font-size: 0.85rem; font-weight: 600;">Calificación Semestral (Mín. 16.00):</span>
                                                 <span class="fw-bold" style="font-size: 1.25rem;" :style="Number(sem.nota_cuantitativa_semestre) >= 16 ? 'color: #198754;' : 'color: #dc3545;'">
                                                     {{ Number(sem.nota_cuantitativa_semestre).toFixed(2) }} <small class="text-muted" style="font-size: 0.75rem;">/ 20 pts</small>
                                                 </span>
                                             </div>
 
-                                            <!-- Desglose de Actores si es Semestre 2 -->
+                                            <!-- Desglose de Actores si es Semestre 2 (Condicionado a fecha guardada) -->
                                             <div v-if="sem.semestre === 'Semestre 2'" class="mt-2 pt-2 border-top">
-                                                <div class="small fw-bold text-muted mb-1" style="font-size: 0.74rem;">Ponderación 4 Actores UPTP:</div>
-                                                <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
-                                                    <span>Docente de Proyecto (40%):</span>
-                                                    <strong class="text-dark">{{ Number(sem.nota_docente || 0).toFixed(2) }} pts</strong>
-                                                </div>
-                                                <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
-                                                    <span>Jurado Evaluador (30%):</span>
-                                                    <strong class="text-dark">{{ Number(sem.nota_jurado || 0).toFixed(2) }} pts</strong>
-                                                </div>
-                                                <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
-                                                    <span>Comunidad Beneficiaria (20%):</span>
-                                                    <strong class="text-dark">{{ Number(sem.nota_comunidad || 0).toFixed(2) }} pts</strong>
-                                                </div>
-                                                <div class="d-flex justify-content-between small text-muted py-1" style="font-size: 0.78rem;">
-                                                    <span>Autoevaluación Estudiante (10%):</span>
-                                                    <strong class="text-dark">{{ Number(sem.nota_estudiante || 0).toFixed(2) }} pts</strong>
+                                                <template v-if="socFinalProgramada">
+                                                    <div class="small fw-bold text-muted mb-1" style="font-size: 0.74rem;">Ponderación 4 Actores UPTP:</div>
+                                                    <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
+                                                        <span>Docente de Proyecto (40%):</span>
+                                                        <strong class="text-dark">{{ Number(sem.nota_docente || 0).toFixed(2) }} pts</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
+                                                        <span>Jurado Evaluador (30%):</span>
+                                                        <strong class="text-dark">{{ Number(sem.nota_jurado || 0).toFixed(2) }} pts</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between small text-muted py-1 border-bottom" style="font-size: 0.78rem;">
+                                                        <span>Comunidad Beneficiaria (20%):</span>
+                                                        <strong class="text-dark">{{ Number(sem.nota_comunidad || 0).toFixed(2) }} pts</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between small text-muted py-1" style="font-size: 0.78rem;">
+                                                        <span>Autoevaluación Estudiante (10%):</span>
+                                                        <strong class="text-dark">{{ Number(sem.nota_estudiante || 0).toFixed(2) }} pts</strong>
+                                                    </div>
+                                                </template>
+                                                <div v-else class="small text-muted p-2 bg-light rounded border">
+                                                    <i class="bi bi-lock-fill text-warning me-1"></i>
+                                                    Evaluación de 4 Actores oculta hasta programar la Fecha de Socialización Final.
                                                 </div>
                                             </div>
                                         </div>
@@ -1163,6 +1309,10 @@ const props = defineProps({
         type: Object,
         default: () => null,
     },
+    metricasIndividuales: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 // Detectar si viene del profesor o del coordinador
 const rutaBase = computed(() => {
@@ -1170,6 +1320,62 @@ const rutaBase = computed(() => {
         ? "/profesor"
         : "/coordinador";
 });
+
+const socFinalProgramada = computed(() => {
+    return (props.equipo?.socializaciones || []).find(
+        (s) =>
+            (s.tipo_socializacion?.tso_orden === 2 || Number(s.soc_id_tso) === 2) &&
+            Boolean(s.soc_fecha)
+    ) || null;
+});
+
+const cdEntregado = computed(() => {
+    const obs = socFinalProgramada.value?.soc_observaciones || "";
+    return obs.includes("[CD/INFORME ENTREGADO]");
+});
+
+const mostrarFormSocExp = ref(false);
+const loadingSocExp = ref(false);
+const formSocFinalExp = ref({
+    fecha: "",
+    hora: "",
+    lugar: "",
+    entrega_cd_informe: false,
+});
+
+const abrirEditorSocExp = () => {
+    mostrarFormSocExp.value = !mostrarFormSocExp.value;
+    if (mostrarFormSocExp.value && socFinalProgramada.value) {
+        formSocFinalExp.value = {
+            fecha: socFinalProgramada.value.soc_fecha || "",
+            hora: socFinalProgramada.value.soc_hora || "",
+            lugar: socFinalProgramada.value.soc_lugar || "",
+            entrega_cd_informe: cdEntregado.value,
+        };
+    }
+};
+
+const guardarSocFinalExpediente = () => {
+    if (!formSocFinalExp.value.fecha || !formSocFinalExp.value.lugar) return;
+    loadingSocExp.value = true;
+    router.post(
+        `${rutaBase.value}/socializaciones/programar-final`,
+        {
+            id_equipo: props.equipo.equ_id,
+            fecha: formSocFinalExp.value.fecha,
+            hora: formSocFinalExp.value.hora,
+            lugar: formSocFinalExp.value.lugar,
+            entrega_cd_informe: formSocFinalExp.value.entrega_cd_informe,
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                loadingSocExp.value = false;
+                mostrarFormSocExp.value = false;
+            },
+        }
+    );
+};
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");

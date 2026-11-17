@@ -34,7 +34,7 @@ class SocializacionController extends Controller
         return Inertia::render('Profesor/Socializaciones', [
             'socializaciones' => Socializacion::whereIn('soc_id_equ', $equipos->pluck('equ_id'))
                 ->with([
-                    'equipo.seccion', 'trayecto', 'tipoSocializacion',
+                    'equipo.seccion', 'equipo.proyectoComunidad', 'trayecto', 'tipoSocializacion',
                     'jurados', 'integrantes.usuario',
                     'socializacionPrevia',
                 ])
@@ -76,9 +76,10 @@ class SocializacionController extends Controller
 
         // Semestre impar: cualitativo, NO cuenta con Socialización Final
         $seccion = $equipo->seccion;
-        if ($seccion && $seccion->esSemestreImpar() && $tipoSoc->tso_orden === 2) {
+        $numSemestre = $seccion ? $seccion->getSemestreNumero() : $equipo->getSemestreNumero();
+        if ($numSemestre % 2 !== 0 && $tipoSoc->tso_orden === 2) {
             return back()->withErrors([
-                'soc_id_tso' => "El semestre impar ({$seccion->sec_semestre}) es cualitativo y no cuenta con Socialización Final con jurados. La Socialización Final se realiza en el semestre par."
+                'soc_id_tso' => "El semestre impar (Semestre {$numSemestre}) es cualitativo y no cuenta con Socialización Final con jurados. La Socialización Final se realiza en el semestre par."
             ]);
         }
 
@@ -153,6 +154,83 @@ class SocializacionController extends Controller
         }
 
         return back()->with('success', 'Socialización registrada correctamente.');
+    }
+
+    public function programarFinal(Request $request)
+    {
+        $request->validate([
+            'id_equipo'          => 'required|exists:equipo,equ_id',
+            'fecha'              => 'required|date',
+            'hora'               => 'nullable',
+            'lugar'              => 'required|string|max:150',
+            'entrega_cd_informe' => 'nullable|boolean',
+        ], [
+            'id_equipo.required' => 'El equipo es obligatorio.',
+            'fecha.required'     => 'La fecha de la socialización final es obligatoria.',
+            'lugar.required'     => 'El lugar del acto es obligatorio.',
+        ]);
+
+        $this->autorizarEquipoId($request->id_equipo);
+        $equipo = Equipo::with('proyectoComunidad')->findOrFail($request->id_equipo);
+
+        $tipoSocFinal = TipoSocializacion::where('tso_orden', 2)->first()
+            ?? TipoSocializacion::where('tso_nombre', 'like', '%Final%')->first();
+
+        if (!$tipoSocFinal) {
+            return back()->withErrors(['error' => 'No se encontró el tipo de socialización final en tablas maestras.']);
+        }
+
+        $obsBase = trim((string) $request->observaciones);
+        $obsBase = trim(str_replace(['[CD/INFORME ENTREGADO]', '[CD/INFORME PENDIENTE]'], '', $obsBase));
+        $tagCd = $request->boolean('entrega_cd_informe') ? '[CD/INFORME ENTREGADO]' : '[CD/INFORME PENDIENTE]';
+        $obsFinal = trim($tagCd . ($obsBase ? ' ' . $obsBase : ''));
+
+        $soc = Socializacion::updateOrCreate(
+            [
+                'soc_id_equ' => $equipo->equ_id,
+                'soc_id_tso' => $tipoSocFinal->tso_id,
+            ],
+            [
+                'soc_id_tra'         => $equipo->equ_id_tra,
+                'soc_fecha'          => $request->fecha,
+                'soc_hora'           => $request->hora,
+                'soc_lugar'          => $request->lugar,
+                'soc_observaciones'  => $obsFinal,
+                'soc_status'         => true,
+                'soc_id_usu_created' => auth()->id(),
+            ]
+        );
+
+        // Asegurar ProyectoComunidad, recorrido y PIN de defensa
+        $proyecto = $equipo->proyectoComunidad;
+        if (!$proyecto) {
+            $proyecto = \App\Models\ProyectoComunidad::create([
+                'pco_id_equ'              => $equipo->equ_id,
+                'pco_id_com'              => \App\Models\Comunidad::first()?->com_id ?: 1,
+                'pco_id_tpr'              => \App\Models\TipoProyecto::first()?->tpr_id ?: 1,
+                'pco_id_mpr'              => \App\Models\ModalidadProyecto::first()?->mpr_id ?: 1,
+                'pco_resumen'             => 'Proyecto Sociotecnológico - ' . ($equipo->equ_titulo ?: $equipo->equ_codigo),
+                'pco_linea_investigacion' => 'Sistemas de Información y Desarrollo de Software',
+                'pco_fecha_limite'        => now()->addMonths(6)->toDateString(),
+                'pco_fecha_aprobacion'    => now()->toDateString(),
+                'pin_defensa'             => str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT),
+                'pco_status'              => true,
+            ]);
+
+            app(\App\Services\EvaluacionTrayectoService::class)->inicializarRecorridoProyecto(
+                (int) $proyecto->pco_id,
+                (int) $equipo->equ_id,
+                (int) ($equipo->equ_id_tra ?: 1)
+            );
+        } elseif (empty($proyecto->pin_defensa)) {
+            $pin = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+            $proyecto->update(['pin_defensa' => $pin]);
+            \Illuminate\Support\Facades\DB::table('recorrido_evaluacion_semestral')
+                ->where('id_proyecto', $proyecto->pco_id)
+                ->update(['pin_defensa' => $pin]);
+        }
+
+        return back()->with('success', 'Fecha y lugar de la Socialización Final guardados exitosamente. El módulo de evaluación y el PIN de defensa han sido habilitados.');
     }
 
     public function registrarResultado(Request $request, $id)

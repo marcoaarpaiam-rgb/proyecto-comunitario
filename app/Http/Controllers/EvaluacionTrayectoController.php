@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\EvaluacionTrayectoService;
 use App\Services\TransicionSemestralService;
+use App\Models\Equipo;
+use App\Models\ProyectoComunidad;
+use Inertia\Inertia;
+use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class EvaluacionTrayectoController extends Controller
@@ -97,12 +101,30 @@ class EvaluacionTrayectoController extends Controller
             ->get()
             ->groupBy('semestre');
 
+        // Buscar registro de Socialización Final (orden 2) para el equipo
+        $socializacionFinal = DB::table('socializacion as s')
+            ->join('tipo_socializacion as ts', 'ts.tso_id', '=', 's.soc_id_tso')
+            ->where('s.soc_id_equ', $data->proyecto->id_equipo)
+            ->where('ts.tso_orden', 2)
+            ->where('s.soc_status', true)
+            ->select('s.*', 'ts.tso_nombre')
+            ->first();
+
+        $tieneFechaSocializacion = !empty($socializacionFinal?->soc_fecha);
+        $metricasIndividuales = $this->evaluacionService->calcularMetricasIndividualesEquipo(
+            (int) $data->proyecto->id_equipo,
+            (int) $id_proyecto
+        );
+
         return view('evaluaciones.recorrido', [
-            'proyecto'    => $data->proyecto,
-            'semestres'   => $data->semestres,
-            'acta'        => $data->acta,
-            'integrantes' => $data->integrantes,
-            'rubricas'    => $rubricas,
+            'proyecto'                => $data->proyecto,
+            'semestres'               => $data->semestres,
+            'acta'                    => $data->acta,
+            'integrantes'             => $data->integrantes,
+            'rubricas'                => $rubricas,
+            'socializacionFinal'      => $socializacionFinal,
+            'tieneFechaSocializacion' => $tieneFechaSocializacion,
+            'metricasIndividuales'    => $metricasIndividuales,
         ]);
     }
 
@@ -118,6 +140,77 @@ class EvaluacionTrayectoController extends Controller
         }
 
         return redirect()->back()->with('success', "Nuevo PIN de defensa generado: {$nuevoPin}");
+    }
+
+    /**
+     * Registra o actualiza la fecha y lugar de la Socialización Final.
+     * Al guardarse, se habilita el PIN de defensa y el módulo de evaluación final.
+     */
+    public function guardarFechaSocializacion(Request $request, int $id_proyecto)
+    {
+        $request->validate([
+            'fecha' => 'required|date',
+            'hora'  => 'nullable',
+            'lugar' => 'required|string|max:150',
+        ], [
+            'fecha.required' => 'La fecha de la socialización final es obligatoria.',
+            'lugar.required' => 'El lugar del acto de defensa es obligatorio.',
+        ]);
+
+        $proyecto = DB::table('proyecto_comunidad')->where('pco_id', $id_proyecto)->first();
+        if (!$proyecto) {
+            return redirect()->back()->with('error', 'Proyecto no encontrado.');
+        }
+
+        $idEquipo = $proyecto->pco_id_equ;
+        $equipo = DB::table('equipo')->where('equ_id', $idEquipo)->first();
+
+        $tipoSocFinal = DB::table('tipo_socializacion')->where('tso_orden', 2)->first()
+            ?? DB::table('tipo_socializacion')->where('tso_nombre', 'like', '%Final%')->first();
+        $idTso = $tipoSocFinal?->tso_id ?? 2;
+
+        $existeSoc = DB::table('socializacion')
+            ->where('soc_id_equ', $idEquipo)
+            ->where('soc_id_tso', $idTso)
+            ->first();
+
+        $obsBase = trim(str_replace(['[CD/INFORME ENTREGADO]', '[CD/INFORME PENDIENTE]'], '', (string) ($existeSoc->soc_observaciones ?? '')));
+        $tagCd = $request->boolean('entrega_cd_informe') ? '[CD/INFORME ENTREGADO]' : '[CD/INFORME PENDIENTE]';
+        $obsFinal = trim($tagCd . ($obsBase ? ' ' . $obsBase : ''));
+
+        if ($existeSoc) {
+            DB::table('socializacion')->where('soc_id', $existeSoc->soc_id)->update([
+                'soc_fecha'          => $request->fecha,
+                'soc_hora'           => $request->hora,
+                'soc_lugar'          => $request->lugar,
+                'soc_observaciones'  => $obsFinal,
+                'soc_updated_at'     => now(),
+                'soc_id_usu_updated' => auth()->id(),
+            ]);
+        } else {
+            DB::table('socializacion')->insert([
+                'soc_id_equ'           => $idEquipo,
+                'soc_id_tra'           => $equipo->equ_id_tra ?? 1,
+                'soc_id_tso'           => $idTso,
+                'soc_fecha'            => $request->fecha,
+                'soc_hora'             => $request->hora,
+                'soc_lugar'            => $request->lugar,
+                'soc_observaciones'    => $obsFinal,
+                'soc_cantidad_jurados' => 0,
+                'soc_status'           => true,
+                'soc_created_at'       => now(),
+                'soc_id_usu_created'   => auth()->id(),
+            ]);
+        }
+
+        // Generar PIN si no existe
+        if (empty($proyecto->pin_defensa)) {
+            $nuevoPin = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+            DB::table('proyecto_comunidad')->where('pco_id', $id_proyecto)->update(['pin_defensa' => $nuevoPin]);
+            DB::table('recorrido_evaluacion_semestral')->where('id_proyecto', $id_proyecto)->update(['pin_defensa' => $nuevoPin]);
+        }
+
+        return redirect()->back()->with('success', 'Fecha y lugar de la Socialización Final guardados exitosamente. El PIN de defensa y el módulo de evaluación final han sido habilitados.');
     }
 
     /**
@@ -261,11 +354,14 @@ class EvaluacionTrayectoController extends Controller
     }
 
     /**
-     * TAREA 1.3: Vista pública para acceso con PIN para Comunidad y Jurados.
+     * TAREA 1.3: Vista informativa si se intenta ingresar a la ruta obsoleta /evaluacion-invitado.
      */
     public function mostrarAccesoInvitado()
     {
-        return view('evaluaciones.invitado');
+        return Inertia::render('Evaluacion/EnlaceExpirado', [
+            'invalido' => true,
+            'mensaje'  => 'El portal público general ha sido desactivado por motivos de seguridad académica. Para ingresar a evaluar, solicite al Docente de Proyecto el enlace temporal de 12 horas correspondiente al equipo.',
+        ]);
     }
 
     /**
@@ -387,5 +483,449 @@ class EvaluacionTrayectoController extends Controller
             ->first();
 
         return view('evaluaciones.verificar', compact('acta', 'hash'));
+    }
+
+    /**
+     * Genera o regenera un enlace de acceso temporal para el Jurado con vigencia de 12 horas.
+     */
+    public function generarLinkJurado(Request $request, int $id_equipo)
+    {
+        $equipo = Equipo::with('proyectoComunidad')->findOrFail($id_equipo);
+        $proyecto = $equipo->proyectoComunidad;
+
+        // Si el equipo no tiene proyecto_comunidad registrado aún, inicializarlo automáticamente
+        if (!$proyecto) {
+            $tprId = \App\Models\TipoProyecto::where('tpr_status', true)->value('tpr_id') ?? 1;
+            $mprId = \App\Models\ModalidadProyecto::where('mpr_status', true)->value('mpr_id') ?? 1;
+            $comId = \App\Models\Comunidad::where('com_status', true)->value('com_id') ?? 1;
+
+            $proyecto = ProyectoComunidad::create([
+                'pco_id_equ'              => $equipo->equ_id,
+                'pco_id_com'              => $comId,
+                'pco_id_tpr'              => $tprId,
+                'pco_id_mpr'              => $mprId,
+                'pco_resumen'             => substr($equipo->equ_titulo ?: 'Proyecto Sociotecnológico Comunitario', 0, 150),
+                'pco_linea_investigacion' => 'Desarrollo de Software y Sistemas de Información',
+                'pco_fecha_limite'        => now()->addMonths(6)->toDateString(),
+                'pco_fecha_aprobacion'    => now()->toDateString(),
+                'pin_defensa'             => str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT),
+                'pco_status'              => true,
+            ]);
+
+            $this->evaluacionService->inicializarRecorridoProyecto(
+                (int) $proyecto->pco_id,
+                (int) $equipo->equ_id,
+                (int) ($equipo->equ_id_tra ?: 1)
+            );
+        }
+
+        // Generar token único criptográficamente seguro de 48 caracteres alfanuméricos
+        $token = bin2hex(random_bytes(24));
+        $expiraAt = now()->addHours(12);
+
+        $proyecto->token_jurado = $token;
+        $proyecto->token_jurado_expira_at = $expiraAt;
+
+        // Asegurar PIN de 6 dígitos
+        if (empty($proyecto->pin_defensa)) {
+            $proyecto->pin_defensa = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        }
+        $proyecto->save();
+
+        // Sincronizar pin_defensa en recorrido si existe
+        DB::table('recorrido_evaluacion_semestral')
+            ->where('id_proyecto', $proyecto->pco_id)
+            ->update(['pin_defensa' => $proyecto->pin_defensa]);
+
+        $enlaceUrl = url("/evaluacion-jurado/{$token}");
+        $minutosRestantes = 720; // 12 horas
+
+        if ($request->header('X-Inertia')) {
+            return redirect()->back()->with([
+                'success'       => 'Enlace temporal para Jurado generado exitosamente. Vigencia de 12 horas hasta ' . $expiraAt->format('d/m/Y h:i A'),
+                'link_jurado'   => $enlaceUrl,
+                'expira_jurado' => $expiraAt->toIso8601String(),
+            ]);
+        }
+
+        return response()->json([
+            'success'           => true,
+            'token'             => $token,
+            'link'              => $enlaceUrl,
+            'pin'               => $proyecto->pin_defensa,
+            'id_proyecto'       => $proyecto->pco_id,
+            'expira_at'         => $expiraAt->toIso8601String(),
+            'expira_formateado' => $expiraAt->format('d/m/Y h:i A'),
+            'horas_vigencia'    => 12,
+            'minutos_restantes' => $minutosRestantes,
+            'mensaje'           => 'Enlace temporal para Jurado generado exitosamente (Vigencia de 12 Horas).',
+        ]);
+    }
+
+    /**
+     * Panel de Acceso del Jurado con antecedentes, historial, expediente y formulario de evaluación.
+     * Control estricto de vigencia de 12 horas.
+     */
+    public function panelJurado(string $token)
+    {
+        $proyecto = DB::table('proyecto_comunidad')->where('token_jurado', $token)->first();
+
+        if (!$proyecto) {
+            return Inertia::render('Evaluacion/EnlaceExpirado', [
+                'invalido' => true,
+                'mensaje'  => 'El enlace de evaluación no es válido o no existe en el sistema.',
+            ]);
+        }
+
+        $expiraAt = $proyecto->token_jurado_expira_at ? Carbon::parse($proyecto->token_jurado_expira_at) : null;
+
+        if (!$expiraAt || now()->greaterThan($expiraAt)) {
+            return Inertia::render('Evaluacion/EnlaceExpirado', [
+                'invalido'            => false,
+                'expirado'            => true,
+                'expira_formateado'   => $expiraAt ? $expiraAt->format('d/m/Y h:i A') : 'Desconocida',
+                'tiempo_transcurrido' => $expiraAt ? $expiraAt->diffForHumans() : '',
+                'codigo_equipo'       => DB::table('equipo')->where('equ_id', $proyecto->pco_id_equ)->value('equ_codigo') ?? '',
+                'mensaje'             => 'Este enlace temporal de evaluación ha expirado (vigencia de 12 horas superada). Por favor, solicite un nuevo enlace de acceso al Docente de Proyecto.',
+            ]);
+        }
+
+        $minutosRestantes = max(0, (int) now()->diffInMinutes($expiraAt, false));
+        $horasRestantes = floor($minutosRestantes / 60);
+        $mins = $minutosRestantes % 60;
+        $tiempoRestanteTexto = "{$horasRestantes}h {$mins}m";
+
+        // 1. Datos del Grupo y Proyecto Evaluado
+        $equipo = Equipo::with([
+            'seccion.trayecto',
+            'seccion.turno',
+            'trayecto',
+            'integrantes.usuario',
+            'proyectoComunidad.comunidad',
+            'proyectoComunidad.tipoProyecto',
+            'proyectoComunidad.modalidad',
+        ])->findOrFail($proyecto->pco_id_equ);
+
+        // Tutor del proyecto
+        $tutor = DB::table('tutor as t')
+            ->leftJoin('usuario as u', 'u.usu_id', '=', 't.tut_id_usu')
+            ->where('t.tut_id_equ', $equipo->equ_id)
+            ->where('t.tut_status', true)
+            ->select('u.usu_id', 'u.usu_primer_nombre', 'u.usu_primer_apellido', 'u.usu_cedula', 'u.usu_email', 'u.usu_telefono')
+            ->first();
+
+        // Docente de la sección
+        $docente = DB::table('profesor_seccion as ps')
+            ->join('usuario as u', 'u.usu_id', '=', 'ps.pse_id_usu')
+            ->where('ps.pse_id_sec', $equipo->equ_id_sec)
+            ->where('ps.pse_status', true)
+            ->select('u.usu_id', 'u.usu_primer_nombre', 'u.usu_primer_apellido', 'u.usu_cedula', 'u.usu_email')
+            ->first();
+
+        // Responsable comunitario
+        $responsableComunidad = DB::table('responsable_comunidad')
+            ->where('rco_id_com', $proyecto->pco_id_com)
+            ->where('rco_status', true)
+            ->first();
+
+        // 2. Historial Académico del Grupo
+        $historialEventos = DB::table('historial_equipo as he')
+            ->leftJoin('tipo_evento_equipo as te', 'te.tee_id', '=', 'he.heq_id_tee')
+            ->where('he.heq_id_equ', $equipo->equ_id)
+            ->orderBy('he.heq_fecha_evento', 'desc')
+            ->select('he.*', 'te.tee_nombre as teq_nombre')
+            ->get();
+
+        // Puntos de Control evaluados
+        $puntosControl = DB::table('punto_control as pc')
+            ->leftJoin('seguimiento_equipo as se', function ($join) use ($equipo) {
+                $join->on('se.seq_id_puc', '=', 'pc.puc_id')
+                     ->where('se.seq_id_equ', '=', $equipo->equ_id);
+            })
+            ->where(function ($q) use ($equipo) {
+                $q->where('pc.puc_id_equ', $equipo->equ_id)
+                  ->orWhere('pc.puc_id_tra', $equipo->equ_id_tra);
+            })
+            ->where('pc.puc_status', true)
+            ->orderBy('pc.puc_orden')
+            ->select([
+                'pc.puc_id',
+                'pc.puc_semana as puc_semana_corte',
+                'pc.puc_fecha_limite as puc_fecha',
+                'pc.puc_nombre as puc_tipo_instrumento',
+                'pc.puc_descripcion',
+                'se.seq_id',
+                'se.seq_observaciones',
+                'se.seq_cumplio_previo as seq_cumplio_observaciones_anteriores',
+                'se.seq_cumplido',
+            ])
+            ->get();
+
+        // Evaluaciones semestrales acumuladas
+        $evaluacionesSemestrales = DB::table('recorrido_evaluacion_semestral')
+            ->where('id_proyecto', $proyecto->pco_id)
+            ->orderBy('semestre', 'asc')
+            ->get();
+
+        // Pre-socialización y Socialización Final
+        $socializaciones = DB::table('socializacion as s')
+            ->leftJoin('tipo_socializacion as ts', 'ts.tso_id', '=', 's.soc_id_tso')
+            ->where('s.soc_id_equ', $equipo->equ_id)
+            ->where('s.soc_status', true)
+            ->orderBy('ts.tso_orden')
+            ->select('s.*', 'ts.tso_nombre', 'ts.tso_orden')
+            ->get();
+
+        // 3. Expediente Individual por Estudiante
+        $integrantesDetalles = [];
+        $integrantesEquipo = $equipo->integrantes()->with('usuario')->where('ein_status', true)->get();
+
+        foreach ($integrantesEquipo as $integ) {
+            $u = $integ->usuario;
+            if (!$u) continue;
+
+            // Récord de asistencia en puntos de control
+            $asistencias = DB::table('asistencia_punto_control as apc')
+                ->join('seguimiento_equipo as se', 'se.seq_id', '=', 'apc.apc_id_seq')
+                ->join('punto_control as pc', 'pc.puc_id', '=', 'se.seq_id_puc')
+                ->where('apc.apc_id_usu', $u->usu_id)
+                ->where('se.seq_id_equ', $equipo->equ_id)
+                ->select([
+                    'pc.puc_semana as puc_semana_corte',
+                    'pc.puc_fecha_limite as puc_fecha',
+                    'apc.apc_asistio',
+                    'apc.apc_justificado as apc_justificacion',
+                    'apc.apc_observaciones as apc_observacion',
+                ])
+                ->orderBy('pc.puc_orden')
+                ->get();
+
+            // Estado en Pre-socialización
+            $preSocInteg = DB::table('integrante_socializacion as iso')
+                ->join('socializacion as s', 's.soc_id', '=', 'iso.iso_id_soc')
+                ->join('tipo_socializacion as ts', 'ts.tso_id', '=', 's.soc_id_tso')
+                ->where('iso.iso_id_usu', $u->usu_id)
+                ->where('s.soc_id_equ', $equipo->equ_id)
+                ->where('ts.tso_orden', 1)
+                ->select('iso.iso_asistio', 'iso.iso_avanza', 'iso.iso_justificacion', 's.soc_fecha')
+                ->first();
+
+            // Calificaciones asignadas previas por jurado
+            $califPrevias = DB::table('evaluaciones_jurado_estudiante')
+                ->where('id_proyecto', $proyecto->pco_id)
+                ->where('id_estudiante', $u->usu_id)
+                ->select('rol_evaluador', 'nombre_evaluador', 'calificacion', 'observacion_individual', 'created_at')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Métricas individuales PNF (regla de 75% asistencia y mínimo 16.00 pts)
+            $metricasEq = $this->evaluacionService->calcularMetricasIndividualesEquipo((int) $equipo->equ_id, (int) $proyecto->pco_id);
+            $metricaEst = $metricasEq[$u->usu_id] ?? null;
+
+            $integrantesDetalles[] = [
+                'usu_id'                  => $u->usu_id,
+                'cedula'                  => $u->usu_cedula,
+                'nombre_completo'         => trim("{$u->usu_primer_nombre} {$u->usu_primer_apellido}"),
+                'email'                   => $u->usu_email,
+                'telefono'                => $u->usu_telefono,
+                'es_lider'                => (bool) $integ->ein_es_lider,
+                'asistencias'             => $asistencias,
+                'pre_socializacion'       => $preSocInteg,
+                'calificaciones'          => $califPrevias,
+                'porcentaje_asistencia'   => $metricaEst['porcentaje_asistencia'] ?? 100.0,
+                'porcentaje_inasistencia' => $metricaEst['porcentaje_inasistencia'] ?? 0.0,
+                'reprobado_inasistencia'  => (bool) ($metricaEst['reprobado_inasistencia'] ?? false),
+                'condicion_pnf'           => $metricaEst['condicion_pnf'] ?? 'En Curso',
+            ];
+        }
+
+        // Calificaciones ya emitidas con este token (para modo consulta o recibo)
+        $evaluacionesToken = DB::table('evaluaciones_jurado_estudiante')
+            ->where('token_usado', $token)
+            ->get();
+
+        return Inertia::render('Evaluacion/PanelJurado', [
+            'token'                   => $token,
+            'tiempo_restante_texto'   => $tiempoRestanteTexto,
+            'minutos_restantes'       => $minutosRestantes,
+            'expira_formateado'       => $expiraAt->format('d/m/Y h:i A'),
+            'equipo'                  => $equipo,
+            'proyecto'                => $proyecto,
+            'tutor'                   => $tutor,
+            'docente'                 => $docente,
+            'responsable_comunidad'   => $responsableComunidad,
+            'historial_eventos'       => $historialEventos,
+            'puntos_control'          => $puntosControl,
+            'evaluaciones_semestrales'=> $evaluacionesSemestrales,
+            'socializaciones'         => $socializaciones,
+            'integrantes_detalles'    => $integrantesDetalles,
+            'evaluaciones_token'      => $evaluacionesToken,
+        ]);
+    }
+
+    /**
+     * Guarda la calificación emitida por el Jurado o Vocero Comunitario.
+     */
+    public function guardarCalificacionJurado(Request $request, string $token)
+    {
+        $proyecto = DB::table('proyecto_comunidad')->where('token_jurado', $token)->first();
+
+        if (!$proyecto) {
+            return back()->with('error', 'El enlace de evaluación no es válido.');
+        }
+
+        $expiraAt = $proyecto->token_jurado_expira_at ? Carbon::parse($proyecto->token_jurado_expira_at) : null;
+        if (!$expiraAt || now()->greaterThan($expiraAt)) {
+            return back()->with('error', 'El enlace de evaluación ha expirado. Debe solicitar uno nuevo al Docente de Proyecto.');
+        }
+
+        $request->validate([
+            'rol_evaluador'           => 'required|in:jurado,comunidad',
+            'nombre_evaluador'        => 'required|string|min:3|max:150',
+            'cedula_evaluador'        => 'required|string|min:4|max:50',
+            'institucion_evaluador'   => 'nullable|string|max:150',
+            'calificaciones'          => 'required|array|min:1',
+            'calificaciones.*'        => 'required|numeric|min:1|max:20',
+            'observaciones_individuales' => 'nullable|array',
+            'observacion_cualitativa' => 'required|string|min:15|max:2000',
+            'nivel_logro_cualitativo' => 'required|in:Logrado con Excelencia,Logrado,En Proceso,No Logrado',
+        ], [
+            'nombre_evaluador.required'        => 'Debe ingresar su nombre completo como evaluador.',
+            'cedula_evaluador.required'        => 'Debe ingresar su cédula de identidad.',
+            'calificaciones.required'          => 'Debe asignar la calificación a cada estudiante del equipo.',
+            'calificaciones.*.min'             => 'La calificación mínima permitida en la escala oficial es 1.00 punto.',
+            'calificaciones.*.max'             => 'La calificación máxima permitida en la escala oficial es 20.00 puntos.',
+            'observacion_cualitativa.required' => 'La observación y síntesis cualitativa de la socialización es obligatoria.',
+            'observacion_cualitativa.min'      => 'La observación cualitativa debe contener al menos 15 caracteres descriptivos.',
+            'nivel_logro_cualitativo.required' => 'Debe seleccionar un nivel de logro cualitativo oficial.',
+        ]);
+
+        DB::transaction(function () use ($request, $token, $proyecto) {
+            $idProyecto = $proyecto->pco_id;
+            $idEquipo = $proyecto->pco_id_equ;
+            $rol = $request->rol_evaluador;
+
+            $recorrido = DB::table('recorrido_evaluacion_semestral')
+                ->where('id_proyecto', $idProyecto)
+                ->where('semestre', 'Semestre 2')
+                ->first();
+
+            $idRecorrido = $recorrido?->id_recorrido;
+
+            $calificaciones = $request->input('calificaciones', []);
+            $obsIndividuales = $request->input('observaciones_individuales', []);
+
+            $suma = 0;
+            $conteo = 0;
+
+            foreach ($calificaciones as $idEstudiante => $nota) {
+                $notaVal = round(floatval($nota), 2);
+                $suma += $notaVal;
+                $conteo++;
+
+                DB::table('evaluaciones_jurado_estudiante')->updateOrInsert(
+                    [
+                        'id_proyecto'      => $idProyecto,
+                        'cedula_evaluador' => trim($request->cedula_evaluador),
+                        'id_estudiante'    => (int) $idEstudiante,
+                    ],
+                    [
+                        'id_equipo'              => $idEquipo,
+                        'id_recorrido'           => $idRecorrido,
+                        'token_usado'            => $token,
+                        'rol_evaluador'          => $rol,
+                        'nombre_evaluador'       => trim($request->nombre_evaluador),
+                        'institucion_evaluador'  => trim($request->institucion_evaluador ?? ''),
+                        'calificacion'           => $notaVal,
+                        'observacion_individual' => $obsIndividuales[$idEstudiante] ?? null,
+                        'observacion_general'    => trim($request->observacion_cualitativa),
+                        'nivel_logro'            => $request->nivel_logro_cualitativo,
+                        'updated_at'             => now(),
+                        'created_at'             => now(),
+                    ]
+                );
+            }
+
+            $promedioEquipo = $conteo > 0 ? round($suma / $conteo, 2) : 0;
+
+            // Registrar o actualizar en la tabla unificada evaluaciones_emitidas
+            if ($idRecorrido) {
+                $queryEval = DB::table('evaluaciones_emitidas')
+                    ->where('id_recorrido', $idRecorrido)
+                    ->where('rol_evaluador', $rol);
+
+                $evalExistente = $queryEval->first();
+
+                $obsCompleta = "EVALUADOR: {$request->nombre_evaluador} (C.I. {$request->cedula_evaluador}) - {$request->institucion_evaluador}\n"
+                             . "OBSERVACIÓN: {$request->observacion_cualitativa}";
+
+                if ($evalExistente) {
+                    DB::table('evaluaciones_emitidas')
+                        ->where('id_evaluacion', $evalExistente->id_evaluacion)
+                        ->update([
+                            'subtotal_cuantitativo'   => $promedioEquipo,
+                            'observacion_cualitativa' => $obsCompleta,
+                            'nivel_logro_cualitativo' => $request->nivel_logro_cualitativo,
+                            'estado'                  => 'consolidado',
+                            'updated_at'              => now(),
+                        ]);
+                } else {
+                    DB::table('evaluaciones_emitidas')->insert([
+                        'id_recorrido'            => $idRecorrido,
+                        'id_proyecto'             => $idProyecto,
+                        'rol_evaluador'           => $rol,
+                        'subtotal_cuantitativo'   => $promedioEquipo,
+                        'observacion_cualitativa' => $obsCompleta,
+                        'nivel_logro_cualitativo' => $request->nivel_logro_cualitativo,
+                        'estado'                  => 'consolidado',
+                        'created_at'              => now(),
+                        'updated_at'              => now(),
+                    ]);
+                }
+
+                // Recalcular consolidado en el recorrido
+                $this->evaluacionService->calcularConsolidadoSemestre($idRecorrido);
+            }
+
+            // Si existe socialización final registrada, sincronizar integrante_socializacion
+            $socFinal = DB::table('socializacion as s')
+                ->join('tipo_socializacion as ts', 'ts.tso_id', '=', 's.soc_id_tso')
+                ->where('s.soc_id_equ', $idEquipo)
+                ->where('ts.tso_orden', 2)
+                ->where('s.soc_status', true)
+                ->select('s.soc_id')
+                ->first();
+
+            if ($socFinal) {
+                $metricasAsist = $this->evaluacionService->calcularMetricasIndividualesEquipo((int) $idEquipo, (int) $idProyecto);
+                foreach ($calificaciones as $idEstudiante => $nota) {
+                    $reprobInasist = (bool) ($metricasAsist[(int) $idEstudiante]['reprobado_inasistencia'] ?? false);
+                    $aprobIndiv = !$reprobInasist && floatval($nota) >= 16.00;
+                    $justifText = $reprobInasist
+                        ? "REPROBADO POR INASISTENCIA (>25% faltas). Calificación ({$rol}): {$nota} pts"
+                        : "Calificación Socialización Final ({$rol}): {$nota} pts (Mín. PNF 16.00)";
+
+                    DB::table('integrante_socializacion')->updateOrInsert(
+                        [
+                            'iso_id_soc' => $socFinal->soc_id,
+                            'iso_id_usu' => (int) $idEstudiante,
+                        ],
+                        [
+                            'iso_asistio'       => true,
+                            'iso_avanza'        => $aprobIndiv,
+                            'iso_justificacion' => $justifText,
+                        ]
+                    );
+                }
+
+                DB::table('socializacion')->where('soc_id', $socFinal->soc_id)->update([
+                    'soc_apto'       => true,
+                    'soc_aprobado'   => $promedioEquipo >= 16.00,
+                    'soc_updated_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', '¡Calificación de Socialización registrada exitosamente! Se ha consolidado la evaluación del equipo y de cada estudiante.');
     }
 }

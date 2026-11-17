@@ -183,6 +183,9 @@
                         <Link href="/coordinador/resultados" class="sb-lnk">
                             <i class="bi bi-trophy"></i> Resultados
                         </Link>
+                        <Link href="/coordinador/transicion-semestral" class="sb-lnk">
+                            <i class="bi bi-arrow-left-right"></i> Transición Semestral
+                        </Link>
                     </div>
 
                     <!-- Sistema — desplegable -->
@@ -510,6 +513,24 @@
                                                 <i
                                                     class="bi bi-mortarboard-fill"
                                                 ></i>
+                                            </button>
+                                            <!-- Botón Socialización Final y Evaluación (4 Actores y PIN) -->
+                                            <button
+                                                v-if="equ.proyecto_comunidad || equ.proyectoComunidad || !esEquipoImpar(equ)"
+                                                class="btn btn-sm btn-outline-danger me-1"
+                                                @click="abrirModalSocializacion(equ)"
+                                                title="Socialización Final y Evaluación (PIN y 4 Actores)"
+                                            >
+                                                <i class="bi bi-award-fill"></i>
+                                            </button>
+                                            <!-- Botón Promoción Semestral a Par (Coordinador) -->
+                                            <button
+                                                v-if="!esProfesor && esEquipoImpar(equ)"
+                                                class="btn btn-sm btn-outline-primary me-1"
+                                                @click="promoverEquipoDirecto(equ)"
+                                                title="Promover a Semestre Par (Transición Semestral)"
+                                            >
+                                                <i class="bi bi-rocket-takeoff-fill"></i>
                                             </button>
                                             <a
                                                 v-if="equ.resultado_proyecto"
@@ -1314,6 +1335,61 @@
                                             </button>
                                         </div>
                                     </div>
+                                    <!-- Radar de Comunidad en Vivo (Crear Equipo) -->
+                                    <div class="col-12" v-if="formProyecto.pco_id_com">
+                                        <div class="p-3 rounded-3 border bg-light small">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold text-dark text-uppercase">
+                                                    <i class="bi bi-radar text-danger me-1"></i>
+                                                    Radar de Comunidad: {{ radarCrear?.comunidad?.com_nombre || 'Consultando...' }}
+                                                </span>
+                                                <span v-if="loadingRadarCrear" class="spinner-border spinner-border-sm text-danger"></span>
+                                                <span v-else-if="radarCrear" class="badge bg-dark">
+                                                    {{ radarCrear.proyectos_activos?.length || 0 }} activos &bull; {{ radarCrear.proyectos_culminados?.length || 0 }} culminados
+                                                </span>
+                                            </div>
+                                            <div
+                                                v-if="radarCrear?.alerta_similitud?.existe"
+                                                class="alert p-2 mb-2 rounded-3"
+                                                :class="radarCrear.alerta_similitud.es_critico ? 'alert-danger border-danger' : 'alert-warning border-warning'"
+                                            >
+                                                <div class="fw-bold mb-1">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                    Posible Proyecto Repetido (Similitud del {{ radarCrear.alerta_similitud.porcentaje }}%)
+                                                </div>
+                                                <p class="mb-2">{{ radarCrear.alerta_similitud.mensaje }}</p>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-dark fw-bold"
+                                                    @click="marcarContinuacionEqu('crear')"
+                                                >
+                                                    <i class="bi bi-diagram-2-fill text-danger me-1"></i>
+                                                    Marcar como Continuación / Escalamiento
+                                                </button>
+                                            </div>
+                                            <div v-if="radarCrear && radarCrear.total_historico > 0" class="row g-2">
+                                                <div class="col-md-6" v-if="radarCrear.proyectos_activos?.length">
+                                                    <div class="fw-bold text-danger mb-1">Proyectos en desarrollo:</div>
+                                                    <ul class="list-unstyled mb-0">
+                                                        <li v-for="pa in radarCrear.proyectos_activos" :key="pa.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
+                                                            <strong>{{ pa.equ_codigo }}</strong>: {{ pa.equ_titulo }}
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6" v-if="radarCrear.proyectos_culminados?.length">
+                                                    <div class="fw-bold text-success mb-1">Culminados previamente:</div>
+                                                    <ul class="list-unstyled mb-0">
+                                                        <li v-for="pc in radarCrear.proyectos_culminados" :key="pc.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
+                                                            <strong>{{ pc.equ_codigo }}</strong>: {{ pc.equ_titulo }}
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div v-else-if="radarCrear && !loadingRadarCrear" class="text-success fw-semibold">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Comunidad sin proyectos previos registrados.
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold"
                                             >Tipo de Proyecto</label
@@ -1723,6 +1799,62 @@
                                     >
                                         <i class="bi bi-plus-lg me-1"></i>Nueva
                                     </button>
+                                </div>
+                            </div>
+
+                            <!-- Radar de Comunidad en Vivo (Editar Equipo) -->
+                            <div class="mb-3" v-if="formEditar.pco_id_com">
+                                <div class="p-3 rounded-3 border bg-light small">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-dark text-uppercase">
+                                            <i class="bi bi-radar text-danger me-1"></i>
+                                            Radar de Comunidad: {{ radarEditar?.comunidad?.com_nombre || 'Consultando...' }}
+                                        </span>
+                                        <span v-if="loadingRadarEditar" class="spinner-border spinner-border-sm text-danger"></span>
+                                        <span v-else-if="radarEditar" class="badge bg-dark">
+                                            {{ radarEditar.proyectos_activos?.length || 0 }} activos &bull; {{ radarEditar.proyectos_culminados?.length || 0 }} culminados
+                                        </span>
+                                    </div>
+                                    <div
+                                        v-if="radarEditar?.alerta_similitud?.existe"
+                                        class="alert p-2 mb-2 rounded-3"
+                                        :class="radarEditar.alerta_similitud.es_critico ? 'alert-danger border-danger' : 'alert-warning border-warning'"
+                                    >
+                                        <div class="fw-bold mb-1">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                            Posible Proyecto Repetido (Similitud del {{ radarEditar.alerta_similitud.porcentaje }}%)
+                                        </div>
+                                        <p class="mb-2">{{ radarEditar.alerta_similitud.mensaje }}</p>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-dark fw-bold"
+                                            @click="marcarContinuacionEqu('editar')"
+                                        >
+                                            <i class="bi bi-diagram-2-fill text-danger me-1"></i>
+                                            Marcar como Continuación / Escalamiento
+                                        </button>
+                                    </div>
+                                    <div v-if="radarEditar && radarEditar.total_historico > 0" class="row g-2">
+                                        <div class="col-md-6" v-if="radarEditar.proyectos_activos?.length">
+                                            <div class="fw-bold text-danger mb-1">Proyectos en desarrollo:</div>
+                                            <ul class="list-unstyled mb-0">
+                                                <li v-for="pa in radarEditar.proyectos_activos" :key="pa.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
+                                                    <strong>{{ pa.equ_codigo }}</strong>: {{ pa.equ_titulo }}
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6" v-if="radarEditar.proyectos_culminados?.length">
+                                            <div class="fw-bold text-success mb-1">Culminados previamente:</div>
+                                            <ul class="list-unstyled mb-0">
+                                                <li v-for="pc in radarEditar.proyectos_culminados" :key="pc.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
+                                                    <strong>{{ pc.equ_codigo }}</strong>: {{ pc.equ_titulo }}
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div v-else-if="radarEditar && !loadingRadarEditar" class="text-success fw-semibold">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Comunidad sin otros proyectos registrados.
+                                    </div>
                                 </div>
                             </div>
 
@@ -3192,6 +3324,284 @@
             </div>
         </div>
 
+        <!-- Modal Socialización Final y Evaluación (4 Actores y PIN) -->
+        <div class="modal fade" id="mSocFinalModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; background: var(--bg-card);">
+                    <div class="mh" style="background: #1a1d23; border-bottom: 2px solid #dc3545; padding: 1.1rem 1.4rem; color: #fff; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-award-fill text-danger fs-4"></i>
+                            <div>
+                                <h5 class="fw-bold m-0 text-white">Socialización Final y Evaluación — {{ equipoSocFinal?.equ_codigo }}</h5>
+                                <div class="small text-white-50">{{ equipoSocFinal?.equ_titulo || 'Proyecto Sociotecnológico' }}</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm text-white fs-5 p-0" data-bs-dismiss="modal">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <!-- CASO 1: YA TIENE FECHA DE SOCIALIZACIÓN FINAL -->
+                        <div v-if="socFinalActual?.soc_fecha">
+                            <div class="alert alert-success d-flex align-items-center justify-content-between p-3 rounded mb-4">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-calendar-check-fill text-success fs-3"></i>
+                                    <div>
+                                        <div class="fw-bold text-success">Socialización Final Programada</div>
+                                        <div class="small text-dark">
+                                            <strong>Fecha:</strong> {{ socFinalActual.soc_fecha }}
+                                            <span v-if="socFinalActual.soc_hora"> &bull; <strong>Hora:</strong> {{ socFinalActual.soc_hora }}</span>
+                                            &bull; <strong>Lugar:</strong> {{ socFinalActual.soc_lugar }}
+                                            <span
+                                                v-if="formSocFinal.entrega_cd_informe"
+                                                class="badge bg-success ms-2"
+                                            >
+                                                <i class="bi bi-disc-fill me-1"></i>CD / Informe Entregado
+                                            </span>
+                                            <span v-else class="badge bg-warning text-dark ms-2">
+                                                <i class="bi bi-exclamation-circle me-1"></i>CD / Informe Pendiente
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary" @click="mostrarReprogramar = !mostrarReprogramar">
+                                    <i class="bi bi-pencil me-1"></i> {{ mostrarReprogramar ? 'Ocultar' : 'Reprogramar' }}
+                                </button>
+                            </div>
+
+                            <!-- Formulario de Reprogramación (Colapsable) -->
+                            <div v-if="mostrarReprogramar" class="p-3 mb-4 border rounded bg-light">
+                                <h6 class="fw-bold mb-2 text-dark">Modificar Fecha, Lugar o Entrega de CD/Informe</h6>
+                                <form @submit.prevent="guardarFechaSocFinal">
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold">Fecha <span class="text-danger">*</span></label>
+                                            <input v-model="formSocFinal.fecha" type="date" class="form-control form-control-sm" required />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold">Hora</label>
+                                            <input v-model="formSocFinal.hora" type="time" class="form-control form-control-sm" />
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label small fw-bold">Lugar <span class="text-danger">*</span></label>
+                                            <input v-model="formSocFinal.lugar" type="text" class="form-control form-control-sm" required />
+                                        </div>
+                                        <div class="col-12 mt-2">
+                                            <div class="form-check form-switch">
+                                                <input
+                                                    v-model="formSocFinal.entrega_cd_informe"
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    id="chkCdReprog"
+                                                />
+                                                <label class="form-check-label fw-bold small text-dark" for="chkCdReprog">
+                                                    <i class="bi bi-disc-fill text-danger me-1"></i>
+                                                    El equipo entregó el CD / Informe Final (Físico y Digital)
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 text-end mt-2">
+                                            <button type="submit" class="btn btn-sm btn-danger fw-bold rounded-pill px-3" :disabled="loadingSocFinal">
+                                                <span v-if="loadingSocFinal" class="spinner-border spinner-border-sm me-1"></span>
+                                                Guardar Cambios
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Link Temporal para Jurado y Vocero Comunitario (Vigencia 12 Horas) -->
+                            <div class="card border-2 border-danger shadow-sm rounded-4 bg-white p-4 mb-4">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                                    <div>
+                                        <span class="badge bg-danger text-uppercase fw-bold px-2 py-1 small">Seguridad y Evaluación en Vivo</span>
+                                        <h5 class="fw-bold text-dark m-0 mt-1">
+                                            <i class="bi bi-link-45deg text-danger fs-4 me-1"></i>
+                                            Enlace Temporal para Jurado y Vocero (Vigencia 12 Horas)
+                                        </h5>
+                                        <small class="text-muted">
+                                            Permite al jurado consultar los antecedentes del proyecto, expediente por estudiante y calificar en tiempo real.
+                                        </small>
+                                    </div>
+
+                                    <!-- Estado de Vigencia -->
+                                    <div>
+                                        <span v-if="linkJuradoVigente" class="badge bg-success text-white fw-bold px-3 py-2 fs-6 rounded-pill shadow-sm">
+                                            <i class="bi bi-clock-history me-1"></i> Vigente &bull; {{ tiempoRestanteJuradoTexto }}
+                                        </span>
+                                        <span v-else-if="linkJuradoUrl" class="badge bg-danger text-white fw-bold px-3 py-2 fs-6 rounded-pill shadow-sm">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Enlace Expirado (12h superadas)
+                                        </span>
+                                        <span v-else class="badge bg-secondary text-white fw-bold px-3 py-2 fs-6 rounded-pill">
+                                            <i class="bi bi-hourglass me-1"></i> Pendiente por Generar
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Si el enlace ya fue generado -->
+                                <div v-if="linkJuradoUrl" class="mb-3">
+                                    <label class="form-label small fw-bold text-dark">URL Única de Acceso Temporal para Compartir:</label>
+                                    <div class="input-group input-group-lg mb-2">
+                                        <input
+                                            type="text"
+                                            class="form-control font-monospace bg-light border-dark fs-6"
+                                            :value="linkJuradoUrl"
+                                            readonly
+                                            @click="$event.target.select()"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="btn fw-bold px-4"
+                                            :class="copiadoLink ? 'btn-success text-white' : 'btn-danger text-white'"
+                                            @click="copiarLinkJurado"
+                                            style="min-height: 48px;"
+                                        >
+                                            <i :class="copiadoLink ? 'bi bi-check-lg' : 'bi bi-clipboard'" class="me-1"></i>
+                                            {{ copiadoLink ? '¡Enlace Copiado!' : 'Copiar Link' }}
+                                        </button>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 small">
+                                        <div class="text-muted">
+                                            <i class="bi bi-shield-check text-success me-1"></i>
+                                            <strong>Expira:</strong> {{ formatearFechaHora(linkJuradoExpiraAt) }}
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <a :href="linkJuradoUrl" target="_blank" class="btn btn-sm btn-outline-dark fw-bold">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i> Abrir Panel de Jurado
+                                            </a>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-danger fw-bold"
+                                                @click="generarLinkTemporalJurado"
+                                                :disabled="loadingGenerarLink"
+                                            >
+                                                <span v-if="loadingGenerarLink" class="spinner-border spinner-border-sm me-1"></span>
+                                                <i v-else class="bi bi-arrow-repeat me-1"></i>
+                                                {{ linkJuradoVigente ? 'Regenerar Enlace' : 'Generar Nuevo Enlace' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Si aún no se ha generado enlace -->
+                                <div v-else class="text-center py-4 bg-light rounded-3 border">
+                                    <p class="text-dark small mb-3">
+                                        Genere el enlace temporal único con vigencia de 12 horas para enviarlo por mensajería o correo al Jurado Evaluador y Vocero Comunitario.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        class="btn btn-danger btn-lg px-4 py-2 fw-bold rounded-pill shadow-sm"
+                                        @click="generarLinkTemporalJurado"
+                                        :disabled="loadingGenerarLink"
+                                        style="min-height: 48px;"
+                                    >
+                                        <span v-if="loadingGenerarLink" class="spinner-border spinner-border-sm me-2"></span>
+                                        <i v-else class="bi bi-lightning-charge-fill me-2"></i>
+                                        Generar Enlace Temporal para Jurado (12 Horas)
+                                    </button>
+                                </div>
+
+                                <!-- PIN de Defensa secundario -->
+                                <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 text-muted small">
+                                    <div>
+                                        <span class="fw-bold text-dark me-1">PIN de Respaldo:</span>
+                                        <span class="badge bg-dark font-monospace fs-6 text-warning">{{ equipoSocFinal?.proyecto_comunidad?.pin_defensa || '123456' }}</span>
+                                    </div>
+                                    <button class="btn btn-link btn-sm text-secondary p-0 text-decoration-none" @click="copiarTexto(equipoSocFinal?.proyecto_comunidad?.pin_defensa)">
+                                        <i class="bi bi-clipboard me-1"></i> Copiar PIN
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Botón de Acceso al Módulo de Evaluación de los 4 Actores -->
+                            <div class="text-center p-3 border rounded bg-white">
+                                <h6 class="fw-bold mb-1 text-dark">Módulo de Evaluación Final y Rúbricas (Semestre 2)</h6>
+                                <p class="small text-muted mb-3">
+                                    Consolida las calificaciones de los 4 actores oficiales: <strong>Docente de Proyecto (40%)</strong>, <strong>Jurado Evaluador (30%)</strong>, <strong>Representante Comunitario (20%)</strong> y <strong>Autoevaluación Estudiantil (10%)</strong>.
+                                </p>
+                                <a
+                                    v-if="equipoSocFinal?.proyecto_comunidad?.pco_id"
+                                    :href="'/evaluaciones/recorrido/' + equipoSocFinal.proyecto_comunidad.pco_id"
+                                    class="btn btn-danger fw-bold px-4 py-2 rounded-pill shadow-sm"
+                                    style="min-height: 48px; font-size: 1rem;"
+                                >
+                                    <i class="bi bi-award-fill me-2"></i>
+                                    Abrir Módulo de Evaluación de los 4 Actores
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- CASO 2: NO TIENE FECHA DE SOCIALIZACIÓN FINAL (REGLA DE VISIBILIDAD ESTRICTA) -->
+                        <div v-else>
+                            <div class="alert alert-warning p-4 rounded-3 border-warning mb-4">
+                                <div class="d-flex align-items-start gap-3">
+                                    <i class="bi bi-calendar-x-fill text-warning fs-2 mt-1"></i>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Fecha de Socialización Final Pendiente</h5>
+                                        <p class="small text-muted mb-0" style="line-height: 1.6;">
+                                            Por directriz institucional UPTP y auditoría académica, el <strong>PIN de defensa</strong> y el <strong>módulo de evaluación de notas</strong> permanecen bloqueados e inactivos hasta que se seleccione y guarde la <strong>Fecha y Lugar</strong> del acto de Socialización Final.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Formulario para Registrar Fecha de Socialización Final -->
+                            <div class="card border p-4 shadow-sm bg-light">
+                                <h6 class="fw-bold mb-3 text-dark">
+                                    <i class="bi bi-calendar-plus text-danger me-2"></i>
+                                    Programar Socialización Final
+                                </h6>
+                                <form @submit.prevent="guardarFechaSocFinal">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Fecha del Acto <span class="text-danger">*</span></label>
+                                            <input v-model="formSocFinal.fecha" type="date" class="form-control" required />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">Hora</label>
+                                            <input v-model="formSocFinal.hora" type="time" class="form-control" />
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label fw-bold">Lugar del Acto <span class="text-danger">*</span></label>
+                                            <input v-model="formSocFinal.lugar" type="text" class="form-control" placeholder="Ej: Aula 4 UPTP, Auditorio" required />
+                                        </div>
+                                        <div class="col-12 mt-3">
+                                            <div class="form-check form-switch p-3 bg-white border rounded-3">
+                                                <input
+                                                    v-model="formSocFinal.entrega_cd_informe"
+                                                    class="form-check-input ms-0 me-2"
+                                                    type="checkbox"
+                                                    id="chkCdInicial"
+                                                />
+                                                <label class="form-check-label fw-bold text-dark" for="chkCdInicial">
+                                                    <i class="bi bi-disc-fill text-danger me-1"></i>
+                                                    Confirmar entrega de CD / Informe Final (Físico y Digital)
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 text-end mt-4">
+                                            <button type="submit" class="btn btn-danger fw-bold px-4 py-2 rounded-pill shadow-sm" :disabled="loadingSocFinal" style="min-height: 48px;">
+                                                <span v-if="loadingSocFinal" class="spinner-border spinner-border-sm me-2"></span>
+                                                <i v-else class="bi bi-check-circle-fill me-1"></i>
+                                                Guardar Fecha y Habilitar Evaluación Final
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light border-top">
+                        <button type="button" class="btn btn-secondary px-4 fw-bold rounded-pill" data-bs-dismiss="modal">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Detalle Interactivo de Actividad del Historial -->
         <div
             class="modal fade"
@@ -3681,6 +4091,171 @@ const ejecutarLogout = () => {
     router.post("/logout");
 };
 
+// Socialización Final y Evaluación (4 Actores & PIN)
+const equipoSocFinal = ref(null);
+const socFinalActual = ref(null);
+const mostrarReprogramar = ref(false);
+const loadingSocFinal = ref(false);
+const formSocFinal = ref({
+    fecha: "",
+    hora: "",
+    lugar: "",
+});
+
+// Enlace Temporal para Jurado (Vigencia 12 Horas)
+const linkJuradoUrl = ref("");
+const linkJuradoExpiraAt = ref("");
+const copiadoLink = ref(false);
+const loadingGenerarLink = ref(false);
+
+const linkJuradoVigente = computed(() => {
+    if (!linkJuradoExpiraAt.value) return false;
+    return new Date(linkJuradoExpiraAt.value) > new Date();
+});
+
+const tiempoRestanteJuradoTexto = computed(() => {
+    if (!linkJuradoExpiraAt.value) return "";
+    const diffMs = new Date(linkJuradoExpiraAt.value) - new Date();
+    if (diffMs <= 0) return "Expirado";
+    const hrs = Math.floor(diffMs / 3600000);
+    const mins = Math.floor((diffMs % 3600000) / 60000);
+    return `Quedan ${hrs}h ${mins}m`;
+});
+
+const formatearFechaHora = (f) => {
+    if (!f) return "No disponible";
+    const d = new Date(f);
+    return d.toLocaleString("es-VE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+    });
+};
+
+const copiarLinkJurado = () => {
+    if (!linkJuradoUrl.value) return;
+    navigator.clipboard.writeText(linkJuradoUrl.value);
+    copiadoLink.value = true;
+    setTimeout(() => {
+        copiadoLink.value = false;
+    }, 2500);
+};
+
+const generarLinkTemporalJurado = async () => {
+    if (!equipoSocFinal.value) return;
+    loadingGenerarLink.value = true;
+    try {
+        const prefix = esProfesor.value ? "profesor" : "coordinador";
+        const url = `/${prefix}/equipos/${equipoSocFinal.value.equ_id}/generar-link-jurado`;
+        const res = await window.axios.post(url);
+        if (res.data?.success) {
+            linkJuradoUrl.value = res.data.link;
+            linkJuradoExpiraAt.value = res.data.expira_at;
+            if (!equipoSocFinal.value.proyecto_comunidad) {
+                equipoSocFinal.value.proyecto_comunidad = {};
+            }
+            equipoSocFinal.value.proyecto_comunidad.token_jurado = res.data.token;
+            equipoSocFinal.value.proyecto_comunidad.token_jurado_expira_at = res.data.expira_at;
+            if (res.data.pin) {
+                equipoSocFinal.value.proyecto_comunidad.pin_defensa = res.data.pin;
+            }
+            if (res.data.id_proyecto) {
+                equipoSocFinal.value.proyecto_comunidad.pco_id = res.data.id_proyecto;
+            }
+        }
+    } catch (e) {
+        console.error("Error generando link jurado:", e);
+        const msg = e.response?.data?.message || e.message || "Ocurrió un error al generar el enlace temporal.";
+        alert(msg);
+    } finally {
+        loadingGenerarLink.value = false;
+    }
+};
+
+const abrirModalSocializacion = (equ) => {
+    equipoSocFinal.value = equ;
+    mostrarReprogramar.value = false;
+    const sf = (equ.socializaciones || []).find(
+        (s) => s.tipo_socializacion?.tso_orden === 2 || s.soc_id_tso === 2
+    );
+    socFinalActual.value = sf || null;
+    formSocFinal.value = {
+        fecha: sf?.soc_fecha || "",
+        hora: sf?.soc_hora || "",
+        lugar: sf?.soc_lugar || "",
+        entrega_cd_informe: String(sf?.soc_observaciones || "").includes("[CD/INFORME ENTREGADO]"),
+    };
+
+    const pc = equ.proyecto_comunidad || equ.proyectoComunidad;
+    if (pc?.token_jurado) {
+        linkJuradoUrl.value = window.location.origin + "/evaluacion-jurado/" + pc.token_jurado;
+        linkJuradoExpiraAt.value = pc.token_jurado_expira_at || "";
+    } else {
+        linkJuradoUrl.value = "";
+        linkJuradoExpiraAt.value = "";
+    }
+    copiadoLink.value = false;
+
+    const modal = new Modal(document.getElementById("mSocFinalModal"));
+    modal.show();
+};
+
+const guardarFechaSocFinal = () => {
+    if (!equipoSocFinal.value) return;
+    loadingSocFinal.value = true;
+    const prefix = currentRole.value === 'profesor' ? 'profesor' : 'coordinador';
+    router.post(`/${prefix}/socializaciones/programar-final`, {
+        id_equipo: equipoSocFinal.value.equ_id,
+        fecha: formSocFinal.value.fecha,
+        hora: formSocFinal.value.hora,
+        lugar: formSocFinal.value.lugar,
+        entrega_cd_informe: formSocFinal.value.entrega_cd_informe,
+    }, {
+        onSuccess: () => {
+            loadingSocFinal.value = false;
+            mostrarReprogramar.value = false;
+            if (!socFinalActual.value) {
+                socFinalActual.value = {
+                    soc_fecha: formSocFinal.value.fecha,
+                    soc_hora: formSocFinal.value.hora,
+                    soc_lugar: formSocFinal.value.lugar,
+                };
+            } else {
+                socFinalActual.value.soc_fecha = formSocFinal.value.fecha;
+                socFinalActual.value.soc_hora = formSocFinal.value.hora;
+                socFinalActual.value.soc_lugar = formSocFinal.value.lugar;
+            }
+        },
+        onError: () => {
+            loadingSocFinal.value = false;
+        }
+    });
+};
+
+const copiarTexto = (txt) => {
+    if (!txt) return;
+    navigator.clipboard.writeText(String(txt));
+    alert("PIN copiado al portapapeles: " + txt);
+};
+
+// Promoción a Semestre Par (Transición Semestral)
+const esEquipoImpar = (equ) => {
+    const secCodigo = String(equ.seccion?.sec_codigo || "");
+    const primerDigito = parseInt(secCodigo.charAt(0));
+    return !isNaN(primerDigito) && primerDigito % 2 !== 0;
+};
+
+const promoverEquipoDirecto = (equ) => {
+    const secCodigo = String(equ.seccion?.sec_codigo || "");
+    const primerDigito = parseInt(secCodigo.charAt(0));
+    const nuevoCodigo = (primerDigito + 1) + secCodigo.substring(1);
+    if (!confirm(`¿Confirmas promover el equipo ${equ.equ_codigo} de la sección impar ${secCodigo} a la sección par ${nuevoCodigo} (Transición Semestral)?\n\nSe congelará su historial del Semestre 1 y se habilitará el Semestre 2 conservando todas las notas acumuladas.`)) return;
+    router.post(`/coordinador/transicion-semestral/equipo/${equ.equ_id}`);
+};
+
 // Historial Académico
 const equipoHistorial = ref(null);
 const cargandoHistorialAcademico = ref(false);
@@ -3838,6 +4413,76 @@ const formProyecto = ref({
     pco_resumen: "",
     beneficiarios: [],
 });
+
+// Radar de Comunidad y Detector Anti-Duplicidad en Vivo
+const radarCrear = ref(null);
+const loadingRadarCrear = ref(false);
+const radarEditar = ref(null);
+const loadingRadarEditar = ref(false);
+let timerRadarCrear = null;
+let timerRadarEditar = null;
+
+const consultarRadarEqu = async (modo) => {
+    const comId = modo === "crear" ? formProyecto.value.pco_id_com : formEditar.value.pco_id_com;
+    const titulo = modo === "crear" ? formCrear.value.equ_titulo : formEditar.value.equ_titulo;
+    const equipoId = modo === "editar" ? equipoEditando.value?.equ_id || "" : "";
+
+    if (!comId) {
+        if (modo === "crear") radarCrear.value = null;
+        else radarEditar.value = null;
+        return;
+    }
+
+    if (modo === "crear") loadingRadarCrear.value = true;
+    else loadingRadarEditar.value = true;
+
+    try {
+        const res = await axios.get(`/api/comunidades/${comId}/radar-proyectos`, {
+            params: { titulo: titulo || "", equipo_id: equipoId },
+        });
+        if (modo === "crear") radarCrear.value = res.data;
+        else radarEditar.value = res.data;
+    } catch (e) {
+        console.error("Error en Radar de Comunidad:", e);
+    } finally {
+        if (modo === "crear") loadingRadarCrear.value = false;
+        else loadingRadarEditar.value = false;
+    }
+};
+
+watch(
+    () => [formProyecto.value.pco_id_com, formCrear.value.equ_titulo],
+    () => {
+        clearTimeout(timerRadarCrear);
+        timerRadarCrear = setTimeout(() => consultarRadarEqu("crear"), 350);
+    }
+);
+
+watch(
+    () => [formEditar.value.pco_id_com, formEditar.value.equ_titulo],
+    () => {
+        clearTimeout(timerRadarEditar);
+        timerRadarEditar = setTimeout(() => consultarRadarEqu("editar"), 350);
+    }
+);
+
+const marcarContinuacionEqu = (modo) => {
+    const modCont = (props.modalidades || []).find((m) =>
+        ["continuación", "continuacion", "reingeniería", "reingenieria"].includes(
+            (m.mpr_nombre || "").toLowerCase()
+        )
+    );
+    const radar = modo === "crear" ? radarCrear.value : radarEditar.value;
+    const pcoPrevId = radar?.alerta_similitud?.proyecto_coincidente?.pco_id || "";
+
+    if (modo === "crear") {
+        if (modCont) formProyecto.value.pco_id_mpr = modCont.mpr_id;
+        if (pcoPrevId) formProyecto.value.pco_id_pco_previo = pcoPrevId;
+    } else {
+        if (modCont) formEditar.value.pco_id_mpr = modCont.mpr_id;
+        if (pcoPrevId) formEditar.value.pco_id_pco_previo = pcoPrevId;
+    }
+};
 
 const integranteATrasladar = ref(null);
 const equipoDestinoId = ref("");

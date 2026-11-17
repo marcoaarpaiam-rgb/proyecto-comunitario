@@ -38,13 +38,14 @@ class SeccionController extends Controller
     public function index()
     {
         return Inertia::render('Coordinador/Secciones', [
-            'secciones' => Seccion::with(['trayecto', 'turno', 'profesorActual.usuario'])
+            'secciones'     => Seccion::with(['trayecto', 'turno', 'profesorActual.usuario'])
                 ->where('sec_status', true)
                 ->orderBy('sec_codigo')
                 ->get(),
-            'trayectos' => Trayecto::where('tra_status', true)->get(),
-            'turnos'    => Turno::where('tur_status', true)->get(),
-            'profesores'=> Usuario::where('usu_status', true)
+            'trayectos'     => Trayecto::where('tra_status', true)->get(),
+            'turnos'        => Turno::where('tur_status', true)->get(),
+            'periodoActivo' => \App\Models\PeriodoAcademico::periodoActivo(),
+            'profesores'    => Usuario::where('usu_status', true)
                 ->whereHas('usuarioRoles', fn($q) => $q->where('uro_status', true)
                     ->whereHas('rol', fn($r) => $r->where('rol_nombre', 'profesor_proyecto')))
                 ->orderBy('usu_primer_apellido')
@@ -84,10 +85,11 @@ class SeccionController extends Controller
             ])->withInput();
         }
 
+        $primerDigito = preg_match('/\d/', (string) $request->sec_codigo, $m) ? (int)$m[0] : null;
         $seccion = Seccion::create([
             'sec_codigo'         => $request->sec_codigo,
             'sec_id_tra'         => $request->sec_id_tra,
-            'sec_semestre'       => $request->sec_semestre ?? ($request->sec_id_tra ? ($request->sec_id_tra * 2 - 1) : 1),
+            'sec_semestre'       => $request->sec_semestre ?? ($primerDigito ?? ($request->sec_id_tra ? ($request->sec_id_tra * 2 - 1) : 1)),
             'sec_id_tur'         => $request->sec_id_tur,
             'sec_status'         => true,
             'sec_id_usu_created' => auth()->id(),
@@ -135,10 +137,11 @@ class SeccionController extends Controller
             ])->withInput();
         }
 
+        $primerDigito = preg_match('/\d/', (string) $request->sec_codigo, $m) ? (int)$m[0] : null;
         $seccion->update([
             'sec_codigo'         => $request->sec_codigo,
             'sec_id_tra'         => $request->sec_id_tra,
-            'sec_semestre'       => $request->sec_semestre ?? $seccion->sec_semestre,
+            'sec_semestre'       => $request->sec_semestre ?? ($primerDigito ?? $seccion->sec_semestre),
             'sec_id_tur'         => $request->sec_id_tur,
             'sec_id_usu_updated' => auth()->id(),
         ]);

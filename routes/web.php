@@ -238,6 +238,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::resource('comunidades', ComunidadController::class)
         ->parameters(['comunidades' => 'id'])
         ->except(['create', 'show', 'edit']);
+    Route::get('comunidades/{id}/radar-proyectos', [ComunidadController::class, 'radarProyectos'])
+        ->name('comunidades.radar-proyectos');
 
     Route::resource('secciones', SeccionController::class)
         ->parameters(['secciones' => 'id'])
@@ -257,6 +259,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
    Route::resource('equipos', EquipoController::class)
         ->parameters(['equipos' => 'id'])
         ->except(['create', 'show', 'edit']);
+   Route::post('equipos/{id_equipo}/generar-link-jurado', [EvaluacionTrayectoController::class, 'generarLinkJurado'])
+        ->name('equipos.generar-link-jurado');
 
     
 
@@ -305,6 +309,9 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::get('socializaciones',
         [SocializacionCoordController::class, 'index'])
         ->name('socializaciones.index');
+    Route::post('socializaciones/programar-final',
+        [SocializacionController::class, 'programarFinal'])
+        ->name('socializaciones.programar-final');
     
 
     Route::get('secciones/{id}/detalle',
@@ -325,6 +332,18 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::get('estudiantes/{id}/expediente', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'show'])
         ->name('estudiantes.expediente');
 
+    // Transición Semestral (Impar a Par)
+    Route::get('transicion-semestral', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'index'])
+        ->name('transicion-semestral.index');
+    Route::post('transicion-semestral/equipo/{id_equipo}', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'promoverEquipo'])
+        ->name('transicion-semestral.equipo');
+    Route::post('transicion-semestral/seccion/{id_sec}', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'promoverSeccion'])
+        ->name('transicion-semestral.seccion');
+    Route::post('transicion-semestral/equipo/{id_equipo}/repositorio', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'cerrarRepositorioEquipo'])
+        ->name('transicion-semestral.equipo.repositorio');
+    Route::post('transicion-semestral/seccion/{id_sec}/repositorio', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'cerrarRepositorioSeccion'])
+        ->name('transicion-semestral.seccion.repositorio');
+
     Route::get('cartas/{id}/descargar',
         [CartaController::class, 'descargar'])
         ->name('cartas.descargar');
@@ -332,6 +351,12 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     Route::get('configuracion', [ConfiguracionController::class, 'index'])
         ->name('configuracion.index');
+    Route::post('configuracion/lapso-academico',
+        [ConfiguracionController::class, 'guardarLapsoAcademico'])
+        ->name('configuracion.lapso');
+    Route::post('configuracion/lapso-academico/{id}/activar',
+        [ConfiguracionController::class, 'activarLapsoAcademico'])
+        ->name('configuracion.lapso.activar');
     Route::post('configuracion/firma',
         [ConfiguracionController::class, 'actualizarFirma'])
         ->name('configuracion.firma');
@@ -478,6 +503,12 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::post('socializaciones',
         [App\Http\Controllers\Profesor\SocializacionController::class, 'store'])
         ->name('socializaciones.store');
+    Route::post('socializaciones/programar-final',
+        [App\Http\Controllers\Profesor\SocializacionController::class, 'programarFinal'])
+        ->name('socializaciones.programar-final');
+    Route::post('equipos/{id_equipo}/generar-link-jurado',
+        [EvaluacionTrayectoController::class, 'generarLinkJurado'])
+        ->name('equipos.generar-link-jurado');
     Route::post('socializaciones/{id}/resultado',
         [App\Http\Controllers\Profesor\SocializacionController::class, 'registrarResultado'])
         ->name('socializaciones.resultado');
@@ -614,6 +645,9 @@ Route::middleware(['auth', 'rol:lider'])
 // =========================================================================
 // MOTOR DE EVALUACIÓN CUALITATIVA Y CUANTITATIVA POR TRAYECTO (SEMESTRES 1 Y 2)
 // =========================================================================
+Route::middleware(['auth'])->get('/api/comunidades/{id}/radar-proyectos', [ComunidadController::class, 'radarProyectos'])
+    ->name('api.comunidades.radar');
+
 Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->group(function () {
     Route::get('/', [EvaluacionTrayectoController::class, 'index'])->name('index');
     Route::get('/recorrido/{id_proyecto}', [EvaluacionTrayectoController::class, 'recorrido'])->name('recorrido');
@@ -621,11 +655,18 @@ Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->grou
     Route::post('/guardar', [EvaluacionTrayectoController::class, 'guardarEvaluacion'])->name('guardar');
     Route::get('/pdf/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarActaPdf'])->name('pdf');
     Route::post('/pin/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarPin'])->name('pin.generar');
+    Route::post('/socializacion-final/{id_proyecto}', [EvaluacionTrayectoController::class, 'guardarFechaSocializacion'])->name('socializacion.guardar');
     Route::post('/transicion/{id_equipo}', [EvaluacionTrayectoController::class, 'transicionSemestre'])->name('transicion.semestre');
     Route::post('/repositorio/{id_equipo}', [EvaluacionTrayectoController::class, 'enviarRepositorio'])->name('repositorio.enviar');
 });
 
-// Portal público para evaluación en vivo con PIN (Vocero Comunitario y Jurados)
+// Portal temporal para Jurados y Voceros Comunitarios (Vigencia estricta de 12 horas)
+Route::get('/evaluacion-jurado/{token}', [EvaluacionTrayectoController::class, 'panelJurado'])
+    ->name('evaluaciones.jurado.panel');
+Route::post('/evaluacion-jurado/{token}/calificar', [EvaluacionTrayectoController::class, 'guardarCalificacionJurado'])
+    ->name('evaluaciones.jurado.calificar');
+
+// Ruta informativa de acceso previo (desactivado por seguridad)
 Route::get('/evaluacion-invitado', [EvaluacionTrayectoController::class, 'mostrarAccesoInvitado'])
     ->name('evaluaciones.invitado');
 Route::post('/evaluacion-invitado', [EvaluacionTrayectoController::class, 'procesarAccesoInvitado'])

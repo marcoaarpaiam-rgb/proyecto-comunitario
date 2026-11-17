@@ -59,42 +59,174 @@
     </div>
 </div>
 
-<!-- Card de Acceso Rápido con PIN para Defensa en Vivo (TAREA 1) -->
-<div class="card shadow-sm border-0 mb-4 bg-dark text-white rounded-3 overflow-hidden">
-    <div class="card-body p-3 p-md-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div class="d-flex align-items-center gap-3">
-            <div class="p-3 bg-danger bg-opacity-25 rounded-circle text-danger fs-2 d-none d-sm-block">
-                <i class="bi bi-key-fill"></i>
+@if ($tieneFechaSocializacion)
+    @php
+        $cdEntregado = str_contains($socializacionFinal->soc_observaciones ?? '', '[CD/INFORME ENTREGADO]');
+    @endphp
+    <!-- Header Informativo de la Fecha de Socialización Final Programada -->
+    <div class="card shadow-sm border-0 mb-3 bg-light border-start border-success border-4">
+        <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <span class="badge bg-success px-3 py-1 text-uppercase fw-bold">
+                        <i class="bi bi-calendar-check-fill me-1"></i> Fecha de Socialización Final Programada
+                    </span>
+                    @if ($cdEntregado)
+                        <span class="badge bg-dark text-white px-3 py-1 fw-bold">
+                            <i class="bi bi-disc-fill me-1"></i> CD / Informe Entregado
+                        </span>
+                    @else
+                        <span class="badge bg-warning text-dark px-3 py-1 fw-bold">
+                            <i class="bi bi-exclamation-circle me-1"></i> CD / Informe Pendiente
+                        </span>
+                    @endif
+                </div>
+                <div class="fs-6 fw-bold text-dark mt-1">
+                    <i class="bi bi-calendar-event text-danger me-1"></i> {{ \Carbon\Carbon::parse($socializacionFinal->soc_fecha)->format('d/m/Y') }}
+                    @if ($socializacionFinal->soc_hora)
+                        &bull; <i class="bi bi-clock text-danger me-1"></i> {{ $socializacionFinal->soc_hora }}
+                    @endif
+                    &bull; <i class="bi bi-geo-alt text-danger me-1"></i> {{ $socializacionFinal->soc_lugar }}
+                </div>
             </div>
             <div>
-                <span class="badge bg-danger px-2 py-1 small text-uppercase">Acceso Rápido con PIN — Socialización Final</span>
-                <div class="d-flex align-items-baseline gap-2 mt-1">
-                    <span class="fs-1 fw-bold text-warning font-monospace" style="letter-spacing: 4px;">
-                        {{ $proyecto->pin_defensa ?: '123456' }}
-                    </span>
-                    <button class="btn btn-sm btn-outline-light border-0 text-white-50" onclick="navigator.clipboard.writeText('{{ $proyecto->pin_defensa }}'); alert('PIN copiado al portapapeles');" title="Copiar PIN">
-                        <i class="bi bi-clipboard"></i>
-                    </button>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill" type="button" data-bs-toggle="collapse" data-bs-target="#formCambiarFecha">
+                    <i class="bi bi-pencil me-1"></i> Reprogramar Fecha / Lugar / CD
+                </button>
+            </div>
+        </div>
+        <div class="collapse px-3 pb-3" id="formCambiarFecha">
+            <form action="{{ route('evaluaciones.socializacion.guardar', $proyecto->id_proyecto) }}" method="POST" class="p-3 bg-white border rounded">
+                @csrf
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">Nueva Fecha <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha" value="{{ $socializacionFinal->soc_fecha }}" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold small">Hora</label>
+                        <input type="time" name="hora" value="{{ $socializacionFinal->soc_hora }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small">Lugar <span class="text-danger">*</span></label>
+                        <input type="text" name="lugar" value="{{ $socializacionFinal->soc_lugar }}" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check p-2 border rounded bg-light" style="padding-left: 2rem !important;">
+                            <input class="form-check-input" type="checkbox" name="entrega_cd_informe" value="1" id="chkCdEditRecorrido" {{ $cdEntregado ? 'checked' : '' }}>
+                            <label class="form-check-label fw-bold small text-dark" for="chkCdEditRecorrido">
+                                Entregó CD / Informe
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end mt-2">
+                        <button type="submit" class="btn btn-sm btn-danger fw-bold rounded-pill px-3">
+                            <i class="bi bi-save me-1"></i> Guardar Cambios de Programación
+                        </button>
+                    </div>
                 </div>
-                <div class="text-white-50 small">
-                    Comparta este PIN con el <strong>Vocero Comunitario</strong> y los <strong>Jurados</strong> para calificar en tiempo real en: 
-                    <a href="{{ route('evaluaciones.invitado') }}" target="_blank" class="text-warning text-decoration-underline fw-bold">/evaluacion-invitado</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Card de Acceso Rápido con PIN para Defensa en Vivo (Solo visible con fecha guardada) -->
+    <div class="card shadow-sm border-0 mb-4 bg-dark text-white rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 bg-danger bg-opacity-25 rounded-circle text-danger fs-2 d-none d-sm-block">
+                    <i class="bi bi-key-fill"></i>
+                </div>
+                <div>
+                    <span class="badge bg-danger px-2 py-1 small text-uppercase">Acceso Rápido con PIN — Socialización Final</span>
+                    <div class="d-flex align-items-baseline gap-2 mt-1">
+                        <span class="fs-1 fw-bold text-warning font-monospace" style="letter-spacing: 4px;">
+                            {{ $proyecto->pin_defensa ?: '123456' }}
+                        </span>
+                        <button class="btn btn-sm btn-outline-light border-0 text-white-50" onclick="navigator.clipboard.writeText('{{ $proyecto->pin_defensa }}'); alert('PIN copiado al portapapeles');" title="Copiar PIN">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div class="text-white-50 small">
+                        @if (!empty($proyecto->token_jurado))
+                            Enlace temporal de 12 horas activo para Jurados: 
+                            <a href="{{ url('/evaluacion-jurado/' . $proyecto->token_jurado) }}" target="_blank" class="text-warning text-decoration-underline fw-bold">/evaluacion-jurado/{{ Str::limit($proyecto->token_jurado, 12) }}</a>
+                        @else
+                            Comparta este PIN y genere el enlace temporal de 12 horas en la gestión de equipos para calificar en tiempo real.
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <form action="{{ route('evaluaciones.pin.generar', $proyecto->id_proyecto) }}" method="POST" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-light px-3" onclick="return confirm('¿Desea regenerar el PIN de defensa para este proyecto?');">
+                        <i class="bi bi-arrow-repeat me-1"></i> Regenerar PIN
+                    </button>
+                </form>
+                @if (!empty($proyecto->token_jurado))
+                    <a href="{{ url('/evaluacion-jurado/' . $proyecto->token_jurado) }}" target="_blank" class="btn btn-sm btn-danger px-3 fw-bold">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Abrir Panel Jurado (12h)
+                    </a>
+                @endif
+            </div>
+        </div>
+    </div>
+@else
+    <!-- Alerta Bloqueante: Fecha de Socialización Final Pendiente (PIN y Módulo Ocultos) -->
+    <div class="card border-warning shadow-sm mb-4" style="background: #fffdf5; border-left: 6px solid #ffc107 !important; border-radius: 12px;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-start gap-3 flex-wrap">
+                <div class="p-3 bg-warning text-dark rounded-circle fs-3 d-none d-sm-block">
+                    <i class="bi bi-calendar-x-fill"></i>
+                </div>
+                <div style="flex: 1; min-width: 280px;">
+                    <span class="badge bg-warning text-dark px-3 py-1 mb-2 text-uppercase fw-bold">
+                        Fecha de Socialización Final Pendiente
+                    </span>
+                    <h5 class="fw-bold text-dark mb-1">
+                        El PIN de Defensa y la Evaluación Final están temporalmente inactivos
+                    </h5>
+                    <p class="text-muted small mb-3" style="line-height: 1.6;">
+                        Por directriz institucional del PNFI y control estricto de auditoría académica, el <strong>PIN de defensa</strong> para jurados y vocero comunitario, así como el <strong>registro de notas de la Socialización Final</strong> (Semestre 2), <strong>solo se habilitan cuando se haya programado y guardado la Fecha y Lugar</strong> del acto de defensa.
+                    </p>
+
+                    <!-- Formulario Contextual para Registrar Fecha y Lugar -->
+                    <form action="{{ route('evaluaciones.socializacion.guardar', $proyecto->id_proyecto) }}" method="POST" class="p-3 bg-white border rounded shadow-sm">
+                        @csrf
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold small text-dark">Fecha de la Socialización Final <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha" class="form-control" required min="{{ date('Y-m-d') }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small text-dark">Hora del Acto</label>
+                                <input type="time" name="hora" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark">Lugar del Acto <span class="text-danger">*</span></label>
+                                <input type="text" name="lugar" class="form-control" placeholder="Ej: Aula 4 UPTP, Auditorio, Casa Comunal" required>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check p-2 border rounded bg-light" style="padding-left: 2rem !important;">
+                                    <input class="form-check-input" type="checkbox" name="entrega_cd_informe" value="1" id="chkCdNewRecorrido">
+                                    <label class="form-check-label fw-bold small text-dark" for="chkCdNewRecorrido">
+                                        Entregó CD / Informe
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12 text-end mt-3">
+                                <button type="submit" class="btn btn-danger fw-bold px-4 py-2 rounded-pill shadow-sm">
+                                    <i class="bi bi-calendar-check-fill me-1"></i>
+                                    Guardar Fecha y Habilitar Evaluación Final
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <form action="{{ route('evaluaciones.pin.generar', $proyecto->id_proyecto) }}" method="POST" class="m-0">
-                @csrf
-                <button type="submit" class="btn btn-sm btn-outline-light px-3" onclick="return confirm('¿Desea regenerar el PIN de defensa para este proyecto?');">
-                    <i class="bi bi-arrow-repeat me-1"></i> Regenerar PIN
-                </button>
-            </form>
-            <a href="{{ route('evaluaciones.invitado') }}?pin={{ $proyecto->pin_defensa }}" target="_blank" class="btn btn-sm btn-danger px-3 fw-bold">
-                <i class="bi bi-box-arrow-up-right me-1"></i> Abrir Portal Invitado
-            </a>
-        </div>
     </div>
-</div>
+@endif
 
 <!-- Línea de Tiempo y Recorrido de los 2 Semestres -->
 <div class="row g-4 mb-4">
@@ -218,7 +350,15 @@
 
                         @else
                             <!-- Semestre 2: 4 Actores Oficiales UPTP (Docente 40%, Jurado 30%, Comunidad 20%, Estudiante 10%) -->
-
+                            @if (!$tieneFechaSocializacion)
+                                <div class="p-4 rounded border bg-light text-center my-3">
+                                    <i class="bi bi-lock-fill text-warning fs-1 d-block mb-2"></i>
+                                    <h6 class="fw-bold text-dark">Evaluación Final del Semestre 2 Inactiva</h6>
+                                    <p class="small text-muted mb-0">
+                                        Para habilitar el registro de notas por rúbrica de los 4 actores y el PIN de jurado/comunidad, debe programar y guardar la <strong>Fecha y Lugar de la Socialización Final</strong> en el formulario superior.
+                                    </p>
+                                </div>
+                            @else
                             <!-- 1. Docente de Proyecto (40%) -->
                             @php
                                 $evalDocente = $evaluacionesEmitidas->get('docente_proyecto') ?? $evaluacionesEmitidas->get('tutor');
@@ -330,6 +470,7 @@
                                     </a>
                                 </div>
                             </div>
+                            @endif
                         @endif
                     </div>
 
@@ -363,6 +504,84 @@
         </div>
     @endforeach
 </div>
+
+<!-- Control Individual PNF: Asistencia (>25% Inasistencia) y Nota Mínima 16.00 pts -->
+@if (!empty($metricasIndividuales))
+<div class="card card-custom mb-4 border-dark">
+    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-lines-fill text-danger fs-5"></i>
+            <h5 class="fw-bold m-0">Expediente Individual por Estudiante (Reglamento PNF)</h5>
+        </div>
+        <span class="badge bg-danger px-3 py-2 rounded-pill">
+            Mínimo Aprobatorio: 16.00 pts &bull; Límite de Inasistencias: 25%
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Cédula</th>
+                        <th>Estudiante</th>
+                        <th class="text-center">Asistencia Puntos de Control</th>
+                        <th class="text-center">Nota Individual</th>
+                        <th class="pe-4">Condición Reglamentaria PNF</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($metricasIndividuales as $m)
+                        <tr class="{{ !empty($m['reprobado_inasistencia']) ? 'table-danger' : '' }}">
+                            <td class="ps-4 font-monospace fw-bold">V-{{ $m['cedula'] }}</td>
+                            <td>
+                                <span class="fw-bold text-dark">{{ $m['nombre_completo'] }}</span>
+                                @if (!empty($m['es_lider']))
+                                    <span class="badge bg-danger ms-1" style="font-size: 0.7rem;">Líder</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                <span class="badge {{ !empty($m['reprobado_inasistencia']) ? 'bg-danger' : 'bg-success' }} px-3 py-1">
+                                    {{ number_format((float)($m['porcentaje_asistencia'] ?? 100), 1) }}% Asistencia
+                                </span>
+                                <div class="small text-muted mt-1">
+                                    Faltas injustificadas: {{ number_format((float)($m['porcentaje_inasistencia'] ?? 0), 1) }}%
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                @if ($m['nota_individual'] !== null)
+                                    <span class="fs-5 fw-bold {{ ((float)$m['nota_individual'] >= 16 && empty($m['reprobado_inasistencia'])) ? 'text-success' : 'text-danger' }}">
+                                        {{ number_format((float)$m['nota_individual'], 2) }} / 20
+                                    </span>
+                                @else
+                                    <span class="text-muted small">Pendiente</span>
+                                @endif
+                            </td>
+                            <td class="pe-4">
+                                @if (!empty($m['reprobado_inasistencia']))
+                                    <div class="text-danger fw-bold small">
+                                        <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                                        ALERTA PNF: Reprobado individualmente por inasistencia (&gt;25% faltas injustificadas). No afecta la nota ni aprobación de sus compañeros.
+                                    </div>
+                                @elseif (($m['aprobado_individual'] ?? null) === true)
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 fw-bold">
+                                        <i class="bi bi-check-circle-fill me-1"></i> {{ $m['condicion_pnf'] }}
+                                    </span>
+                                @elseif (($m['aprobado_individual'] ?? null) === false)
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 fw-bold">
+                                        <i class="bi bi-x-circle-fill me-1"></i> {{ $m['condicion_pnf'] }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-light text-dark border px-3 py-1">{{ $m['condicion_pnf'] ?? 'En Curso' }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif
 
 <!-- Acta Final, Cierre de Trayecto y Exportaciones Oficiales UPTP -->
 <div class="card card-custom border-danger">

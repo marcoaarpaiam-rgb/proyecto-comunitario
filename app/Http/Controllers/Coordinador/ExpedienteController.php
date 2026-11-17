@@ -65,10 +65,16 @@ class ExpedienteController extends Controller
             })
             ->first();
 
+        $metricasIndividuales = app(\App\Services\EvaluacionTrayectoService::class)->calcularMetricasIndividualesEquipo(
+            (int) $equipo->equ_id,
+            $idProyecto ? (int) $idProyecto : null
+        );
+
         return Inertia::render('Coordinador/ExpedienteEquipo', [
-            'equipo'       => $equipo,
-            'evaluaciones' => $evaluaciones,
-            'actaFinal'    => $actaFinal,
+            'equipo'               => $equipo,
+            'evaluaciones'         => $evaluaciones,
+            'actaFinal'            => $actaFinal,
+            'metricasIndividuales' => $metricasIndividuales,
         ]);
     }
 }

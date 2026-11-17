@@ -5,14 +5,18 @@ namespace App\Http\Controllers\Coordinador;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\PeriodoAcademico;
+use Illuminate\Support\Facades\DB;
 
 class ConfiguracionController extends Controller
 {
     public function index()
     {
         return Inertia::render('Coordinador/Configuracion', [
-            'coordinador' => auth()->user(),
-            'lideres' => \App\Models\Usuario::whereHas('usuarioRoles', fn($q) =>
+            'coordinador'   => auth()->user(),
+            'periodoActivo' => PeriodoAcademico::periodoActivo(),
+            'periodos'      => PeriodoAcademico::orderBy('id_periodo', 'desc')->get(),
+            'lideres'       => \App\Models\Usuario::whereHas('usuarioRoles', fn($q) =>
                 $q->where('uro_status', true)
                 ->whereHas('rol', fn($r) => $r->where('rol_nombre', 'lider'))
             )->get(['usu_id','usu_cedula','usu_primer_nombre','usu_primer_apellido']),
@@ -84,5 +88,61 @@ class ConfiguracionController extends Controller
         }
         $usuario->update(['usu_password' => bcrypt($usuario->usu_cedula)]);
         return back()->with('success', "Contraseña de {$usuario->usu_primer_nombre} reseteada a su cédula: {$usuario->usu_cedula}");
+    }
+
+    public function guardarLapsoAcademico(Request $request)
+    {
+        $request->validate([
+            'lapso_academico' => 'required|string|max:50',
+            'tipo_semestre'   => 'required|in:Impar,Par',
+            'fecha_inicio'    => 'required|date',
+            'fecha_fin'       => 'required|date|after_or_equal:fecha_inicio',
+        ], [
+            'lapso_academico.required' => 'El código o nombre del lapso académico es obligatorio (ej. 2026-I).',
+            'tipo_semestre.required'   => 'Debe indicar si el lapso corresponde a Semestre Impar o Par.',
+            'fecha_inicio.required'    => 'La fecha de inicio es obligatoria.',
+            'fecha_fin.required'       => 'La fecha de culminación es obligatoria.',
+            'fecha_fin.after_or_equal' => 'La fecha de culminación no puede ser anterior a la de inicio.',
+        ]);
+
+        $lapsoNombre = trim($request->lapso_academico);
+
+        DB::transaction(function () use ($request, $lapsoNombre) {
+            // Desactivar lapsos anteriores
+            PeriodoAcademico::where('activo', true)->update(['activo' => false]);
+
+            // Buscar si ya existe para actualizarlo o crearlo
+            $periodo = PeriodoAcademico::where('lapso_academico', $lapsoNombre)->first();
+            if ($periodo) {
+                $periodo->update([
+                    'tipo_semestre' => $request->tipo_semestre,
+                    'fecha_inicio'  => $request->fecha_inicio,
+                    'fecha_fin'     => $request->fecha_fin,
+                    'activo'        => true,
+                ]);
+            } else {
+                PeriodoAcademico::create([
+                    'lapso_academico' => $lapsoNombre,
+                    'tipo_semestre'   => $request->tipo_semestre,
+                    'fecha_inicio'    => $request->fecha_inicio,
+                    'fecha_fin'       => $request->fecha_fin,
+                    'activo'          => true,
+                ]);
+            }
+        });
+
+        return back()->with('success', "Lapso Académico activo establecido en: {$lapsoNombre}");
+    }
+
+    public function activarLapsoAcademico($id)
+    {
+        $periodo = PeriodoAcademico::findOrFail($id);
+
+        DB::transaction(function () use ($periodo) {
+            PeriodoAcademico::where('activo', true)->update(['activo' => false]);
+            $periodo->update(['activo' => true]);
+        });
+
+        return back()->with('success', "Lapso Académico activo cambiado a: {$periodo->lapso_academico}");
     }
 }
