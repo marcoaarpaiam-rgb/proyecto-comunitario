@@ -427,7 +427,7 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold"
-                                        >Semana de Corte / Encuentro</label
+                                        >Semana de Corte / Encuentro <span class="text-danger">*</span></label
                                     >
                                     <div class="input-group">
                                         <span
@@ -442,16 +442,28 @@
                                             v-model.number="form.puc_semana"
                                             type="number"
                                             min="1"
-                                            max="24"
+                                            max="18"
+                                            step="1"
                                             class="form-control"
-                                            placeholder="Ej: 6"
+                                            :class="{
+                                                'is-invalid': errorSemana || errores.puc_semana,
+                                            }"
+                                            placeholder="1 a 18"
+                                            @keydown="bloquearCaracteresSemana($event)"
+                                            @input="validarSemanaInput"
+                                            required
                                         />
+                                    </div>
+                                    <div
+                                        v-if="errorSemana || errores.puc_semana"
+                                        class="invalid-feedback d-block"
+                                    >
+                                        {{ errorSemana || errores.puc_semana }}
                                     </div>
                                     <small
                                         class="text-muted"
                                         style="font-size: 0.72rem"
-                                        >Sugerido: 6 (Corte 1), 10 (Corte 2), 14
-                                        (Corte 3)</small
+                                        >Rango estricto del 1 al 18. Sugerido: 6 (Corte 1), 10 (Corte 2), 14 (Corte 3)</small
                                     >
                                 </div>
                                 <div class="col-md-5">
@@ -1031,6 +1043,42 @@
                                 </div>
                             </div>
 
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small"
+                                    >Nueva Semana de Encuentro (Opcional, 1 a 18)</label
+                                >
+                                <div class="input-group">
+                                    <span
+                                        class="input-group-text"
+                                        style="
+                                            background: var(--bg-card);
+                                            color: var(--text-muted);
+                                        "
+                                        >Semana</span
+                                    >
+                                    <input
+                                        v-model.number="formReprog.nueva_semana"
+                                        type="number"
+                                        min="1"
+                                        max="18"
+                                        step="1"
+                                        class="form-control"
+                                        :class="{
+                                            'is-invalid': errorSemanaReprog || erroresReprog.nueva_semana,
+                                        }"
+                                        placeholder="1 a 18"
+                                        @keydown="bloquearCaracteresSemanaReprog($event)"
+                                        @input="validarSemanaReprogInput"
+                                    />
+                                </div>
+                                <div
+                                    v-if="errorSemanaReprog || erroresReprog.nueva_semana"
+                                    class="invalid-feedback d-block"
+                                >
+                                    {{ errorSemanaReprog || erroresReprog.nueva_semana }}
+                                </div>
+                            </div>
+
                             <div class="mb-2">
                                 <label class="form-label fw-semibold small"
                                     >Motivo de la Reprogramación
@@ -1210,6 +1258,60 @@ const puntoReprog = ref(null);
 const formReprog = ref({ nueva_fecha: "", motivo: "" });
 const erroresReprog = ref({});
 const loadingReprog = ref(false);
+const errorSemana = ref("");
+const errorSemanaReprog = ref("");
+
+const bloquearCaracteresSemana = (e) => {
+    const prohibidos = ['e', 'E', '+', '-', '.', ',', ' '];
+    if (prohibidos.includes(e.key)) {
+        e.preventDefault();
+        errorSemana.value = "Solo se permiten números enteros del 1 al 18.";
+    }
+};
+
+const validarSemanaInput = () => {
+    if (form.value.puc_semana === "" || form.value.puc_semana === null || form.value.puc_semana === undefined) {
+        errorSemana.value = "La semana es obligatoria.";
+        return false;
+    }
+    const val = Number(form.value.puc_semana);
+    if (isNaN(val) || !Number.isInteger(val)) {
+        errorSemana.value = "La semana debe ser un número entero sin decimales ni caracteres especiales.";
+        return false;
+    } else if (val < 1 || val > 18) {
+        errorSemana.value = "La semana debe estar estrictamente en el rango del 1 al 18.";
+        return false;
+    } else {
+        errorSemana.value = "";
+        return true;
+    }
+};
+
+const bloquearCaracteresSemanaReprog = (e) => {
+    const prohibidos = ['e', 'E', '+', '-', '.', ',', ' '];
+    if (prohibidos.includes(e.key)) {
+        e.preventDefault();
+        errorSemanaReprog.value = "Solo se permiten números enteros del 1 al 18.";
+    }
+};
+
+const validarSemanaReprogInput = () => {
+    if (formReprog.value.nueva_semana === "" || formReprog.value.nueva_semana === null || formReprog.value.nueva_semana === undefined) {
+        errorSemanaReprog.value = "";
+        return true;
+    }
+    const val = Number(formReprog.value.nueva_semana);
+    if (isNaN(val) || !Number.isInteger(val)) {
+        errorSemanaReprog.value = "La semana debe ser un número entero sin decimales ni caracteres especiales.";
+        return false;
+    } else if (val < 1 || val > 18) {
+        errorSemanaReprog.value = "La semana debe estar estrictamente en el rango del 1 al 18.";
+        return false;
+    } else {
+        errorSemanaReprog.value = "";
+        return true;
+    }
+};
 
 const puntoAEliminar = ref(null);
 let mPunto = null;
@@ -1241,6 +1343,7 @@ const filtrados = computed(() => {
 });
 const abrirModal = () => {
     seccionSeleccionadaModal.value = "";
+    errorSemana.value = "";
     form.value = {
         puc_id_equ: "",
         puc_nombre: "",
@@ -1254,6 +1357,9 @@ const abrirModal = () => {
     mPunto.show();
 };
 const guardar = () => {
+    if (!validarSemanaInput()) {
+        return;
+    }
     loading.value = true;
     router.post("/profesor/puntos-control", form.value, {
         onError: (e) => {
@@ -1347,8 +1453,10 @@ const guardarSeguimiento = () => {
 };
 const abrirReprogramar = (puc) => {
     puntoReprog.value = puc;
+    errorSemanaReprog.value = "";
     formReprog.value = {
         nueva_fecha: puc.puc_fecha_reprogramada || "",
+        nueva_semana: puc.puc_semana || "",
         motivo: puc.puc_motivo_reprogramacion || "",
     };
     erroresReprog.value = {};
@@ -1360,6 +1468,9 @@ const abrirReprogramar = (puc) => {
 };
 const guardarReprogramar = () => {
     if (!puntoReprog.value) return;
+    if (!validarSemanaReprogInput()) {
+        return;
+    }
     loadingReprog.value = true;
     erroresReprog.value = {};
 

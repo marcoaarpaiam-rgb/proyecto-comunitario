@@ -313,14 +313,38 @@ class EquipoController extends Controller
         $beneficiarios = collect($proy['beneficiarios'] ?? [])
             ->filter(fn($b) => !empty($b['tbe_id']) && (int) ($b['cantidad'] ?? 0) > 0)->values();
 
-        DB::transaction(function () use ($request, $seccion, $trayecto, $codigo, $integrantes, $total, $crearProyecto, $proy, $beneficiarios, $totalSec) {
+        $justifDuplicidad = $proy['pco_justificacion_duplicidad']
+            ?? $request->input('justificacion_duplicidad')
+            ?? $request->input('pco_justificacion_duplicidad');
+
+        // Validación estricta anti-duplicidad si se selecciona comunidad
+        if (!empty($proy['pco_id_com'])) {
+            $verificacion = app(\App\Services\DetectorDuplicidadService::class)->verificarCoincidencia(
+                (int) $proy['pco_id_com'],
+                $request->equ_titulo,
+                null,
+                !empty($proy['pco_id_tpr']) ? (int) $proy['pco_id_tpr'] : null,
+                $justifDuplicidad,
+                !empty($proy['pco_id_mpr']) ? (int) $proy['pco_id_mpr'] : null
+            );
+
+            if (!$verificacion['es_valido']) {
+                return back()->withErrors([
+                    'justificacion_duplicidad' => $verificacion['mensaje_error'],
+                    'equ_titulo'               => $verificacion['mensaje_error'],
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($request, $seccion, $trayecto, $codigo, $integrantes, $total, $crearProyecto, $proy, $beneficiarios, $totalSec, $justifDuplicidad) {
             $equipo = Equipo::create([
-                'equ_codigo'         => $codigo,
-                'equ_titulo'         => $request->equ_titulo,
-                'equ_id_sec'         => $seccion->sec_id,
-                'equ_id_tra'         => $trayecto->tra_id,
-                'equ_status'         => true,
-                'equ_id_usu_created' => auth()->id(),
+                'equ_codigo'                   => $codigo,
+                'equ_titulo'                   => $request->equ_titulo,
+                'equ_justificacion_duplicidad' => $justifDuplicidad,
+                'equ_id_sec'                   => $seccion->sec_id,
+                'equ_id_tra'                   => $trayecto->tra_id,
+                'equ_status'                   => true,
+                'equ_id_usu_created'           => auth()->id(),
             ]);
 
             // Si se estableció o modificó el total de equipos de la sección,
@@ -372,17 +396,18 @@ class EquipoController extends Controller
                 $fechaLim = !empty($proy['pco_fecha_limite']) ? $proy['pco_fecha_limite'] : now()->addMonths(6)->toDateString();
 
                 $proyecto = ProyectoComunidad::create([
-                    'pco_id_equ'          => $equipo->equ_id,
-                    'pco_id_com'          => $proy['pco_id_com'],
-                    'pco_id_tpr'          => $proy['pco_id_tpr'],
-                    'pco_id_mpr'          => $mprId,
-                    'pco_id_pco_previo'   => !empty($proy['pco_id_pco_previo']) ? $proy['pco_id_pco_previo'] : null,
-                    'pco_resumen'         => $proy['pco_resumen'] ?? '',
-                    'pco_fecha_limite'    => $fechaLim,
-                    'pco_fecha_aprobacion'=> now()->toDateString(),   // aprobado al crear
-                    'pco_id_usu_aprobado' => auth()->id(),
-                    'pco_status'          => true,
-                    'pco_id_usu_created'  => auth()->id(),
+                    'pco_id_equ'                  => $equipo->equ_id,
+                    'pco_id_com'                  => $proy['pco_id_com'],
+                    'pco_id_tpr'                  => $proy['pco_id_tpr'],
+                    'pco_id_mpr'                  => $mprId,
+                    'pco_id_pco_previo'           => !empty($proy['pco_id_pco_previo']) ? $proy['pco_id_pco_previo'] : null,
+                    'pco_resumen'                 => $proy['pco_resumen'] ?? '',
+                    'pco_justificacion_duplicidad' => $justifDuplicidad,
+                    'pco_fecha_limite'            => $fechaLim,
+                    'pco_fecha_aprobacion'        => now()->toDateString(),   // aprobado al crear
+                    'pco_id_usu_aprobado'         => auth()->id(),
+                    'pco_status'                  => true,
+                    'pco_id_usu_created'          => auth()->id(),
                 ]);
 
                 foreach ($beneficiarios as $b) {
@@ -394,11 +419,15 @@ class EquipoController extends Controller
                     ]);
                 }
 
+                $motivoHist = 'Proyecto asignado en la comunidad "' . (Comunidad::find($proy['pco_id_com'])?->com_nombre ?? '—') . '"';
+                if ($justifDuplicidad) {
+                    $motivoHist .= ". Justificación coincidencia/duplicidad: {$justifDuplicidad}";
+                }
+
                 HistorialEquipo::create([
                     'heq_id_equ'         => $equipo->equ_id,
                     'heq_id_tee'         => $this->eventoId('Proyecto asignado'),
-                    'heq_motivo'         => 'Proyecto asignado en la comunidad "'
-                                            . (Comunidad::find($proy['pco_id_com'])?->com_nombre ?? '—') . '".',
+                    'heq_motivo'         => $motivoHist,
                     'heq_fecha_evento'   => now()->toDateString(),
                     'heq_id_usu_created' => auth()->id(),
                 ]);
@@ -431,8 +460,35 @@ class EquipoController extends Controller
             'pco_fecha_limite'    => $reglaFecha,
         ], ['equ_titulo.required' => 'El título es obligatorio.']);
 
-        DB::transaction(function () use ($request, $equipo, $proyecto) {
-            $equipo->update(['equ_titulo' => $request->equ_titulo, 'equ_id_usu_updated' => auth()->id()]);
+        $comId = $request->pco_id_com ?: ($proyecto?->pco_id_com);
+        $justifDuplicidad = $request->pco_justificacion_duplicidad
+            ?? $request->justificacion_duplicidad
+            ?? $proyecto?->pco_justificacion_duplicidad;
+
+        if ($comId) {
+            $verificacion = app(\App\Services\DetectorDuplicidadService::class)->verificarCoincidencia(
+                (int) $comId,
+                $request->equ_titulo,
+                (int) $equipo->equ_id,
+                $request->pco_id_tpr ? (int) $request->pco_id_tpr : ($proyecto?->pco_id_tpr ? (int) $proyecto->pco_id_tpr : null),
+                $justifDuplicidad,
+                $request->pco_id_mpr ? (int) $request->pco_id_mpr : ($proyecto?->pco_id_mpr ? (int) $proyecto->pco_id_mpr : null)
+            );
+
+            if (!$verificacion['es_valido']) {
+                return back()->withErrors([
+                    'justificacion_duplicidad' => $verificacion['mensaje_error'],
+                    'equ_titulo'               => $verificacion['mensaje_error'],
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($request, $equipo, $proyecto, $justifDuplicidad) {
+            $equipo->update([
+                'equ_titulo'                   => $request->equ_titulo,
+                'equ_justificacion_duplicidad' => $justifDuplicidad,
+                'equ_id_usu_updated'           => auth()->id(),
+            ]);
 
             if (!$proyecto) {
                 if ($request->filled('pco_id_com')) {
@@ -441,23 +497,29 @@ class EquipoController extends Controller
                     $fechaLim = $request->filled('pco_fecha_limite') ? $request->pco_fecha_limite : now()->addMonths(6)->toDateString();
 
                     $proyecto = ProyectoComunidad::create([
-                        'pco_id_equ'          => $equipo->equ_id,
-                        'pco_id_com'          => $request->pco_id_com,
-                        'pco_id_tpr'          => $tprId,
-                        'pco_id_mpr'          => $mprId,
-                        'pco_id_pco_previo'   => $request->pco_id_pco_previo ?: null,
-                        'pco_resumen'         => $request->pco_resumen ?? '',
-                        'pco_fecha_limite'    => $fechaLim,
-                        'pco_fecha_aprobacion'=> now()->toDateString(),
-                        'pco_id_usu_aprobado' => auth()->id(),
-                        'pco_status'          => true,
-                        'pco_id_usu_created'  => auth()->id(),
+                        'pco_id_equ'                  => $equipo->equ_id,
+                        'pco_id_com'                  => $request->pco_id_com,
+                        'pco_id_tpr'                  => $tprId,
+                        'pco_id_mpr'                  => $mprId,
+                        'pco_id_pco_previo'           => $request->pco_id_pco_previo ?: null,
+                        'pco_resumen'                 => $request->pco_resumen ?? '',
+                        'pco_justificacion_duplicidad'=> $justifDuplicidad,
+                        'pco_fecha_limite'            => $fechaLim,
+                        'pco_fecha_aprobacion'        => now()->toDateString(),
+                        'pco_id_usu_aprobado'         => auth()->id(),
+                        'pco_status'                  => true,
+                        'pco_id_usu_created'          => auth()->id(),
                     ]);
+
+                    $motivoHist = 'Proyecto asignado en la comunidad "' . (Comunidad::find($request->pco_id_com)?->com_nombre ?? '—') . '"';
+                    if ($justifDuplicidad) {
+                        $motivoHist .= ". Justificación coincidencia/duplicidad: {$justifDuplicidad}";
+                    }
 
                     HistorialEquipo::create([
                         'heq_id_equ'         => $equipo->equ_id,
                         'heq_id_tee'         => $this->eventoId('Proyecto asignado'),
-                        'heq_motivo'         => 'Proyecto asignado en la comunidad "' . (Comunidad::find($request->pco_id_com)?->com_nombre ?? '—') . '".',
+                        'heq_motivo'         => $motivoHist,
                         'heq_fecha_evento'   => now()->toDateString(),
                         'heq_id_usu_created' => auth()->id(),
                     ]);
@@ -475,12 +537,13 @@ class EquipoController extends Controller
             $comunidadAnterior = (int) $proyecto->pco_id_com;
 
             $proyecto->update([
-                'pco_id_com'         => $request->pco_id_com ?: $proyecto->pco_id_com,
-                'pco_id_tpr'         => $request->pco_id_tpr ?: $proyecto->pco_id_tpr,
-                'pco_id_mpr'         => $request->pco_id_mpr ?: $proyecto->pco_id_mpr,
-                'pco_resumen'        => $request->pco_resumen ?? $proyecto->pco_resumen,
-                'pco_fecha_limite'   => $request->pco_fecha_limite ?: $proyecto->pco_fecha_limite,
-                'pco_id_usu_updated' => auth()->id(),
+                'pco_id_com'                   => $request->pco_id_com ?: $proyecto->pco_id_com,
+                'pco_id_tpr'                   => $request->pco_id_tpr ?: $proyecto->pco_id_tpr,
+                'pco_id_mpr'                   => $request->pco_id_mpr ?: $proyecto->pco_id_mpr,
+                'pco_resumen'                  => $request->pco_resumen ?? $proyecto->pco_resumen,
+                'pco_justificacion_duplicidad' => $justifDuplicidad,
+                'pco_fecha_limite'             => $request->pco_fecha_limite ?: $proyecto->pco_fecha_limite,
+                'pco_id_usu_updated'           => auth()->id(),
             ]);
 
             if ($request->filled('pco_id_com') && (int) $request->pco_id_com !== $comunidadAnterior) {

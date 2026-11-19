@@ -179,11 +179,19 @@
                                     v-for="soc in socializaciones"
                                     :key="soc.soc_id"
                                 >
-                                    <td
-                                        class="ps-4 fw-bold"
-                                        style="color: var(--rojo)"
-                                    >
-                                        {{ soc.equipo?.equ_codigo }}
+                                    <td class="ps-4">
+                                        <button
+                                            type="button"
+                                            class="btn btn-link p-0 text-danger fw-bold text-decoration-none text-start d-flex align-items-center gap-1"
+                                            @click="abrirDetalleEquipo(soc)"
+                                            title="Ver todas las opciones del equipo"
+                                        >
+                                            <i class="bi bi-box-arrow-up-right small"></i>
+                                            <span>{{ soc.equipo?.equ_codigo }}</span>
+                                        </button>
+                                        <div class="small text-muted text-truncate" style="max-width: 170px;" :title="soc.equipo?.equ_titulo">
+                                            {{ soc.equipo?.equ_titulo || 'Proyecto PST' }}
+                                        </div>
                                     </td>
                                     <td>
                                         <span
@@ -252,6 +260,14 @@
                                         </template>
                                     </td>
                                     <td class="text-end pe-4">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-dark fw-bold me-1"
+                                            @click="abrirDetalleEquipo(soc)"
+                                            title="Opciones completas del equipo, expediente y descargas"
+                                        >
+                                            <i class="bi bi-folder2-open me-1"></i>Opciones
+                                        </button>
                                         <!-- Enlace al Módulo de Evaluación de los 4 Actores (Solo habilitado si ya tiene fecha de socialización final) -->
                                         <template v-if="soc.tipo_socializacion?.tso_orden === 2">
                                             <!-- Si tiene token de jurado activo -->
@@ -722,6 +738,262 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL DETALLE DEL EQUIPO DENTRO DE SOCIALIZACIÓN -->
+        <div class="modal fade" id="mDetalleEquipoSoc" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-dark text-white p-3 border-bottom border-danger border-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-danger fs-6 font-monospace">{{ socSeleccionadaDetalle?.equipo?.equ_codigo }}</span>
+                            <h5 class="modal-title fw-bold text-white m-0">Detalle y Opciones del Equipo</h5>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body p-4 text-dark" v-if="socSeleccionadaDetalle">
+                        <!-- Identidad del Proyecto -->
+                        <div class="p-3 bg-light rounded-3 border mb-3">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                <div>
+                                    <span class="badge bg-dark me-1">Sección {{ socSeleccionadaDetalle.equipo?.seccion?.sec_codigo }}</span>
+                                    <span class="badge bg-secondary me-1">{{ socSeleccionadaDetalle.trayecto?.tra_nombre || socSeleccionadaDetalle.equipo?.seccion?.trayecto?.tra_nombre || 'Trayecto' }}</span>
+                                    <span class="badge bg-light text-dark border">{{ socSeleccionadaDetalle.tipo_socializacion?.tso_nombre }}</span>
+                                </div>
+                                <span v-if="socSeleccionadaDetalle.soc_entrega_cd_informe" class="badge bg-success">
+                                    <i class="bi bi-disc-fill me-1"></i>CD / Informe Entregado
+                                </span>
+                                <span v-else class="badge bg-warning text-dark">
+                                    <i class="bi bi-disc me-1"></i>CD / Informe Pendiente
+                                </span>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-1">
+                                {{ socSeleccionadaDetalle.equipo?.equ_titulo || 'Proyecto Sociotecnológico' }}
+                            </h5>
+                            <div class="small text-muted mt-2 d-flex flex-wrap gap-3">
+                                <div>
+                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                                    <strong>Comunidad:</strong> {{ socSeleccionadaDetalle.equipo?.proyectoComunidad?.comunidad?.com_nombre || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.comunidad?.com_nombre || 'No asignada' }}
+                                </div>
+                                <div>
+                                    <i class="bi bi-pin-map text-danger me-1"></i>
+                                    {{ socSeleccionadaDetalle.equipo?.proyectoComunidad?.comunidad?.com_direccion || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.comunidad?.com_sector || 'Dirección en proceso' }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Convocatoria y Estado de Socialización -->
+                        <div class="card border mb-3">
+                            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-calendar-event text-danger me-1"></i> Estado del Acto de Socialización</span>
+                                <span v-if="socSeleccionadaDetalle.tipo_socializacion?.tso_orden === 1" class="badge" :class="socSeleccionadaDetalle.soc_apto ? 'bg-success' : (socSeleccionadaDetalle.soc_apto === false ? 'bg-danger' : 'bg-secondary')">
+                                    {{ socSeleccionadaDetalle.soc_apto ? 'Apto' : (socSeleccionadaDetalle.soc_apto === false ? 'No Apto' : 'Pendiente') }}
+                                </span>
+                                <span v-else class="badge" :class="socSeleccionadaDetalle.soc_aprobado ? 'bg-success' : (socSeleccionadaDetalle.soc_aprobado === false ? 'bg-danger' : 'bg-secondary')">
+                                    {{ socSeleccionadaDetalle.soc_aprobado ? 'Aprobado' : (socSeleccionadaDetalle.soc_aprobado === false ? 'No Aprobado' : 'Pendiente') }}
+                                </span>
+                            </div>
+                            <div class="card-body p-3 small">
+                                <div class="row g-2">
+                                    <div class="col-sm-4">
+                                        <div class="text-muted">Fecha del Acto:</div>
+                                        <div class="fw-bold" :class="socSeleccionadaDetalle.soc_fecha ? 'text-dark' : 'text-danger'">
+                                            {{ socSeleccionadaDetalle.soc_fecha || 'Sin fecha programada' }}
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="text-muted">Hora:</div>
+                                        <div class="fw-bold text-dark">{{ socSeleccionadaDetalle.soc_hora || 'Por definir' }}</div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="text-muted">Lugar:</div>
+                                        <div class="fw-bold text-dark">{{ socSeleccionadaDetalle.soc_lugar || 'Por definir' }}</div>
+                                    </div>
+                                </div>
+                                <div v-if="socSeleccionadaDetalle.soc_observaciones" class="mt-2 p-2 bg-light rounded border">
+                                    <strong>Observaciones registradas:</strong> {{ socSeleccionadaDetalle.soc_observaciones }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Link Temporal de 12 Horas para Jurados y Vocero -->
+                        <div class="card border mb-3">
+                            <div class="card-header bg-dark text-white p-2 px-3 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold small text-uppercase">
+                                    <i class="bi bi-link-45deg text-warning me-1"></i> Link Temporal para Jurado (Vigencia 12 Horas)
+                                </span>
+                                <span class="badge bg-warning text-dark small">Exclusivo Jurado / Vocero</span>
+                            </div>
+                            <div class="card-body p-3">
+                                <!-- Si es pre-socialización -->
+                                <div v-if="socSeleccionadaDetalle.tipo_socializacion?.tso_orden === 1" class="text-muted small">
+                                    <i class="bi bi-info-circle text-primary me-1"></i>
+                                    Este equipo cursa Semestre Impar (Pre-Socialización cualitativa). Los enlaces temporales de 12 horas con rúbricas cuantitativas se generan durante la Socialización Final (Semestre Par).
+                                </div>
+
+                                <!-- Si es socialización final pero no tiene fecha programada -->
+                                <div v-else-if="!socSeleccionadaDetalle.soc_fecha" class="alert alert-warning py-2 px-3 mb-0 small">
+                                    <i class="bi bi-calendar-x-fill me-1"></i>
+                                    <strong>Atención:</strong> Para generar y compartir el enlace de evaluación con los jurados, primero debe registrarse la fecha y lugar de la defensa final.
+                                </div>
+
+                                <!-- Si es socialización final y tiene fecha -->
+                                <div v-else>
+                                    <template v-if="tokenJuradoActivo(socSeleccionadaDetalle)">
+                                        <label class="form-label fw-bold small text-muted mb-1">Enlace de Acceso Directo:</label>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <input
+                                                type="text"
+                                                class="form-control font-monospace bg-light"
+                                                readonly
+                                                :value="obtenerUrlJurado(socSeleccionadaDetalle)"
+                                            />
+                                            <button
+                                                class="btn fw-bold text-white"
+                                                :class="copiadoExitoso ? 'btn-success' : 'btn-danger'"
+                                                type="button"
+                                                @click="copiarLinkModal(tokenJuradoActivo(socSeleccionadaDetalle))"
+                                            >
+                                                <i class="bi" :class="copiadoExitoso ? 'bi-check-lg' : 'bi-clipboard'"></i>
+                                                {{ copiadoExitoso ? '¡Copiado!' : 'Copiar Link' }}
+                                            </button>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <a
+                                                :href="obtenerUrlJurado(socSeleccionadaDetalle)"
+                                                target="_blank"
+                                                class="btn btn-sm btn-dark text-white fw-bold"
+                                            >
+                                                <i class="bi bi-box-arrow-up-right me-1"></i>Abrir Panel de Jurado
+                                            </a>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                @click="generarLinkDesdeModal(socSeleccionadaDetalle.equipo.equ_id)"
+                                                :disabled="generandoLinkId === socSeleccionadaDetalle.equipo.equ_id"
+                                            >
+                                                <span v-if="generandoLinkId === socSeleccionadaDetalle.equipo.equ_id" class="spinner-border spinner-border-sm me-1"></span>
+                                                <i v-else class="bi bi-arrow-repeat me-1"></i>Regenerar Link (Nuevas 12h)
+                                            </button>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                            <span class="small text-muted">Aún no se ha emitido un enlace de 12 horas para este proyecto.</span>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-danger fw-bold"
+                                                @click="generarLinkDesdeModal(socSeleccionadaDetalle.equipo.equ_id)"
+                                                :disabled="generandoLinkId === socSeleccionadaDetalle.equipo.equ_id"
+                                            >
+                                                <span v-if="generandoLinkId === socSeleccionadaDetalle.equipo.equ_id" class="spinner-border spinner-border-sm me-1"></span>
+                                                <i v-else class="bi bi-magic me-1"></i>Generar Enlace de 12 Horas
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Integrantes del Equipo -->
+                        <div class="card border mb-3">
+                            <div class="card-header bg-white fw-bold small text-muted text-uppercase">
+                                <i class="bi bi-people-fill text-danger me-1"></i> Integrantes del Equipo ({{ socSeleccionadaDetalle.equipo?.integrantes?.length || 0 }})
+                            </div>
+                            <ul class="list-group list-group-flush small">
+                                <li
+                                    v-for="integ in socSeleccionadaDetalle.equipo?.integrantes"
+                                    :key="integ.ein_id || integ.ein_id_usu"
+                                    class="list-group-item d-flex justify-content-between align-items-center py-2"
+                                >
+                                    <div>
+                                        <strong class="text-dark">{{ integ.usuario?.usu_primer_nombre }} {{ integ.usuario?.usu_primer_apellido }}</strong>
+                                        <span class="text-muted font-monospace ms-2">C.I. {{ integ.usuario?.usu_cedula }}</span>
+                                    </div>
+                                    <span v-if="integ.ein_es_lider" class="badge bg-danger rounded-pill">Líder</span>
+                                    <span v-else class="badge bg-light text-muted border rounded-pill">Integrante</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Accesos y Descargas Oficiales -->
+                        <div class="card border bg-light">
+                            <div class="card-header bg-white fw-bold small text-dark">
+                                <i class="bi bi-download text-danger me-1"></i> Navegación Directa y Descargas Oficiales UPTP
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="row g-2">
+                                    <!-- Expediente -->
+                                    <div class="col-sm-6">
+                                        <a
+                                            :href="'/profesor/equipos/' + socSeleccionadaDetalle.equipo?.equ_id + '/expediente'"
+                                            class="btn btn-outline-dark btn-sm w-100 fw-bold text-start d-flex align-items-center justify-content-between p-2"
+                                        >
+                                            <span><i class="bi bi-file-earmark-person-fill text-danger me-1"></i>Expediente de Calificaciones</span>
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </div>
+
+                                    <!-- 4 Actores Rúbricas -->
+                                    <div class="col-sm-6" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
+                                        <a
+                                            :href="'/evaluaciones/recorrido/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
+                                            class="btn btn-outline-danger btn-sm w-100 fw-bold text-start d-flex align-items-center justify-content-between p-2"
+                                        >
+                                            <span><i class="bi bi-award-fill me-1"></i>Evaluación 4 Actores (Rúbricas)</span>
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </div>
+
+                                    <!-- Acta Final PDF -->
+                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
+                                        <a
+                                            :href="'/evaluaciones/pdf/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
+                                            target="_blank"
+                                            class="btn btn-danger btn-sm w-100 fw-bold p-2 text-truncate"
+                                            title="Descargar Acta Final Oficial PDF con Hash SHA-256"
+                                        >
+                                            <i class="bi bi-file-earmark-pdf-fill me-1"></i>Acta Final PDF
+                                        </a>
+                                    </div>
+
+                                    <!-- Planilla Vinculación Excel -->
+                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
+                                        <a
+                                            :href="'/inventario/excel/vinculacion/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
+                                            target="_blank"
+                                            class="btn btn-success btn-sm w-100 fw-bold p-2 text-truncate"
+                                            title="Descargar Planilla de Vinculación Excel"
+                                        >
+                                            <i class="bi bi-file-earmark-excel-fill me-1"></i>Planilla Vinc. Excel
+                                        </a>
+                                    </div>
+
+                                    <!-- Inventario PST Sección Excel -->
+                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.equ_id_sec">
+                                        <a
+                                            :href="'/inventario/excel/libro-seccion/' + socSeleccionadaDetalle.equipo?.equ_id_sec"
+                                            target="_blank"
+                                            class="btn btn-outline-success btn-sm w-100 fw-bold p-2 text-truncate"
+                                            title="Descargar Inventario PST de la Sección Completa"
+                                        >
+                                            <i class="bi bi-file-spreadsheet me-1"></i>Inventario PST
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light p-3 border-top">
+                        <button type="button" class="btn btn-secondary fw-bold rounded-pill px-4" data-bs-dismiss="modal">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 <script setup>
@@ -784,6 +1056,69 @@ const copiarLinkJuradoSoc = (token) => {
     const url = window.location.origin + '/evaluacion-jurado/' + token;
     navigator.clipboard.writeText(url);
     alert('¡Enlace copiado exitosamente al portapapeles!\n\n' + url + '\n\nComparte este link con el Jurado Evaluador y Vocero Comunitario (Vigencia: 12 Horas).');
+};
+
+let mDetalle = null;
+const socSeleccionadaDetalle = ref(null);
+const copiadoExitoso = ref(false);
+
+const abrirDetalleEquipo = (soc) => {
+    socSeleccionadaDetalle.value = soc;
+    mDetalle = mDetalle || new Modal(document.getElementById("mDetalleEquipoSoc"));
+    mDetalle.show();
+};
+
+const tokenJuradoActivo = (soc) => {
+    return (
+        soc?.equipo?.proyectoComunidad?.token_jurado ||
+        soc?.equipo?.proyecto_comunidad?.token_jurado ||
+        null
+    );
+};
+
+const obtenerUrlJurado = (soc) => {
+    const token = tokenJuradoActivo(soc);
+    if (!token) return "";
+    return window.location.origin + "/evaluacion-jurado/" + token;
+};
+
+const copiarLinkModal = (token) => {
+    if (!token) return;
+    const url = window.location.origin + "/evaluacion-jurado/" + token;
+    navigator.clipboard.writeText(url);
+    copiadoExitoso.value = true;
+    setTimeout(() => {
+        copiadoExitoso.value = false;
+    }, 3000);
+};
+
+const generarLinkDesdeModal = (equId) => {
+    generandoLinkId.value = equId;
+    router.post(
+        `/profesor/equipos/${equId}/generar-link-jurado`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                if (
+                    page.props.flash?.link_jurado &&
+                    socSeleccionadaDetalle.value?.equipo
+                ) {
+                    const parts = page.props.flash.link_jurado.split("/");
+                    const tok = parts[parts.length - 1];
+                    const p =
+                        socSeleccionadaDetalle.value.equipo.proyectoComunidad ||
+                        socSeleccionadaDetalle.value.equipo.proyecto_comunidad;
+                    if (p) {
+                        p.token_jurado = tok;
+                    }
+                }
+            },
+            onFinish: () => {
+                generandoLinkId.value = null;
+            },
+        },
+    );
 };
 const page = usePage();
 const sidebarOpen = ref(false);

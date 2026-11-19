@@ -1360,12 +1360,31 @@
                                                 <p class="mb-2">{{ radarCrear.alerta_similitud.mensaje }}</p>
                                                 <button
                                                     type="button"
-                                                    class="btn btn-sm btn-dark fw-bold"
+                                                    class="btn btn-sm btn-dark fw-bold mb-2"
                                                     @click="marcarContinuacionEqu('crear')"
                                                 >
                                                     <i class="bi bi-diagram-2-fill text-danger me-1"></i>
                                                     Marcar como Continuación / Escalamiento
                                                 </button>
+
+                                                <div class="mt-2 pt-2 border-top">
+                                                    <label class="form-label fw-bold text-dark small mb-1">
+                                                        <i class="bi bi-shield-fill-exclamation text-danger me-1"></i>
+                                                        Justificación Obligatoria contra Duplicidad <span class="text-danger">*</span>
+                                                    </label>
+                                                    <textarea
+                                                        class="form-control form-control-sm bg-white"
+                                                        rows="2"
+                                                        v-model="formNuevo.justificacion_duplicidad"
+                                                        placeholder="Explique claramente el motivo (ej. Fase II, módulo complementario, nuevo alcance o usuarios distintos)..."
+                                                    ></textarea>
+                                                    <div class="form-text small" :class="(formNuevo.justificacion_duplicidad || '').length >= 15 ? 'text-success' : 'text-danger'">
+                                                        Mínimo 15 caracteres (actual: {{ (formNuevo.justificacion_duplicidad || '').length }})
+                                                    </div>
+                                                    <div v-if="errores.justificacion_duplicidad" class="text-danger small mt-1 fw-semibold">
+                                                        {{ errores.justificacion_duplicidad }}
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div v-if="radarCrear && radarCrear.total_historico > 0" class="row g-2">
                                                 <div class="col-md-6" v-if="radarCrear.proyectos_activos?.length">
@@ -1827,12 +1846,31 @@
                                         <p class="mb-2">{{ radarEditar.alerta_similitud.mensaje }}</p>
                                         <button
                                             type="button"
-                                            class="btn btn-sm btn-dark fw-bold"
+                                            class="btn btn-sm btn-dark fw-bold mb-2"
                                             @click="marcarContinuacionEqu('editar')"
                                         >
                                             <i class="bi bi-diagram-2-fill text-danger me-1"></i>
                                             Marcar como Continuación / Escalamiento
                                         </button>
+
+                                        <div class="mt-2 pt-2 border-top">
+                                            <label class="form-label fw-bold text-dark small mb-1">
+                                                <i class="bi bi-shield-fill-exclamation text-danger me-1"></i>
+                                                Justificación Obligatoria contra Duplicidad <span class="text-danger">*</span>
+                                            </label>
+                                            <textarea
+                                                class="form-control form-control-sm bg-white"
+                                                rows="2"
+                                                v-model="formEditar.justificacion_duplicidad"
+                                                placeholder="Explique claramente el motivo (ej. Fase II, módulo complementario, nuevo alcance o usuarios distintos)..."
+                                            ></textarea>
+                                            <div class="form-text small" :class="(formEditar.justificacion_duplicidad || '').length >= 15 ? 'text-success' : 'text-danger'">
+                                                Mínimo 15 caracteres (actual: {{ (formEditar.justificacion_duplicidad || '').length }})
+                                            </div>
+                                            <div v-if="erroresEditar.justificacion_duplicidad" class="text-danger small mt-1 fw-semibold">
+                                                {{ erroresEditar.justificacion_duplicidad }}
+                                            </div>
+                                        </div>
                                     </div>
                                     <div v-if="radarEditar && radarEditar.total_historico > 0" class="row g-2">
                                         <div class="col-md-6" v-if="radarEditar.proyectos_activos?.length">
@@ -4393,6 +4431,7 @@ const formNuevo = ref({
     equ_titulo: "",
     integrantes: [{ usu_id: "", es_lider: true }],
     justificacion_integrantes: "",
+    justificacion_duplicidad: "",
 });
 const formEditar = ref({
     equ_titulo: "",
@@ -4402,6 +4441,7 @@ const formEditar = ref({
     pco_id_pco_previo: "",
     pco_resumen: "",
     pco_fecha_limite: "",
+    justificacion_duplicidad: "",
 });
 
 const formProyecto = ref({
@@ -4411,6 +4451,7 @@ const formProyecto = ref({
     pco_id_pco_previo: "",
     pco_fecha_limite: "",
     pco_resumen: "",
+    justificacion_duplicidad: "",
     beneficiarios: [],
 });
 
@@ -4424,7 +4465,7 @@ let timerRadarEditar = null;
 
 const consultarRadarEqu = async (modo) => {
     const comId = modo === "crear" ? formProyecto.value.pco_id_com : formEditar.value.pco_id_com;
-    const titulo = modo === "crear" ? formCrear.value.equ_titulo : formEditar.value.equ_titulo;
+    const titulo = modo === "crear" ? formNuevo.value.equ_titulo : formEditar.value.equ_titulo;
     const equipoId = modo === "editar" ? equipoEditando.value?.equ_id || "" : "";
 
     if (!comId) {
@@ -4437,7 +4478,7 @@ const consultarRadarEqu = async (modo) => {
     else loadingRadarEditar.value = true;
 
     try {
-        const res = await axios.get(`/api/comunidades/${comId}/radar-proyectos`, {
+        const res = await window.axios.get(`/api/comunidades/${comId}/radar-proyectos`, {
             params: { titulo: titulo || "", equipo_id: equipoId },
         });
         if (modo === "crear") radarCrear.value = res.data;
@@ -4451,7 +4492,7 @@ const consultarRadarEqu = async (modo) => {
 };
 
 watch(
-    () => [formProyecto.value.pco_id_com, formCrear.value.equ_titulo],
+    () => [formProyecto.value.pco_id_com, formNuevo.value.equ_titulo],
     () => {
         clearTimeout(timerRadarCrear);
         timerRadarCrear = setTimeout(() => consultarRadarEqu("crear"), 350);
@@ -4827,6 +4868,7 @@ const abrirModalCrear = () => {
         equ_titulo: "",
         integrantes: [{ usu_id: "", es_lider: true }],
         justificacion_integrantes: "",
+        justificacion_duplicidad: "",
     };
     if (formNuevo.value.equ_id_sec) {
         onSeccionChange();
@@ -4838,8 +4880,10 @@ const abrirModalCrear = () => {
         pco_id_pco_previo: "",
         pco_fecha_limite: "",
         pco_resumen: "",
+        justificacion_duplicidad: "",
         beneficiarios: [],
     };
+    radarCrear.value = null;
     liderIndex.value = 0;
     errores.value = {};
     mCrear = mCrear || new Modal(document.getElementById("mCrear"));
@@ -4859,7 +4903,9 @@ const abrirModalEditar = (equ) => {
         pco_fecha_limite: p?.pco_fecha_limite
             ? String(p.pco_fecha_limite).slice(0, 10)
             : "",
+        justificacion_duplicidad: equ.equ_justificacion_duplicidad || p?.pco_justificacion_duplicidad || "",
     };
+    radarEditar.value = null;
     erroresEditar.value = {};
     mEditar = mEditar || new Modal(document.getElementById("mEditar"));
     mEditar.show();
@@ -4951,10 +4997,25 @@ const guardarSinProyecto = () => {
 
 const guardarNuevo = () => {
     actualizarLider();
+
+    // Si el radar de duplicidad detectó similitud, exigir justificación mínima de 15 caracteres
+    if (radarCrear.value?.alerta_similitud?.existe) {
+        const just = (formNuevo.value.justificacion_duplicidad || "").trim();
+        if (just.length < 15) {
+            errores.value = {
+                ...errores.value,
+                justificacion_duplicidad: "Debe ingresar una justificación detallada (mínimo 15 caracteres) explicando por qué este proyecto no es un duplicado.",
+            };
+            paso.value = 2;
+            return;
+        }
+    }
+
     loading.value = true;
 
     // Preparar proyecto limpio solo si se eligió comunidad y tipo
     let proyectoLimpio = null;
+    const justifDuplicidad = (formNuevo.value.justificacion_duplicidad || formProyecto.value.justificacion_duplicidad || "").trim();
     if (formProyecto.value.pco_id_com) {
         proyectoLimpio = {
             pco_id_com: formProyecto.value.pco_id_com,
@@ -4963,6 +5024,8 @@ const guardarNuevo = () => {
             pco_id_pco_previo: formProyecto.value.pco_id_pco_previo || null,
             pco_fecha_limite: formProyecto.value.pco_fecha_limite || null,
             pco_resumen: formProyecto.value.pco_resumen || "",
+            pco_justificacion_duplicidad: justifDuplicidad,
+            justificacion_duplicidad: justifDuplicidad,
             beneficiarios: (formProyecto.value.beneficiarios || [])
                 .filter((b) => b.tbe_id && Number(b.cantidad) > 0)
                 .map((b) => ({
@@ -4981,6 +5044,8 @@ const guardarNuevo = () => {
             formNuevo.value.equ_numero_grupo,
         equ_codigo: codigoPreview.value !== "—" ? codigoPreview.value : "",
         equ_titulo: formNuevo.value.equ_titulo,
+        equ_justificacion_duplicidad: justifDuplicidad,
+        justificacion_duplicidad: justifDuplicidad,
         integrantes: formNuevo.value.integrantes,
         justificacion_integrantes:
             formNuevo.value.justificacion_integrantes ?? "",
@@ -4992,7 +5057,7 @@ const guardarNuevo = () => {
             errores.value = e;
             loading.value = false;
             const tieneErrorProyecto = Object.keys(e).some((k) =>
-                k.startsWith("proyecto"),
+                k.startsWith("proyecto") || k.includes("duplicidad"),
             );
             paso.value = tieneErrorProyecto ? 2 : 1;
         },
@@ -5004,6 +5069,18 @@ const guardarNuevo = () => {
     });
 };
 const guardarEdicion = () => {
+    // Si el radar de duplicidad detectó similitud en edición, exigir justificación
+    if (radarEditar.value?.alerta_similitud?.existe) {
+        const just = (formEditar.value.justificacion_duplicidad || "").trim();
+        if (just.length < 15) {
+            erroresEditar.value = {
+                ...erroresEditar.value,
+                justificacion_duplicidad: "Debe ingresar una justificación detallada (mínimo 15 caracteres) explicando por qué este proyecto no es un duplicado.",
+            };
+            return;
+        }
+    }
+
     loadingEditar.value = true;
     router.put(
         `${base.value}/equipos/${equipoEditando.value.equ_id}`,

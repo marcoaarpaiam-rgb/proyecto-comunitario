@@ -540,12 +540,31 @@
                                             <p class="small mb-2">{{ radarData.alerta_similitud.mensaje }}</p>
                                             <button
                                                 type="button"
-                                                class="btn btn-sm btn-dark fw-bold"
+                                                class="btn btn-sm btn-dark fw-bold mb-2"
                                                 @click="marcarComoContinuacion"
                                             >
                                                 <i class="bi bi-diagram-2-fill text-danger me-1"></i>
                                                 Indicar como Continuación / Escalamiento del Proyecto Previo
                                             </button>
+
+                                            <div class="mt-2 pt-2 border-top">
+                                                <label class="form-label fw-bold text-dark small mb-1">
+                                                    <i class="bi bi-shield-fill-exclamation text-danger me-1"></i>
+                                                    Justificación Obligatoria contra Duplicidad <span class="text-danger">*</span>
+                                                </label>
+                                                <textarea
+                                                    class="form-control form-control-sm bg-white"
+                                                    rows="2"
+                                                    v-model="form.pco_justificacion_duplicidad"
+                                                    placeholder="Explique claramente el motivo (ej. Fase II, módulo complementario, nuevo alcance o usuarios distintos)..."
+                                                ></textarea>
+                                                <div class="form-text small" :class="(form.pco_justificacion_duplicidad || '').length >= 15 ? 'text-success' : 'text-danger'">
+                                                    Mínimo 15 caracteres (actual: {{ (form.pco_justificacion_duplicidad || '').length }})
+                                                </div>
+                                                <div v-if="errores.justificacion_duplicidad" class="text-danger small mt-1 fw-semibold">
+                                                    {{ errores.justificacion_duplicidad }}
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- Lista de proyectos activos y culminados -->
@@ -940,6 +959,8 @@ const form = ref({
     pco_id_mpr: "",
     pco_resumen: "",
     pco_fecha_limite: "",
+    pco_justificacion_duplicidad: "",
+    justificacion_duplicidad: "",
     beneficiarios: [],
 });
 const errores = ref({});
@@ -1050,8 +1071,11 @@ const abrirModal = () => {
         pco_id_mpr: "",
         pco_resumen: "",
         pco_fecha_limite: "",
+        pco_justificacion_duplicidad: "",
+        justificacion_duplicidad: "",
         beneficiarios: [],
     };
+    radarData.value = null;
     errores.value = {};
     modal = modal || new Modal(document.getElementById("mProy"));
     modal.show();
@@ -1131,6 +1155,20 @@ watch(
 );
 
 const guardar = () => {
+    // Si el radar de duplicidad detectó similitud, exigir justificación mínima de 15 caracteres
+    if (radarData.value?.alerta_similitud?.existe) {
+        const just = (form.value.pco_justificacion_duplicidad || form.value.justificacion_duplicidad || "").trim();
+        if (just.length < 15) {
+            errores.value = {
+                ...errores.value,
+                justificacion_duplicidad: "Debe ingresar una justificación detallada (mínimo 15 caracteres) explicando por qué este proyecto no es un duplicado.",
+            };
+            return;
+        }
+        form.value.justificacion_duplicidad = just;
+        form.value.pco_justificacion_duplicidad = just;
+    }
+
     // Validar que ningún beneficiario supere 10000 antes del envío
     for (const ben of form.value.beneficiarios) {
         if (!ben.tbe_id) {

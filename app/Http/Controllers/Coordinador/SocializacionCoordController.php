@@ -12,11 +12,15 @@ class SocializacionCoordController extends Controller
     {
         return Inertia::render('Coordinador/Socializaciones', [
             'socializaciones' => Socializacion::with([
-                'equipo.seccion',
+                'equipo.seccion.trayecto',
+                'equipo.proyectoComunidad.comunidad',
+                'equipo.integrantes.usuario',
+                'equipo.socializaciones.tipoSocializacion',
                 'trayecto',
                 'tipoSocializacion',
                 'jurados',
                 'integrantes.usuario',
+                'socializacionPrevia',
             ])->orderBy('soc_fecha', 'desc')->get(),
         ]);
     }

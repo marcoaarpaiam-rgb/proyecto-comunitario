@@ -13,6 +13,7 @@ class Equipo extends Model
     protected $fillable = [
         'equ_codigo',
         'equ_titulo',
+        'equ_justificacion_duplicidad',
         'equ_status',
         'equ_created_at',
         'equ_updated_at',

@@ -46,14 +46,22 @@ class CartaController extends Controller
 
     public function solicitar(Request $request)
     {
-        $request->validate(['cpr_id_pco' => 'required|exists:proyecto_comunidad,pco_id']);
+        $request->validate(
+            ['cpr_id_pco' => 'required|exists:proyecto_comunidad,pco_id'],
+            [
+                'cpr_id_pco.required' => 'El identificador del proyecto es obligatorio para solicitar la carta.',
+                'cpr_id_pco.exists'   => 'El proyecto seleccionado no existe o no es válido.',
+            ]
+        );
 
         $miEquipoId = \App\Models\EquipoIntegrante::where('ein_id_usu', auth()->id())
             ->where('ein_es_lider', true)->where('ein_status', true)->value('ein_id_equ');
 
         $proyecto = \App\Models\ProyectoComunidad::where('pco_id', $request->cpr_id_pco)
             ->where('pco_id_equ', $miEquipoId)->first();
-        abort_unless($proyecto, 403);
+        if (!$proyecto) {
+            return back()->withErrors(['cpr_id_pco' => 'No tienes autorización para solicitar una carta para este proyecto o no eres el líder del equipo.']);
+        }
 
         $carta = CartaPresentacion::where('cpr_id_pco', $proyecto->pco_id)->first();
 

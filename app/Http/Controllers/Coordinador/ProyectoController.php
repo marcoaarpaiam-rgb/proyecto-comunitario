@@ -63,40 +63,28 @@ class ProyectoController extends Controller
             'beneficiarios.*.cantidad.integer' => 'La cantidad debe ser un número entero.',
         ]);
 
-        // Validación contra proyectos duplicados en la misma comunidad
+        // Validación contra proyectos duplicados o similares en la misma comunidad con requerimiento de justificación
         $equipoActual = Equipo::find($request->pco_id_equ);
-        $tituloActual = mb_strtolower(trim($equipoActual?->equ_titulo ?? ''));
+        $tituloActual = $equipoActual?->equ_titulo ?? '';
+        $justificacion = $request->justificacion_duplicidad ?? $request->pco_justificacion_duplicidad;
 
-        $proyectosExistentes = ProyectoComunidad::where('pco_id_com', $request->pco_id_com)
-            ->where('pco_status', true)
-            ->where('pco_id_equ', '!=', $request->pco_id_equ)
-            ->with(['equipo', 'tipoProyecto', 'modalidad'])
-            ->get();
+        $verificacion = app(\App\Services\DetectorDuplicidadService::class)->verificarCoincidencia(
+            (int) $request->pco_id_com,
+            $tituloActual,
+            (int) $request->pco_id_equ,
+            (int) $request->pco_id_tpr,
+            $justificacion,
+            (int) $request->pco_id_mpr
+        );
 
-        $modNueva = ModalidadProyecto::find($request->pco_id_mpr);
-        $nuevaEsContinuacion = in_array(mb_strtolower($modNueva?->mpr_nombre ?? ''), ['continuación', 'continuacion', 'reingeniería', 'reingenieria']);
-
-        foreach ($proyectosExistentes as $prev) {
-            $tituloPrev = mb_strtolower(trim($prev->equipo?->equ_titulo ?? ''));
-            // 1. Mismo tipo de proyecto y modalidad no es continuación/reingeniería
-            if ($prev->pco_id_tpr == $request->pco_id_tpr && !$nuevaEsContinuacion) {
-                return back()->withErrors([
-                    'pco_id_com' => "La comunidad ya cuenta con un proyecto activo del mismo tipo ({$prev->tipoProyecto?->tpr_nombre}) asignado al equipo {$prev->equipo?->equ_codigo}. Si se trata de una fase posterior, seleccione la modalidad Continuación o Reingeniería."
-                ]);
-            }
-
-            // 2. Similitud semántica o de título mayor a 65%
-            if ($tituloActual && $tituloPrev) {
-                similar_text($tituloActual, $tituloPrev, $percent);
-                if ($percent >= 65 && !$nuevaEsContinuacion) {
-                    return back()->withErrors([
-                        'pco_id_com' => "Posible proyecto duplicado: La comunidad ya tiene el proyecto '{$prev->equipo?->equ_titulo}' (similitud del " . round($percent) . "%). Verifique con el equipo {$prev->equipo?->equ_codigo}."
-                    ]);
-                }
-            }
+        if (!$verificacion['es_valido']) {
+            return back()->withErrors([
+                'justificacion_duplicidad' => $verificacion['mensaje_error'],
+                'pco_id_com'               => $verificacion['mensaje_error'],
+            ]);
         }
 
-        DB::transaction(function () use ($request, $equipoActual, &$proyecto) {
+        DB::transaction(function () use ($request, $equipoActual, $justificacion, &$proyecto) {
             $proyecto = ProyectoComunidad::create([
                 'pco_id_equ'          => $request->pco_id_equ,
                 'pco_id_com'          => $request->pco_id_com,
@@ -104,6 +92,7 @@ class ProyectoController extends Controller
                 'pco_id_mpr'          => $request->pco_id_mpr,
                 'pco_id_pco_previo'   => $request->pco_id_pco_previo,
                 'pco_resumen'         => $request->pco_resumen,
+                'pco_justificacion_duplicidad' => $justificacion,
                 'pco_area_comunidad'  => $request->pco_area_comunidad,
                 'pco_linea_investigacion' => $request->pco_linea_investigacion ?? 'Desarrollo de Software - Web',
                 'pco_fecha_limite'    => $request->pco_fecha_limite,
@@ -171,13 +160,32 @@ class ProyectoController extends Controller
             'beneficiarios.*.cantidad.integer'=> 'La cantidad debe ser un número entero.',
         ]);
 
+        $justificacion = $request->justificacion_duplicidad ?? $request->pco_justificacion_duplicidad ?? $proyecto->pco_justificacion_duplicidad;
+
+        $verificacion = app(\App\Services\DetectorDuplicidadService::class)->verificarCoincidencia(
+            (int) $request->pco_id_com,
+            $proyecto->equipo?->equ_titulo,
+            (int) $proyecto->pco_id_equ,
+            (int) $request->pco_id_tpr,
+            $justificacion,
+            (int) $request->pco_id_mpr
+        );
+
+        if (!$verificacion['es_valido']) {
+            return back()->withErrors([
+                'justificacion_duplicidad' => $verificacion['mensaje_error'],
+                'pco_id_com'               => $verificacion['mensaje_error'],
+            ]);
+        }
+
         $proyecto->update([
-            'pco_id_com'         => $request->pco_id_com,
-            'pco_id_tpr'         => $request->pco_id_tpr,
-            'pco_id_mpr'         => $request->pco_id_mpr,
-            'pco_resumen'        => $request->pco_resumen,
-            'pco_fecha_limite'   => $request->pco_fecha_limite ?: $proyecto->pco_fecha_limite,
-            'pco_id_usu_updated' => auth()->id(),
+            'pco_id_com'                   => $request->pco_id_com,
+            'pco_id_tpr'                   => $request->pco_id_tpr,
+            'pco_id_mpr'                   => $request->pco_id_mpr,
+            'pco_resumen'                  => $request->pco_resumen,
+            'pco_justificacion_duplicidad' => $justificacion,
+            'pco_fecha_limite'             => $request->pco_fecha_limite ?: $proyecto->pco_fecha_limite,
+            'pco_id_usu_updated'           => auth()->id(),
         ]);
 
         if ($request->has('beneficiarios')) {

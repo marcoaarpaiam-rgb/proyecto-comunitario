@@ -66,18 +66,23 @@ class PuntoControlController extends Controller
         $request->validate([
             'puc_id_equ'      => 'required|exists:equipo,equ_id',
             'puc_nombre'      => 'required|string|max:150',
-            'puc_semana'      => 'nullable|integer|min:1|max:24',
+            'puc_semana'      => 'required|integer|min:1|max:18',
             'puc_descripcion' => 'nullable|string',
             'puc_fecha_limite'=> 'required|date|after_or_equal:today',
             'puc_dias_aviso'  => 'required|integer|min:1|max:30',
         ], [
             'puc_id_equ.required'            => 'El equipo es obligatorio.',
-            'puc_nombre.required'            => 'El nombre es obligatorio.',
-            'puc_semana.integer'             => 'La semana debe ser un número entero.',
-            'puc_semana.min'                 => 'La semana debe ser mínimo 1.',
-            'puc_semana.max'                 => 'La semana no puede ser mayor a 24.',
+            'puc_nombre.required'            => 'El nombre del punto de control es obligatorio.',
+            'puc_semana.required'            => 'La semana del punto de control es obligatoria (rango del 1 al 18).',
+            'puc_semana.integer'             => 'La semana debe ser un número entero válido (sin caracteres especiales ni letras).',
+            'puc_semana.min'                 => 'La semana debe ser como mínimo la semana 1.',
+            'puc_semana.max'                 => 'La semana no puede ser mayor a la semana 18.',
             'puc_fecha_limite.required'      => 'La fecha del encuentro es obligatoria.',
             'puc_fecha_limite.after_or_equal'=> 'La fecha del encuentro no puede ser anterior a la fecha de hoy.',
+            'puc_dias_aviso.required'        => 'Los días de aviso son obligatorios.',
+            'puc_dias_aviso.integer'         => 'Los días de aviso deben ser un número entero.',
+            'puc_dias_aviso.min'             => 'Los días de aviso deben ser al menos 1 día.',
+            'puc_dias_aviso.max'             => 'Los días de aviso no pueden superar 30 días.',
         ]);
 
         $this->autorizarEquipoId($request->puc_id_equ);
@@ -224,11 +229,15 @@ class PuntoControlController extends Controller
     public function reprogramar(\Illuminate\Http\Request $request, $id)
     {
         $request->validate([
-            'nueva_fecha' => 'required|date|after_or_equal:today',
-            'motivo'      => 'required|string|max:300',
+            'nueva_fecha'  => 'required|date|after_or_equal:today',
+            'nueva_semana' => 'nullable|integer|min:1|max:18',
+            'motivo'       => 'required|string|max:300',
         ], [
             'nueva_fecha.required'       => 'La nueva fecha es obligatoria.',
             'nueva_fecha.after_or_equal' => 'La nueva fecha no puede ser anterior a la fecha de hoy.',
+            'nueva_semana.integer'       => 'La nueva semana debe ser un número entero válido (1 al 18).',
+            'nueva_semana.min'           => 'La nueva semana debe ser como mínimo 1.',
+            'nueva_semana.max'           => 'La nueva semana no puede ser mayor a 18.',
             'motivo.required'            => 'El motivo de la reprogramación es obligatorio.',
             'motivo.max'                 => 'El motivo de la reprogramación no puede exceder 300 caracteres.',
         ]);
@@ -250,11 +259,16 @@ class PuntoControlController extends Controller
             ]);
         }
 
-        $punto->update([
+        $datosActualizar = [
             'puc_fecha_reprogramada'      => $request->nueva_fecha,
             'puc_motivo_reprogramacion'   => $request->motivo,
             'puc_id_usu_updated'          => auth()->id(),
-        ]);
+        ];
+        if ($request->filled('nueva_semana')) {
+            $datosActualizar['puc_semana'] = (int) $request->nueva_semana;
+        }
+
+        $punto->update($datosActualizar);
 
         // Notificar al líder del equipo
         try {

@@ -34,8 +34,13 @@ class SocializacionController extends Controller
         return Inertia::render('Profesor/Socializaciones', [
             'socializaciones' => Socializacion::whereIn('soc_id_equ', $equipos->pluck('equ_id'))
                 ->with([
-                    'equipo.seccion', 'equipo.proyectoComunidad', 'trayecto', 'tipoSocializacion',
-                    'jurados', 'integrantes.usuario',
+                    'equipo.seccion.trayecto',
+                    'equipo.proyectoComunidad.comunidad',
+                    'equipo.socializaciones.tipoSocializacion',
+                    'trayecto',
+                    'tipoSocializacion',
+                    'jurados',
+                    'integrantes.usuario',
                     'socializacionPrevia',
                 ])
                 ->orderBy('soc_fecha', 'desc')
