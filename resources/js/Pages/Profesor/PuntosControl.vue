@@ -68,6 +68,9 @@
                 <Link href="/profesor/entregables" class="sb-lnk"
                     ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg> Entregables</Link
                 >
+                <Link href="/profesor/estudiantes/buscar" class="sb-lnk"
+                    ><i class="bi bi-person-badge me-2"></i> Expediente Estudiantes</Link
+                >
                 <div style="padding: 0.75rem 1.4rem">
                     <form @submit.prevent="logout">
                         <button

@@ -71,6 +71,9 @@
                 <Link href="/profesor/entregables" class="sb-link">
                     <i class="bi bi-file-earmark-check"></i> Entregables
                 </Link>
+                <Link href="/profesor/estudiantes/buscar" class="sb-link">
+                    <i class="bi bi-person-badge"></i> Expediente Estudiantes
+                </Link>
 
                 <div style="padding: 0.75rem 1.4rem; margin-top: auto">
                     <form @submit.prevent="logout">

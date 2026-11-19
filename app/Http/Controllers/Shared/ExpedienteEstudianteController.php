@@ -20,22 +20,22 @@ class ExpedienteEstudianteController extends Controller
     public function buscar(Request $request)
     {
         $q = trim($request->input('q', ''));
+        $idSec = $request->input('id_sec');
         $usuarioAutenticado = auth()->user();
         $esProfesor = $usuarioAutenticado && $usuarioAutenticado->hasRol('profesor_proyecto');
         $esCoordinador = $usuarioAutenticado && $usuarioAutenticado->hasRol('coordinador');
 
         $query = Usuario::where('usu_status', true);
 
-        if (strlen($q) >= 2) {
-            $query->where(function ($query) use ($q) {
-                $query->where('usu_cedula', 'like', "%{$q}%")
-                      ->orWhere('usu_primer_nombre', 'like', "%{$q}%")
-                      ->orWhere('usu_primer_apellido', 'like', "%{$q}%")
-                      ->orWhere('usu_usuario', 'like', "%{$q}%");
+        if (strlen($q) >= 1) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('usu_cedula', 'like', "%{$q}%")
+                    ->orWhere('usu_primer_nombre', 'like', "%{$q}%")
+                    ->orWhere('usu_primer_apellido', 'like', "%{$q}%")
+                    ->orWhere('usu_username', 'like', "%{$q}%")
+                    ->orWhereRaw("CONCAT(usu_primer_nombre, ' ', usu_primer_apellido) LIKE ?", ["%{$q}%"]);
             });
         }
-
-        $query->whereHas('usuarioRoles', fn($r) => $r->whereHas('rol', fn($rol) => $rol->whereIn('rol_nombre', ['lider', 'estudiante'])));
 
         // Si es profesor, restringir la búsqueda únicamente a estudiantes de sus secciones asignadas
         if ($esProfesor) {
@@ -43,30 +43,71 @@ class ExpedienteEstudianteController extends Controller
                 ->where('pse_status', true)
                 ->pluck('pse_id_sec');
 
-            $query->whereHas('seccionesEstudiante', function ($se) use ($misSeccionesIds) {
-                $se->where('ese_status', true)
-                   ->whereIn('ese_id_sec', $misSeccionesIds);
+            $query->where(function ($sub) use ($misSeccionesIds) {
+                $sub->whereHas('seccionesEstudiante', function ($se) use ($misSeccionesIds) {
+                    $se->where('ese_status', true)
+                       ->whereIn('ese_id_sec', $misSeccionesIds);
+                })->orWhereHas('equiposIntegrante.equipo', function ($eq) use ($misSeccionesIds) {
+                    $eq->where('equ_status', true)
+                       ->whereIn('equ_id_sec', $misSeccionesIds);
+                });
             });
+
+            if ($idSec && in_array($idSec, $misSeccionesIds->toArray())) {
+                $query->where(function ($sub) use ($idSec) {
+                    $sub->whereHas('seccionesEstudiante', fn($se) => $se->where('ese_status', true)->where('ese_id_sec', $idSec))
+                       ->orWhereHas('equiposIntegrante.equipo', fn($eq) => $eq->where('equ_status', true)->where('equ_id_sec', $idSec));
+                });
+            }
+
+            $secciones = \App\Models\Seccion::whereIn('sec_id', $misSeccionesIds)
+                ->with('trayecto')
+                ->get();
+        } else {
+            // Coordinador: ver todos los estudiantes (excluye coordinadores y profesores)
+            $query->whereDoesntHave('usuarioRoles.rol', fn($r) => $r->whereIn('rol_nombre', ['coordinador', 'profesor_proyecto']));
+
+            if ($idSec) {
+                $query->where(function ($sub) use ($idSec) {
+                    $sub->whereHas('seccionesEstudiante', fn($se) => $se->where('ese_status', true)->where('ese_id_sec', $idSec))
+                       ->orWhereHas('equiposIntegrante.equipo', fn($eq) => $eq->where('equ_status', true)->where('equ_id_sec', $idSec));
+                });
+            }
+
+            $secciones = \App\Models\Seccion::where('sec_status', true)
+                ->with('trayecto')
+                ->get();
         }
 
         $estudiantes = $query->with([
-                'seccionesEstudiante.seccion.trayecto',
-                'equiposIntegrante.equipo',
+                'seccionesEstudiante' => fn($q) => $q->where('ese_status', true)->with('seccion.trayecto'),
+                'equiposIntegrante' => fn($q) => $q->where('ein_status', true)->with('equipo.trayecto'),
             ])
-            ->take(25)
-            ->get(['usu_id', 'usu_cedula', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_email', 'usu_telefono']);
+            ->orderBy('usu_primer_nombre')
+            ->orderBy('usu_primer_apellido')
+            ->take(100)
+            ->get(['usu_id', 'usu_cedula', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_email', 'usu_telefono'])
+            ->map(function ($est) {
+                $secc = $est->seccionesEstudiante->first()?->seccion;
+                $equi = $est->equiposIntegrante->first()?->equipo;
+                return [
+                    'usu_id'              => $est->usu_id,
+                    'usu_cedula'          => $est->usu_cedula,
+                    'usu_primer_nombre'   => $est->usu_primer_nombre,
+                    'usu_primer_apellido' => $est->usu_primer_apellido,
+                    'usu_email'           => $est->usu_email,
+                    'usu_telefono'        => $est->usu_telefono,
+                    'seccion_id'          => $secc?->sec_id,
+                    'seccion_codigo'      => $secc?->sec_codigo,
+                    'trayecto_nombre'     => $secc?->trayecto?->tra_nombre,
+                    'equipo_id'           => $equi?->equ_id,
+                    'equipo_codigo'       => $equi?->equ_codigo,
+                ];
+            });
 
         // Si la petición espera JSON explícito (ej: autocompletado con axios)
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json($estudiantes);
-        }
-
-        // Si es una navegación directa de Inertia a /estudiantes/buscar
-        // Redirigir limpiamente a la ruta del primer estudiante encontrado
-        $primerEstudianteId = $estudiantes->first()?->usu_id;
-        if ($primerEstudianteId) {
-            $rutaExpediente = $esCoordinador ? 'coordinador.estudiantes.expediente' : 'profesor.estudiantes.expediente';
-            return redirect()->route($rutaExpediente, $primerEstudianteId);
         }
 
         return Inertia::render('Shared/ExpedienteEstudiante', [
@@ -77,6 +118,7 @@ class ExpedienteEstudianteController extends Controller
             'backUrl'           => $esCoordinador ? '/coordinador' : '/profesor',
             'esCoordinador'     => (bool)$esCoordinador,
             'estudiantesLista'  => $estudiantes,
+            'secciones'         => $secciones,
         ]);
     }
 
@@ -87,7 +129,9 @@ class ExpedienteEstudianteController extends Controller
     {
         $usuarioAutenticado = auth()->user();
         $esProfesor = $usuarioAutenticado && $usuarioAutenticado->hasRol('profesor_proyecto');
+        $esCoordinador = $usuarioAutenticado && $usuarioAutenticado->hasRol('coordinador');
 
+        $misSeccionesIds = collect();
         if ($esProfesor) {
             $misSeccionesIds = \App\Models\ProfesorSeccion::where('pse_id_usu', $usuarioAutenticado->usu_id)
                 ->where('pse_status', true)
@@ -99,8 +143,19 @@ class ExpedienteEstudianteController extends Controller
                 ->exists();
 
             if (!$pertenece) {
-                abort(403, 'No tienes autorización para consultar el expediente de este estudiante ya que no pertenece a tus secciones asignadas.');
+                $perteneceEquipo = EquipoIntegrante::where('ein_id_usu', $id)
+                    ->where('ein_status', true)
+                    ->whereHas('equipo', fn($eq) => $eq->whereIn('equ_id_sec', $misSeccionesIds)->where('equ_status', true))
+                    ->exists();
+
+                if (!$perteneceEquipo) {
+                    abort(403, 'No tienes autorización para consultar el expediente de este estudiante ya que no pertenece a tus secciones asignadas.');
+                }
             }
+
+            $secciones = \App\Models\Seccion::whereIn('sec_id', $misSeccionesIds)->with('trayecto')->get();
+        } else {
+            $secciones = \App\Models\Seccion::where('sec_status', true)->with('trayecto')->get();
         }
         $estudiante = Usuario::with([
             'seccionesEstudiante.seccion.trayecto',
@@ -197,13 +252,52 @@ class ExpedienteEstudianteController extends Controller
         $esCoordinador = auth()->user()->hasRol('coordinador');
         $backUrl = $esCoordinador ? '/coordinador' : '/profesor';
 
+        // Estudiantes disponibles para el switcher y búsqueda
+        $queryLista = Usuario::where('usu_status', true);
+        if ($esProfesor) {
+            $queryLista->where(function ($sub) use ($misSeccionesIds) {
+                $sub->whereHas('seccionesEstudiante', fn($se) => $se->where('ese_status', true)->whereIn('ese_id_sec', $misSeccionesIds))
+                   ->orWhereHas('equiposIntegrante.equipo', fn($eq) => $eq->where('equ_status', true)->whereIn('equ_id_sec', $misSeccionesIds));
+            });
+        } else {
+            $queryLista->whereDoesntHave('usuarioRoles.rol', fn($r) => $r->whereIn('rol_nombre', ['coordinador', 'profesor_proyecto']));
+        }
+
+        $estudiantesLista = $queryLista->with([
+                'seccionesEstudiante' => fn($q) => $q->where('ese_status', true)->with('seccion.trayecto'),
+                'equiposIntegrante' => fn($q) => $q->where('ein_status', true)->with('equipo.trayecto'),
+            ])
+            ->orderBy('usu_primer_nombre')
+            ->orderBy('usu_primer_apellido')
+            ->take(100)
+            ->get(['usu_id', 'usu_cedula', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_email', 'usu_telefono'])
+            ->map(function ($est) {
+                $secc = $est->seccionesEstudiante->first()?->seccion;
+                $equi = $est->equiposIntegrante->first()?->equipo;
+                return [
+                    'usu_id'              => $est->usu_id,
+                    'usu_cedula'          => $est->usu_cedula,
+                    'usu_primer_nombre'   => $est->usu_primer_nombre,
+                    'usu_primer_apellido' => $est->usu_primer_apellido,
+                    'usu_email'           => $est->usu_email,
+                    'usu_telefono'        => $est->usu_telefono,
+                    'seccion_id'          => $secc?->sec_id,
+                    'seccion_codigo'      => $secc?->sec_codigo,
+                    'trayecto_nombre'     => $secc?->trayecto?->tra_nombre,
+                    'equipo_id'           => $equi?->equ_id,
+                    'equipo_codigo'       => $equi?->equ_codigo,
+                ];
+            });
+
         return Inertia::render('Shared/ExpedienteEstudiante', [
             'estudiante'        => $estudiante,
             'historialEventos'  => $historialEventos,
             'asistenciasPuntos' => $asistenciasPuntos,
             'socializaciones'   => $socializaciones,
             'backUrl'           => $backUrl,
-            'esCoordinador'     => $esCoordinador,
+            'esCoordinador'     => (bool)$esCoordinador,
+            'estudiantesLista'  => $estudiantesLista,
+            'secciones'         => $secciones,
         ]);
     }
 }
