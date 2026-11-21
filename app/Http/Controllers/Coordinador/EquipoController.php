@@ -159,9 +159,15 @@ class EquipoController extends Controller
             $equiposDisueltosQuery->whereIn('equ_id_sec', $seccionesIds);
         }
 
+        $equiposCollection = $equiposQuery->get();
+        $diagnosticosEquipos = app(\App\Services\DiagnosticoProyectoService::class)->diagnosticarSeccion(
+            $equiposCollection->pluck('equ_id')->toArray()
+        );
+
         return Inertia::render('Shared/Equipos', [
-            'equipos'          => $equiposQuery->get(),
-            'secciones'        => $seccionesQuery->get(),
+            'equipos'             => $equiposCollection,
+            'diagnosticosEquipos' => $diagnosticosEquipos,
+            'secciones'           => $seccionesQuery->get(),
             'trayectos'        => Trayecto::where('tra_status', true)->get(),
             'equiposDisueltos' => $equiposDisueltosQuery->get(),
             'estudiantes'      => $estudiantes,
@@ -912,6 +918,20 @@ class EquipoController extends Controller
             )
             ->get(['usu_id','usu_cedula','usu_primer_nombre','usu_primer_apellido','usu_tiene_acceso']);
 
+        $equiposSec = \App\Models\Equipo::with([
+            'seccion.trayecto','trayecto','integrantes.usuario',
+            'proyectoComunidad.comunidad',
+            'proyectoComunidad.tipoProyecto',
+            'socializaciones.tipoSocializacion',
+            'resultadoProyecto',
+        ])->where('equ_id_sec', $id)
+        ->where('equ_status', true)
+        ->orderBy('equ_codigo')->get();
+
+        $diagnosticosEquipos = app(\App\Services\DiagnosticoProyectoService::class)->diagnosticarSeccion(
+            $equiposSec->pluck('equ_id')->toArray()
+        );
+
         return \Inertia\Inertia::render('Shared/Equipos', [
             'seccion'          => [
                 'sec_id'     => $seccion->sec_id,
@@ -919,15 +939,8 @@ class EquipoController extends Controller
                 'trayecto'   => $seccion->trayecto?->tra_nombre,
                 'turno'      => $seccion->turno?->tur_nombre,
             ],
-            'equipos'          => \App\Models\Equipo::with([
-                                    'seccion.trayecto','trayecto','integrantes.usuario',
-                                    'proyectoComunidad.comunidad',
-                                    'proyectoComunidad.tipoProyecto',
-                                    'socializaciones.tipoSocializacion',
-                                    'resultadoProyecto',
-                                ])->where('equ_id_sec', $id)
-                                ->where('equ_status', true)
-                                ->orderBy('equ_codigo')->get(),
+            'equipos'             => $equiposSec,
+            'diagnosticosEquipos' => $diagnosticosEquipos,
             'equiposDisueltos' => \App\Models\Equipo::with([
                                     'seccion','trayecto','integrantes.usuario'
                                 ])->where('equ_id_sec', $id)

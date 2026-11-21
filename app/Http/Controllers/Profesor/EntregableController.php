@@ -20,17 +20,28 @@ class EntregableController extends Controller
         $profesor  = auth()->user();
         $secciones = $profesor->seccionesProfesor()
             ->where('pse_status', true)->pluck('pse_id_sec');
-        $equipos   = Equipo::whereIn('equ_id_sec', $secciones)
-            ->where('equ_status', true)->pluck('equ_id');
+        $equiposModelos = Equipo::whereIn('equ_id_sec', $secciones)
+            ->where('equ_status', true)
+            ->with(['seccion', 'trayecto'])
+            ->get(['equ_id', 'equ_codigo', 'equ_titulo', 'equ_id_sec', 'equ_id_tra']);
+        $equiposIds = $equiposModelos->pluck('equ_id');
 
         return Inertia::render('Profesor/Entregables', [
-            'entregables' => Entregable::whereIn('entr_id_equ', $equipos)
-                ->with(['equipo', 'tipoEntregable'])
-                ->select('entr_id','entr_id_equ','entr_id_tet','entr_nombre_archivo',
+            'equipos'     => $equiposModelos,
+            'entregables' => Entregable::whereIn('entr_id_equ', $equiposIds)
+                ->with(['equipo', 'tipoEntregable', 'catalogoPnfi'])
+                ->select('entr_id','entr_id_equ','entr_id_tet','entr_id_cep','entr_nombre_archivo',
                         'entr_ruta','entr_version','entr_aprobado','entr_fecha_subida',
                         'entr_observacion_rechazo')
                 ->orderBy('entr_fecha_subida', 'desc')
                 ->get(),
+            'catalogoPnfi' => \App\Models\CatalogoEntregablePnfi::where('cep_activo', true)
+                ->with('trayecto')
+                ->orderBy('cep_id_trayecto')
+                ->orderBy('cep_semestre')
+                ->orderBy('cep_orden')
+                ->get(),
+            'semestreActivo' => app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion(0),
         ]);
     }
 

@@ -26,7 +26,13 @@ class Entregable extends Model
         'entr_status',
         'entr_id_usu_aprobado',
         'entr_id_usu_created',
+        'entr_id_cep',
     ];
+
+    public function catalogoPnfi()
+    {
+        return $this->belongsTo(CatalogoEntregablePnfi::class, 'entr_id_cep', 'cep_id');
+    }
 
     public function equipo()
     {

@@ -65,6 +65,12 @@
                 <Link href="/profesor/puntos-control" class="sb-link">
                     <i class="bi bi-flag"></i> Puntos de Control
                 </Link>
+                <Link href="/profesor/esquemas-evaluacion" class="sb-link">
+                    <i class="bi bi-sliders"></i> Esquemas de Evaluación
+                </Link>
+                <Link href="/evaluaciones" class="sb-link">
+                    <i class="bi bi-journal-check"></i> Rúbricas Oficiales
+                </Link>
                 <Link href="/profesor/socializaciones" class="sb-link">
                     <i class="bi bi-mic"></i> Socializaciones
                 </Link>

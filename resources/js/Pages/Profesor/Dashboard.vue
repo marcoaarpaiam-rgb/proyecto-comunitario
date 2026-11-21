@@ -7,99 +7,8 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-
-        <!-- SIDEBAR -->
-        <div class="sb-prof" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                        font-size: 1rem;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-avatar">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Profesor de Proyecto</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/profesor" class="sb-link active"
-                    ><i class="bi bi-speedometer2"></i> Dashboard</Link
-                >
-                <Link href="/profesor/secciones" class="sb-link"
-                    ><i class="bi bi-collection"></i> Mis Secciones</Link
-                >
-                <div class="sb-sec">Gestión</div>
-                <Link href="/profesor/puntos-control" class="sb-link"
-                    ><i class="bi bi-flag"></i> Puntos de Control
-                    <span v-if="stats.puntosVencer > 0" class="sb-badge">{{
-                        stats.puntosVencer
-                    }}</span></Link
-                >
-                <Link href="/profesor/socializaciones" class="sb-link"
-                    ><i class="bi bi-mic"></i> Socializaciones</Link
-                >
-                <Link href="/profesor/entregables" class="sb-link"
-                    ><i class="bi bi-file-earmark-check"></i> Entregables
-                    <span
-                        v-if="stats.entregablesPendientes > 0"
-                        class="sb-badge"
-                        >{{ stats.entregablesPendientes }}</span
-                    ></Link
-                >
-                <Link href="/profesor/estudiantes/buscar" class="sb-link"
-                    ><i class="bi bi-person-badge"></i> Expediente Estudiantes</Link
-                >
-                <div style="padding: 0.75rem 1.4rem; margin-top: auto">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-link w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- SIDEBAR PROFESOR ESTANDARIZADO -->
+        <SidebarProfesor :sidebar-open="sidebarOpen" @close="sidebarOpen = false" />
 
         <!-- MAIN -->
         <div class="main-prof">
@@ -595,6 +504,7 @@ import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 const props = defineProps({
     stats: {
         type: Object,

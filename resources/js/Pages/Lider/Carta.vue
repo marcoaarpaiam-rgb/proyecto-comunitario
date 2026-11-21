@@ -7,117 +7,10 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-        <div class="sb" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-av">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">
-                        <i
-                            class="bi bi-star-fill me-1"
-                            style="color: #ffd700; font-size: 0.65rem"
-                        ></i
-                        >Líder de Equipo
-                    </div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Mi Proyecto</div>
-                <Link
-                    href="/lider"
-                    class="sb-lnk d-flex align-items-center justify-content-between"
-                >
-                    <span
-                        ><i class="bi bi-speedometer2 me-2"></i>Dashboard</span
-                    >
-                    <span
-                        v-if="notifNoLeidas > 0"
-                        style="
-                            background: #dc3545;
-                            color: #fff;
-                            border-radius: 50%;
-                            width: 18px;
-                            height: 18px;
-                            font-size: 0.7rem;
-                            font-weight: 800;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            flex-shrink: 0;
-                        "
-                    >
-                        {{ notifNoLeidas > 9 ? "9+" : notifNoLeidas }}
-                    </span>
-                </Link>
-                <Link href="/lider/equipo" class="sb-lnk"
-                    ><i class="bi bi-people"></i> Mi Equipo</Link
-                >
-                <Link href="/lider/proyecto" class="sb-lnk"
-                    ><i class="bi bi-building"></i> Mi Comunidad</Link
-                >
-                <div class="sb-sec">Acciones</div>
-                <Link href="/lider/entregables" class="sb-lnk"
-                    ><i class="bi bi-cloud-upload"></i> Entregables</Link
-                >
-                <Link href="/lider/carta" class="sb-lnk active"
-                    ><i class="bi bi-send"></i> Carta de Presentación</Link
-                >
-                <Link href="/lider/historial-academico" class="sb-lnk"
-                    ><i class="bi bi-mortarboard"></i> Historial Académico</Link
-                >
-                <div style="padding: 0.75rem 1.4rem">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-lnk w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <SidebarLider
+            :sidebar-open="sidebarOpen"
+            @close="sidebarOpen = false"
+        />
         <div class="main">
             <div class="topbar">
                 <div class="d-flex align-items-center gap-3">
@@ -419,6 +312,7 @@
 import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
+import SidebarLider from "@/Components/SidebarLider.vue";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 
 const props = defineProps({ carta: Object, proyecto: Object, equipo: Object });
@@ -470,7 +364,7 @@ onMounted(() => {
         .catch(() => {});
 });
 </script>
-<style>
+<style scoped>
 :root {
     --rojo: #dc3545;
     --bg-body: #f0f2f5;

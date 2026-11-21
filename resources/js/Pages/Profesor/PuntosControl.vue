@@ -7,88 +7,9 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-        <div class="sb" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-av">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Profesor de Proyecto</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/profesor" class="sb-lnk"
-                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard</Link
-                >
-                <Link href="/profesor/secciones" class="sb-lnk"
-                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Mis Secciones</Link
-                >
-                <div class="sb-sec">Gestión</div>
-                <Link href="/profesor/puntos-control" class="sb-lnk active"
-                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg> Puntos de Control</Link
-                >
-                <Link href="/profesor/socializaciones" class="sb-lnk"
-                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg> Socializaciones</Link
-                >
-                <Link href="/profesor/entregables" class="sb-lnk"
-                    ><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg> Entregables</Link
-                >
-                <Link href="/profesor/estudiantes/buscar" class="sb-lnk"
-                    ><i class="bi bi-person-badge me-2"></i> Expediente Estudiantes</Link
-                >
-                <div style="padding: 0.75rem 1.4rem">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-lnk w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- SIDEBAR PROFESOR ESTANDARIZADO -->
+        <SidebarProfesor :sidebar-open="sidebarOpen" @close="sidebarOpen = false" />
+
         <div class="main">
             <div class="topbar">
                 <div class="d-flex align-items-center gap-3">
@@ -189,6 +110,110 @@
                         />
                     </div>
                 </div>
+
+                <!-- BARRA COMPACTA DE FILTROS POR SEMÁFORO Y PANEL DE DETALLE -->
+                <div v-if="diagnosticosEquipos && Object.keys(diagnosticosEquipos).length > 0" class="mb-4">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <!-- Filtros rápidos por estado de semáforo -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="fw-bold small text-muted">Semáforo Semana {{ semanaActual }}:</span>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    :class="filtroSemaforo === '' ? 'btn-dark' : 'btn-outline-secondary'"
+                                    style="font-size: 0.78rem;"
+                                    @click="filtroSemaforo = ''"
+                                >
+                                    Todos ({{ Object.keys(diagnosticosEquipos).length }})
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    :class="filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
+                                    style="font-size: 0.78rem;"
+                                    @click="filtroSemaforo = filtroSemaforo === 'en_ruta' ? '' : 'en_ruta'"
+                                >
+                                    🟢 En ruta ({{ contarPorSemaforo('en_ruta') }})
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    :class="filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
+                                    style="font-size: 0.78rem;"
+                                    @click="filtroSemaforo = filtroSemaforo === 'acelerar' ? '' : 'acelerar'"
+                                >
+                                    🟡 Acelerar ({{ contarPorSemaforo('acelerar') }})
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    :class="filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
+                                    style="font-size: 0.78rem;"
+                                    @click="filtroSemaforo = filtroSemaforo === 'riesgo_alto' ? '' : 'riesgo_alto'"
+                                >
+                                    🔴 Riesgo alto ({{ contarPorSemaforo('riesgo_alto') }})
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    :class="filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
+                                    style="font-size: 0.78rem;"
+                                    @click="filtroSemaforo = filtroSemaforo === 'inviable' ? '' : 'inviable'"
+                                >
+                                    ⛔ Inviable ({{ contarPorSemaforo('inviable') }})
+                                </button>
+                            </div>
+
+                            <!-- Selector de equipo para ver diagnóstico detallado -->
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="small text-muted fw-semibold mb-0">Detalle:</label>
+                                <select
+                                    v-model="equipoSeleccionadoDiag"
+                                    class="form-select form-select-sm"
+                                    style="max-width: 270px; font-size: 0.8rem;"
+                                >
+                                    <option value="">Seleccione equipo para ver ruta crítica...</option>
+                                    <option
+                                        v-for="(diag, idEq) in diagnosticosEquipos"
+                                        :key="idEq"
+                                        :value="idEq"
+                                    >
+                                        {{ getIconoSemaforo(diag.semaforo) }} {{ diag.nombre_equipo || ('Equipo #' + idEq) }}
+                                    </option>
+                                </select>
+                                <button
+                                    v-if="equipoSeleccionadoDiag"
+                                    type="button"
+                                    class="btn btn-sm btn-link text-muted p-0"
+                                    @click="equipoSeleccionadoDiag = ''"
+                                    title="Cerrar detalle"
+                                >
+                                    <i class="bi bi-x-circle fs-6"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- PANEL COMPLETO SOLO PARA EL EQUIPO SELECCIONADO -->
+                        <div v-if="equipoSeleccionadoDiag && diagnosticosEquipos[equipoSeleccionadoDiag]" class="mt-3 pt-3 border-top">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-bold text-dark small">
+                                    <i class="bi bi-compass-fill text-danger me-1"></i> Diagnóstico Completo: {{ diagnosticosEquipos[equipoSeleccionadoDiag].nombre_equipo }}
+                                </span>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill"
+                                    style="font-size: 0.75rem;"
+                                    @click="equipoSeleccionadoDiag = ''"
+                                >
+                                    Cerrar panel
+                                </button>
+                            </div>
+                            <SemaforoEquipo :diagnostico="diagnosticosEquipos[equipoSeleccionadoDiag]" />
+                        </div>
+                    </div>
+                </div>
+
                 <div class="sc">
                     <div class="table-responsive">
                         <table class="ct">
@@ -217,9 +242,20 @@
                                         {{ puc.puc_nombre }}
                                     </td>
                                     <td>
-                                        <span class="bs bp">{{
-                                            puc.equipo?.equ_codigo
-                                        }}</span>
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            <span class="bs bp">{{ puc.equipo?.equ_codigo }}</span>
+                                            <button
+                                                v-if="diagnosticosEquipos && diagnosticosEquipos[puc.puc_id_equ]"
+                                                type="button"
+                                                class="badge border-0 cursor-pointer"
+                                                :class="'bg-' + (diagnosticosEquipos[puc.puc_id_equ].color || 'secondary')"
+                                                style="font-size: 0.72rem; cursor: pointer;"
+                                                title="Ver Diagnóstico y Ruta Crítica del Equipo"
+                                                @click="equipoSeleccionadoDiag = puc.puc_id_equ"
+                                            >
+                                                {{ getEtiquetaSemaforo(diagnosticosEquipos[puc.puc_id_equ].semaforo) }}
+                                            </button>
+                                        </div>
                                     </td>
                                     <td>
                                         <span
@@ -761,6 +797,175 @@
                                     {{ erroresSeg.seq_cumplido }}
                                 </div>
                             </div>
+
+                            <!-- Tipo de Encuentro -->
+                            <div class="card border p-3 mb-3 bg-light bg-opacity-50">
+                                <label class="form-label fw-bold d-flex align-items-center gap-1 mb-1">
+                                    <i class="bi bi-tag-fill text-danger"></i> Tipo de Encuentro <span class="text-danger">*</span>
+                                </label>
+                                <small class="text-muted mb-2 d-block" style="font-size: 0.73rem">
+                                    Modalidad de acompañamiento según el catálogo oficial
+                                </small>
+                                <select
+                                    v-model="formSeg.seq_id_tipo_encuentro"
+                                    class="form-select form-select-sm"
+                                    :disabled="modoSoloLecturaSeg"
+                                >
+                                    <option :value="null">Seleccione tipo de encuentro...</option>
+                                    <option v-for="te in props.tiposEncuentro" :key="te.tep_id" :value="te.tep_id">
+                                        {{ te.tep_nombre }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Dos Campos Visualmente Separados: Nivel de Avance Técnico y Semáforo del Encuentro -->
+                            <div class="row g-3 mb-3">
+                                <!-- CAMPO 1: Nivel / % de Avance Técnico -->
+                                <div class="col-md-6">
+                                    <div class="card h-100 border p-3 bg-light bg-opacity-50">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label class="form-label fw-bold mb-0">Nivel de Avance Técnico</label>
+                                            <span class="badge bg-dark fw-bold">{{ formSeg.seq_valoracion_avance || 0 }}%</span>
+                                        </div>
+                                        <small class="text-muted mb-2 d-block" style="font-size: 0.72rem">
+                                            Estimación porcentual de lo ejecutado en este punto
+                                        </small>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                v-model.number="formSeg.seq_valoracion_avance"
+                                                class="form-control"
+                                                placeholder="0 - 100"
+                                                :disabled="modoSoloLecturaSeg"
+                                            />
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div
+                                                class="progress-bar bg-danger"
+                                                role="progressbar"
+                                                :style="{ width: `${formSeg.seq_valoracion_avance || 0}%` }"
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- CAMPO 2: Valoración / Semáforo del Encuentro -->
+                                <div class="col-md-6">
+                                    <div class="card h-100 border p-3 bg-light bg-opacity-50">
+                                        <label class="form-label fw-bold mb-1">Valoración / Semáforo del Encuentro</label>
+                                        <small class="text-muted mb-2 d-block" style="font-size: 0.72rem">
+                                            Cualificación del desempeño en la sesión
+                                        </small>
+                                        <div class="d-flex flex-column gap-2">
+                                            <div class="form-check">
+                                                <input
+                                                    type="radio"
+                                                    class="form-check-input"
+                                                    v-model="formSeg.seq_estado_semaforo"
+                                                    value="positivo"
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    id="sem_pos"
+                                                />
+                                                <label class="form-check-label text-success fw-bold small" for="sem_pos">
+                                                    🟢 Positivo (Avance adecuado)
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input
+                                                    type="radio"
+                                                    class="form-check-input"
+                                                    v-model="formSeg.seq_estado_semaforo"
+                                                    value="neutral"
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    id="sem_neu"
+                                                />
+                                                <label class="form-check-label text-warning fw-bold small" for="sem_neu">
+                                                    🟡 Neutral (Parcial con observaciones)
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input
+                                                    type="radio"
+                                                    class="form-check-input"
+                                                    v-model="formSeg.seq_estado_semaforo"
+                                                    value="negativo"
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    id="sem_neg"
+                                                />
+                                                <label class="form-check-label text-danger fw-bold small" for="sem_neg">
+                                                    🔴 Negativo (Riesgo o incumplimiento)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Acuerdos y Correcciones para el próximo encuentro -->
+                            <div class="card border p-3 mb-3 bg-light bg-opacity-50">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <label class="form-label fw-bold mb-0">Acuerdos y Correcciones para el Próximo Encuentro</label>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem">
+                                            Compromisos con fecha límite y seguimiento de estado
+                                        </small>
+                                    </div>
+                                    <button
+                                        v-if="!modoSoloLecturaSeg"
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill"
+                                        @click="agregarAcuerdoModal"
+                                    >
+                                        <i class="bi bi-plus-circle me-1"></i> Agregar Compromiso
+                                    </button>
+                                </div>
+                                <div v-if="!formSeg.acuerdos || formSeg.acuerdos.length === 0" class="text-muted small p-2 bg-white rounded border">
+                                    Sin acuerdos específicos registrados para este encuentro.
+                                </div>
+                                <div v-for="(acue, aIdx) in formSeg.acuerdos" :key="aIdx" class="row g-2 mb-2 align-items-center p-2 bg-white rounded border">
+                                    <div class="col-md-5">
+                                        <label class="form-label text-muted small mb-0" style="font-size: 0.7rem">Descripción</label>
+                                        <input
+                                            v-model="acue.descripcion"
+                                            type="text"
+                                            class="form-control form-control-sm"
+                                            placeholder="Descripción del compromiso o corrección..."
+                                            :disabled="modoSoloLecturaSeg"
+                                        />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted small mb-0" style="font-size: 0.7rem">Fecha límite</label>
+                                        <input
+                                            v-model="acue.fecha_limite"
+                                            type="date"
+                                            class="form-control form-control-sm"
+                                            :disabled="modoSoloLecturaSeg"
+                                        />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted small mb-0" style="font-size: 0.7rem">Estado</label>
+                                        <select
+                                            v-model="acue.estado"
+                                            class="form-select form-select-sm"
+                                            :disabled="modoSoloLecturaSeg"
+                                        >
+                                            <option value="pendiente">⏳ Pendiente</option>
+                                            <option value="en_proceso">🔄 En Proceso</option>
+                                            <option value="rectificado">✅ Rectificado</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-1 text-end" v-if="!modoSoloLecturaSeg">
+                                        <label class="form-label d-block text-transparent small mb-0" style="font-size: 0.7rem">&nbsp;</label>
+                                        <button type="button" class="btn btn-sm btn-outline-danger p-0 px-1" @click="eliminarAcuerdoModal(aIdx)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Nuevas Observaciones para este punto</label
@@ -773,11 +978,15 @@
                                     placeholder="Indique las observaciones y correcciones que el equipo debe atender para el próximo corte..."
                                 ></textarea>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Control Individual de Asistencia y
-                                    Desempeño</label
-                                >
+
+                            <!-- Control Individual de Asistencia y Participación -->
+                            <div class="card border p-3 mb-3 bg-light bg-opacity-50">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold mb-0">Control Individual de Asistencia y Participación</label>
+                                    <small class="text-muted d-block" style="font-size: 0.72rem">
+                                        Marque asistencia, participación verificable y registre justificativo o motivo de edición si aplica
+                                    </small>
+                                </div>
                                 <div
                                     v-if="
                                         !puntoActual?.equipo?.integrantes
@@ -791,18 +1000,14 @@
                                     v-for="int in puntoActual?.equipo
                                         ?.integrantes"
                                     :key="int.ein_id"
-                                    class="p-2 mb-2 rounded border"
-                                    style="
-                                        border-color: var(--border) !important;
-                                        background: var(--bg-body);
-                                    "
+                                    class="p-2 mb-2 rounded border bg-white"
                                 >
                                     <template v-if="formSeg.asistencias && formSeg.asistencias[int.ein_id_usu]">
                                         <div
-                                            class="d-flex align-items-center justify-content-between"
+                                            class="d-flex align-items-center justify-content-between flex-wrap gap-2"
                                         >
                                             <div>
-                                                <strong style="font-size: 0.92rem"
+                                                <strong style="font-size: 0.9rem"
                                                     >{{
                                                         int.usuario
                                                             ?.usu_primer_nombre
@@ -820,32 +1025,59 @@
                                                     }}</span
                                                 >
                                             </div>
-                                            <div
-                                                class="form-check form-switch mb-0"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    class="form-check-input"
-                                                    :id="'asist_' + int.ein_id"
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    v-model="
-                                                        formSeg.asistencias[
-                                                            int.ein_id_usu
-                                                        ].asistio
-                                                    "
-                                                />
-                                                <label
-                                                    class="form-check-label small fw-bold"
-                                                    :for="'asist_' + int.ein_id"
+                                            <div class="d-flex align-items-center gap-3">
+                                                <!-- Switch Asistió -->
+                                                <div
+                                                    class="form-check form-switch mb-0"
                                                 >
-                                                    {{
-                                                        formSeg.asistencias[
-                                                            int.ein_id_usu
-                                                        ]?.asistio
-                                                            ? "Asistió"
-                                                            : "Inasistencia"
-                                                    }}
-                                                </label>
+                                                    <input
+                                                        type="checkbox"
+                                                        class="form-check-input"
+                                                        :id="'asist_' + int.ein_id"
+                                                        :disabled="modoSoloLecturaSeg"
+                                                        v-model="
+                                                            formSeg.asistencias[
+                                                                int.ein_id_usu
+                                                            ].asistio
+                                                        "
+                                                    />
+                                                    <label
+                                                        class="form-check-label small fw-bold"
+                                                        :for="'asist_' + int.ein_id"
+                                                    >
+                                                        {{
+                                                            formSeg.asistencias[
+                                                                int.ein_id_usu
+                                                            ]?.asistio
+                                                                ? "Asistió"
+                                                                : "Inasistencia"
+                                                        }}
+                                                    </label>
+                                                </div>
+
+                                                <!-- Switch Participación -->
+                                                <div
+                                                    class="form-check form-switch mb-0"
+                                                    v-if="formSeg.asistencias[int.ein_id_usu]?.asistio"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        class="form-check-input"
+                                                        :id="'part_' + int.ein_id"
+                                                        :disabled="modoSoloLecturaSeg"
+                                                        v-model="
+                                                            formSeg.asistencias[
+                                                                int.ein_id_usu
+                                                            ].participo
+                                                        "
+                                                    />
+                                                    <label
+                                                        class="form-check-label small fw-semibold text-primary"
+                                                        :for="'part_' + int.ein_id"
+                                                    >
+                                                        Participó
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                         <!-- Si falta, justificación -->
@@ -889,19 +1121,34 @@
                                                 placeholder="Motivo o constancia de la inasistencia..."
                                             />
                                         </div>
-                                        <!-- Observación individual -->
-                                        <div class="mt-2">
-                                            <input
-                                                type="text"
-                                                v-model="
-                                                    formSeg.asistencias[
-                                                        int.ein_id_usu
-                                                    ].observacion
-                                                "
-                                                :disabled="modoSoloLecturaSeg"
-                                                class="form-control form-control-sm"
-                                                placeholder="Observación individual (aporte destacado, dificultades, o falta)..."
-                                            />
+                                        <!-- Observación individual y motivo de edición -->
+                                        <div class="mt-2 row g-2">
+                                            <div :class="formSeg.asistencias[int.ein_id_usu]?.es_existente ? 'col-md-7' : 'col-12'">
+                                                <input
+                                                    type="text"
+                                                    v-model="
+                                                        formSeg.asistencias[
+                                                            int.ein_id_usu
+                                                        ].observacion
+                                                    "
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    class="form-control form-control-sm"
+                                                    placeholder="Observación individual..."
+                                                />
+                                            </div>
+                                            <div v-if="formSeg.asistencias[int.ein_id_usu]?.es_existente" class="col-md-5">
+                                                <input
+                                                    type="text"
+                                                    v-model="
+                                                        formSeg.asistencias[
+                                                            int.ein_id_usu
+                                                        ].motivo_edicion
+                                                    "
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    class="form-control form-control-sm border-warning"
+                                                    placeholder="Motivo si editó asistencia..."
+                                                />
+                                            </div>
                                         </div>
                                     </template>
                                 </div>
@@ -1180,11 +1427,16 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
+import SemaforoEquipo from "@/Components/SemaforoEquipo.vue";
+import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
 const props = defineProps({
     puntosControl: Array,
     equipos: Array,
     secciones: { type: Array, default: () => [] },
+    diagnosticosEquipos: { type: Object, default: () => ({}) },
+    semanaActual: { type: Number, default: 1 },
+    tiposEncuentro: { type: Array, default: () => [] },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -1202,6 +1454,46 @@ const iniciales = computed(() => {
 });
 const busqueda = ref("");
 const seccionSeleccionadaModal = ref("");
+const filtroSemaforo = ref("");
+const equipoSeleccionadoDiag = ref("");
+
+const contarPorSemaforo = (tipo) => {
+    if (!props.equipos || !props.diagnosticosEquipos) return 0;
+    return props.equipos.filter((eq) => {
+        const d = props.diagnosticosEquipos[eq.equ_id];
+        return d && d.semaforo === tipo;
+    }).length;
+};
+
+const getIconoSemaforo = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+            return { icon: "🟢", class: "bg-success text-white" };
+        case "acelerar":
+            return { icon: "🟡", class: "bg-warning text-dark" };
+        case "riesgo_alto":
+            return { icon: "🔴", class: "bg-danger text-white" };
+        case "inviable":
+            return { icon: "⛔", class: "bg-dark text-white" };
+        default:
+            return { icon: "⚪", class: "bg-secondary text-white" };
+    }
+};
+
+const getEtiquetaSemaforo = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+            return "En ruta";
+        case "acelerar":
+            return "Acelerar";
+        case "riesgo_alto":
+            return "Riesgo alto";
+        case "inviable":
+            return "Inviable";
+        default:
+            return "Pendiente";
+    }
+};
 
 const fechaHoy = computed(() => {
     const d = new Date();
@@ -1252,13 +1544,19 @@ const erroresSeg = ref({});
 const loading = ref(false);
 const formSeg = ref({
     seq_cumplido: null,
+    seq_cumplio_previo: null,
+    seq_obs_previas_verificacion: "",
     seq_observaciones: "",
+    seq_id_tipo_encuentro: null,
+    seq_estado_semaforo: "positivo",
+    seq_valoracion_avance: 50,
+    acuerdos: [],
     asistencias: {},
 });
 const loadingSeg = ref(false);
 const puntoActual = ref(null);
 const puntoReprog = ref(null);
-const formReprog = ref({ nueva_fecha: "", motivo: "" });
+const formReprog = ref({ nueva_fecha: "", nueva_semana: "", motivo: "" });
 const erroresReprog = ref({});
 const loadingReprog = ref(false);
 const errorSemana = ref("");
@@ -1323,7 +1621,6 @@ let mReprog = null;
 let mElim = null;
 const estaVencido = (f) => {
     if (!f) return false;
-    // Descomponer YYYY-MM-DD con hora local para evitar desfase UTC
     const [y, m, d] = f.split('-').map(Number);
     const fechaLocal = new Date(y, m - 1, d, 23, 59, 59);
     return fechaLocal < new Date();
@@ -1336,13 +1633,23 @@ const esCercano = (f) => {
     return diff > 0 && diff < 3 * 86400000;
 };
 const filtrados = computed(() => {
-    if (!busqueda.value.trim()) return props.puntosControl;
-    const q = busqueda.value.toLowerCase();
-    return props.puntosControl.filter(
-        (p) =>
-            p.puc_nombre?.toLowerCase().includes(q) ||
-            p.equipo?.equ_codigo?.toLowerCase().includes(q),
-    );
+    let list = props.puntosControl || [];
+    if (busqueda.value.trim()) {
+        const q = busqueda.value.toLowerCase();
+        list = list.filter(
+            (p) =>
+                p.puc_nombre?.toLowerCase().includes(q) ||
+                p.equipo?.equ_codigo?.toLowerCase().includes(q) ||
+                p.equipo?.equ_titulo?.toLowerCase().includes(q),
+        );
+    }
+    if (filtroSemaforo.value) {
+        list = list.filter((p) => {
+            const diag = props.diagnosticosEquipos?.[p.equipo?.equ_id];
+            return diag && diag.semaforo === filtroSemaforo.value;
+        });
+    }
+    return list;
 });
 const abrirModal = () => {
     seccionSeleccionadaModal.value = "";
@@ -1397,19 +1704,35 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
     prevAsist.forEach((a) => {
         prevMap[a.apc_id_usu] = {
             asistio: Boolean(a.apc_asistio),
+            participo: Boolean(a.apc_participo),
             justificado: Boolean(a.apc_justificado),
             justificativo: a.apc_justificativo || "",
             observacion: a.apc_observaciones || "",
+            motivo_edicion: a.apc_motivo_edicion || "",
         };
     });
 
     ints.forEach((i) => {
-        initialAsist[i.ein_id_usu] = prevMap[i.ein_id_usu] || {
-            asistio: true,
-            justificado: false,
-            justificativo: "",
-            observacion: "",
-        };
+        const prev = prevMap[i.ein_id_usu];
+        initialAsist[i.ein_id_usu] = prev
+            ? {
+                  asistio: prev.asistio,
+                  participo: prev.participo,
+                  justificado: prev.justificado,
+                  justificativo: prev.justificativo,
+                  observacion: prev.observacion,
+                  motivo_edicion: prev.motivo_edicion,
+                  es_existente: true,
+              }
+            : {
+                  asistio: true,
+                  participo: false,
+                  justificado: false,
+                  justificativo: "",
+                  observacion: "",
+                  motivo_edicion: "",
+                  es_existente: false,
+              };
     });
 
     formSeg.value = {
@@ -1425,11 +1748,36 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
         seq_obs_previas_verificacion:
             prevSeg?.seq_obs_previas_verificacion || "",
         seq_observaciones: prevSeg?.seq_observaciones || "",
+        seq_id_tipo_encuentro:
+            prevSeg?.seq_id_tipo_encuentro || (props.tiposEncuentro?.[0]?.tep_id || null),
+        seq_estado_semaforo:
+            prevSeg?.seq_estado_semaforo || "positivo",
+        seq_valoracion_avance:
+            prevSeg?.seq_valoracion_avance !== undefined && prevSeg?.seq_valoracion_avance !== null
+                ? Number(prevSeg.seq_valoracion_avance)
+                : 50,
+        acuerdos: prevSeg?.acuerdos?.length
+            ? prevSeg.acuerdos.map((a) => ({
+                  acue_id: a.acue_id,
+                  descripcion: a.acue_descripcion,
+                  fecha_limite: a.acue_fecha_limite ? a.acue_fecha_limite.split("T")[0] : "",
+                  estado: a.acue_estado || "pendiente",
+              }))
+            : [],
         asistencias: initialAsist,
     };
     erroresSeg.value = {};
     mSeg = mSeg || new Modal(document.getElementById("mSeg"));
     mSeg.show();
+};
+
+const agregarAcuerdoModal = () => {
+    if (!formSeg.value.acuerdos) formSeg.value.acuerdos = [];
+    formSeg.value.acuerdos.push({ descripcion: "", fecha_limite: "", estado: "pendiente" });
+};
+
+const eliminarAcuerdoModal = (idx) => {
+    formSeg.value.acuerdos.splice(idx, 1);
 };
 const guardarSeguimiento = () => {
     if (modoSoloLecturaSeg.value || estaEvaluado(puntoActual.value)) return;
@@ -1525,7 +1873,7 @@ const confirmarEliminar = () => {
     });
 };
 </script>
-<style>
+<style scoped>
 :root {
     --rojo: #dc3545;
     --bg-body: #f0f2f5;

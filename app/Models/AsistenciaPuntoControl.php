@@ -15,9 +15,22 @@ class AsistenciaPuntoControl extends Model
         'apc_id_usu',
         'apc_asistio',
         'apc_justificado',
+        'apc_participo',
         'apc_justificativo',
         'apc_observaciones',
+        'apc_motivo_edicion',
+        'apc_created_at',
+        'apc_updated_at',
         'apc_id_usu_created',
+        'apc_id_usu_updated',
+    ];
+
+    protected $casts = [
+        'apc_asistio'     => 'boolean',
+        'apc_justificado' => 'boolean',
+        'apc_participo'   => 'boolean',
+        'apc_created_at'  => 'datetime',
+        'apc_updated_at'  => 'datetime',
     ];
 
     public function seguimiento()
@@ -28,6 +41,11 @@ class AsistenciaPuntoControl extends Model
     public function usuario()
     {
         return $this->belongsTo(Usuario::class, 'apc_id_usu', 'usu_id');
+    }
+
+    public function usuarioUpdated()
+    {
+        return $this->belongsTo(Usuario::class, 'apc_id_usu_updated', 'usu_id');
     }
 
     public function estudiante()

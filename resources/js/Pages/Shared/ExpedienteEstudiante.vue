@@ -7,195 +7,16 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-
-        <!-- SIDEBAR PROFESOR -->
-        <div v-if="!esCoordinador" class="sb-prof" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                        font-size: 1rem;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-avatar">{{ inicialesDocente }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Profesor de Proyecto</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/profesor" class="sb-link">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </Link>
-                <Link href="/profesor/secciones" class="sb-link">
-                    <i class="bi bi-collection"></i> Mis Secciones
-                </Link>
-                <div class="sb-sec">Gestión</div>
-                <Link href="/profesor/puntos-control" class="sb-link">
-                    <i class="bi bi-flag"></i> Puntos de Control
-                </Link>
-                <Link href="/profesor/socializaciones" class="sb-link">
-                    <i class="bi bi-mic"></i> Socializaciones
-                </Link>
-                <Link href="/profesor/entregables" class="sb-link">
-                    <i class="bi bi-file-earmark-check"></i> Entregables
-                </Link>
-                <Link href="/profesor/estudiantes/buscar" class="sb-link active">
-                    <i class="bi bi-person-badge"></i> Expediente Estudiantes
-                </Link>
-
-                <div style="padding: 0.75rem 1.4rem; margin-top: auto">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-link w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- SIDEBAR COORDINADOR -->
-        <div v-else class="sb-prof" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                        font-size: 1rem;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-avatar">{{ inicialesDocente }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Coordinador PNF</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/coordinador" class="sb-link">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </Link>
-                <Link href="/coordinador/secciones" class="sb-link">
-                    <i class="bi bi-collection"></i> Secciones
-                </Link>
-                <Link href="/coordinador/comunidades" class="sb-link">
-                    <i class="bi bi-building"></i> Comunidades
-                </Link>
-                <Link href="/coordinador/equipos" class="sb-link">
-                    <i class="bi bi-people"></i> Equipos
-                </Link>
-                <Link href="/coordinador/proyectos" class="sb-link">
-                    <i class="bi bi-folder"></i> Proyectos
-                </Link>
-                <Link href="/coordinador/socializaciones" class="sb-link">
-                    <i class="bi bi-mic"></i> Socializaciones
-                </Link>
-                <Link href="/coordinador/resultados" class="sb-link">
-                    <i class="bi bi-trophy"></i> Resultados
-                </Link>
-                <Link href="/coordinador/transicion-semestral" class="sb-link">
-                    <i class="bi bi-arrow-left-right"></i> Transición Semestral
-                </Link>
-
-                <div class="sb-sec">Sistema</div>
-                <Link href="/coordinador/reportes" class="sb-link">
-                    <i class="bi bi-bar-chart"></i> Reportes
-                </Link>
-                <Link href="/coordinador/cartas" class="sb-link">
-                    <i class="bi bi-file-earmark-text"></i> Cartas
-                </Link>
-                <Link href="/coordinador/estudiantes/buscar" class="sb-link active">
-                    <i class="bi bi-person-badge"></i> Expediente Estudiantes
-                </Link>
-                <Link href="/coordinador/bitacora" class="sb-link">
-                    <i class="bi bi-journal-text"></i> Bitácora
-                </Link>
-                <Link href="/coordinador/configuracion" class="sb-link">
-                    <i class="bi bi-gear"></i> Configuración
-                </Link>
-
-                <div style="padding: 0.75rem 1.4rem; margin-top: auto">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-link w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <SidebarCoordinador
+            v-if="esCoordinador"
+            :sidebar-open="sidebarOpen"
+            @close="sidebarOpen = false"
+        />
+        <SidebarProfesor
+            v-else
+            :sidebar-open="sidebarOpen"
+            @close="sidebarOpen = false"
+        />
 
         <!-- MAIN CONTAINER -->
         <div class="main-prof">
@@ -814,6 +635,8 @@
 import { ref, computed } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
+import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
 const props = defineProps({
     estudiante: Object,

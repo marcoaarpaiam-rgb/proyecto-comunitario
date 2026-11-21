@@ -7,196 +7,8 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sidebar-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-
-        <!-- SIDEBAR -->
-        <div class="sidebar-coord" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 36px;
-                        height: 36px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-brand-title">UPTP — Proyectos</div>
-                    <div class="sb-brand-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-4 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-avatar">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Coordinador PNF</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-section">Principal</div>
-                <Link href="/coordinador" class="sb-link">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </Link>
-                <Link href="/coordinador/secciones" class="sb-link">
-                    <i class="bi bi-collection"></i> Secciones
-                </Link>
-                <Link href="/coordinador/comunidades" class="sb-link">
-                    <i class="bi bi-building"></i> Comunidades
-                </Link>
-                <Link href="/coordinador/proyectos" class="sb-link">
-                    <i class="bi bi-folder"></i> Proyectos
-                </Link>
-                <Link href="/coordinador/socializaciones" class="sb-link">
-                    <i class="bi bi-mic"></i> Socializaciones
-                </Link>
-                <Link href="/coordinador/resultados" class="sb-link">
-                    <i class="bi bi-trophy"></i> Resultados
-                </Link>
-                <Link href="/coordinador/transicion-semestral" class="sb-link">
-                    <i class="bi bi-arrow-left-right"></i> Transición Semestral
-                </Link>
-
-                <!-- Tablas Maestras — desplegable -->
-                <div
-                    class="sb-section sb-toggle"
-                    @click="toggleMenuMaestras"
-                    style="
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        padding-right: 1.2rem;
-                    "
-                >
-                    <span>Tablas Maestras</span>
-                    <i
-                        class="bi"
-                        :class="
-                            menuMaestras ? 'bi-chevron-up' : 'bi-chevron-down'
-                        "
-                        style="font-size: 0.75rem"
-                    ></i>
-                </div>
-                <div v-show="menuMaestras">
-                    <Link href="/coordinador/tipos-proyecto" class="sb-link">
-                        <i class="bi bi-tag"></i> Tipos de Proyecto
-                    </Link>
-                    <Link
-                        href="/coordinador/maestras/modalidades"
-                        class="sb-link"
-                    >
-                        <i class="bi bi-layers"></i> Modalidades
-                    </Link>
-                    <Link
-                        href="/coordinador/maestras/tipos-jurado"
-                        class="sb-link"
-                    >
-                        <i class="bi bi-person-badge"></i> Tipos de Jurado
-                    </Link>
-                    <Link
-                        href="/coordinador/maestras/tipos-beneficiario"
-                        class="sb-link"
-                    >
-                        <i class="bi bi-people"></i> Tipos Beneficiario
-                    </Link>
-                    <Link
-                        href="/coordinador/maestras/tipos-entregable"
-                        class="sb-link"
-                    >
-                        <i class="bi bi-file-earmark"></i> Tipos Entregable
-                    </Link>
-                    <Link
-                        href="/coordinador/maestras/tipos-evento-equipo"
-                        class="sb-link"
-                    >
-                        <i class="bi bi-calendar-event"></i> Eventos Equipo
-                    </Link>
-                    <Link href="/coordinador/maestras/turnos" class="sb-link">
-                        <i class="bi bi-clock"></i> Turnos
-                    </Link>
-                    <Link
-                        href="/coordinador/maestras/estados-proyecto"
-                        class="sb-link"
-                    >
-                        <i class="bi bi-award"></i> Estados Proyecto
-                    </Link>
-                </div>
-
-                <!-- Sistema — desplegable -->
-                <div
-                    class="sb-section sb-toggle"
-                    @click="menuSistema = !menuSistema"
-                    style="
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        padding-right: 1.2rem;
-                    "
-                >
-                    <span>Sistema</span>
-                    <i
-                        class="bi"
-                        :class="
-                            menuSistema ? 'bi-chevron-up' : 'bi-chevron-down'
-                        "
-                        style="font-size: 0.75rem"
-                    ></i>
-                </div>
-                <div v-show="menuSistema">
-                    <Link href="/coordinador/reportes" class="sb-link">
-                        <i class="bi bi-bar-chart"></i> Reportes
-                    </Link>
-                    <Link href="/coordinador/cartas" class="sb-link">
-                        <i class="bi bi-file-earmark-text"></i> Cartas
-                    </Link>
-                    <Link href="/coordinador/estudiantes/buscar" class="sb-link">
-                        <i class="bi bi-person-badge"></i> Expediente Estudiantes
-                    </Link>
-                    <Link href="/coordinador/bitacora" class="sb-link">
-                        <i class="bi bi-journal-text"></i> Bitácora
-                    </Link>
-                    <Link href="/coordinador/configuracion" class="sb-link">
-                        <i class="bi bi-gear"></i> Configuración
-                    </Link>
-                </div>
-                <div style="padding: 1rem 1.5rem">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-link w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- SIDEBAR COORDINADOR ESTANDARIZADO -->
+        <SidebarCoordinador :sidebar-open="sidebarOpen" @close="sidebarOpen = false" />
 
         <!-- MAIN -->
         <div class="main-coord">
@@ -701,6 +513,7 @@ import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
 import axios from "axios";
 
 const modalBusquedaExpediente = ref(false);
@@ -1394,7 +1207,7 @@ onMounted(() => {
         transform: translateX(0) !important;
     }
     .main-coord {
-        margin-left: 260px;
+        margin-left: 250px;
     }
     .toggle-btn {
         display: none !important;

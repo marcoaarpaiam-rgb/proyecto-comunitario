@@ -206,51 +206,159 @@
             </div>
 
             <div class="sidebar-menu">
-                <div class="menu-header">Navegación Principal</div>
-                <a href="/coordinador" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-                    <span>Dashboard</span>
-                </a>
-                <a href="/coordinador/proyectos" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-                    <span>Proyectos</span>
-                </a>
-                <a href="/coordinador/equipos" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <span>Equipos de Trabajo</span>
-                </a>
+                @auth
+                    @if (auth()->user()->esCoordinador())
+                        <div class="menu-header">Navegación Coordinador</div>
+                        <a href="/coordinador" class="nav-link">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="/coordinador/secciones" class="nav-link">
+                            <i class="bi bi-collection"></i>
+                            <span>Secciones</span>
+                        </a>
+                        <a href="/coordinador/equipos" class="nav-link">
+                            <i class="bi bi-people"></i>
+                            <span>Equipos</span>
+                        </a>
+                        <a href="/coordinador/comunidades" class="nav-link">
+                            <i class="bi bi-building"></i>
+                            <span>Comunidades</span>
+                        </a>
+                        <a href="/coordinador/proyectos" class="nav-link">
+                            <i class="bi bi-folder"></i>
+                            <span>Proyectos</span>
+                        </a>
+                        <a href="/coordinador/socializaciones" class="nav-link">
+                            <i class="bi bi-mic"></i>
+                            <span>Socializaciones</span>
+                        </a>
 
-                <div class="menu-header">Evaluación y Calificación</div>
-                <a href="{{ route('evaluaciones.index') }}" class="nav-link {{ request()->routeIs('evaluaciones.*') ? 'active' : '' }}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2 text-danger"><circle cx="12" cy="8" r="6"/><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/></svg>
-                    <span>Evaluación por Trayecto</span>
-                </a>
-                <a href="{{ route('evaluaciones.invitado') }}" target="_blank" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2 text-warning"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    <span>Portal Jurado y Comunidad (PIN)</span>
-                </a>
-                <a href="/profesor/puntos-control" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
-                    <span>Puntos de Control</span>
-                </a>
-                <a href="/profesor/socializaciones" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg>
-                    <span>Socializaciones</span>
-                </a>
+                        <div class="menu-header">Evaluación y Calificación</div>
+                        <a href="{{ route('evaluaciones.index') }}" class="nav-link {{ request()->routeIs('evaluaciones.*') ? 'active' : '' }}">
+                            <i class="bi bi-journal-check text-danger"></i>
+                            <span>Evaluación por Trayecto</span>
+                        </a>
+                        <a href="/coordinador/resultados" class="nav-link">
+                            <i class="bi bi-trophy"></i>
+                            <span>Resultados</span>
+                        </a>
+                        <a href="/coordinador/transicion-semestral" class="nav-link">
+                            <i class="bi bi-arrow-left-right"></i>
+                            <span>Transición Semestral</span>
+                        </a>
 
-                <div class="menu-header">Académico y Documentos</div>
-                <a href="/coordinador/estudiantes/buscar" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>
-                    <span>Expediente Estudiantil</span>
-                </a>
-                <a href="/coordinador/cartas" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-                    <span>Cartas de Presentación</span>
-                </a>
-                <a href="/coordinador/bitacora" class="nav-link">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="me-2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                    <span>Bitácora de Eventos</span>
-                </a>
+                        <div class="menu-header">Sistema y Documentos</div>
+                        <a href="/coordinador/estudiantes/buscar" class="nav-link">
+                            <i class="bi bi-person-badge"></i>
+                            <span>Expediente Estudiantes</span>
+                        </a>
+                        <a href="/coordinador/reportes" class="nav-link">
+                            <i class="bi bi-bar-chart"></i>
+                            <span>Reportes</span>
+                        </a>
+                        <a href="/coordinador/cartas" class="nav-link">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <span>Cartas</span>
+                        </a>
+                        <a href="/coordinador/bitacora" class="nav-link">
+                            <i class="bi bi-journal-text"></i>
+                            <span>Bitácora</span>
+                        </a>
+                        <a href="/coordinador/configuracion" class="nav-link">
+                            <i class="bi bi-gear"></i>
+                            <span>Configuración</span>
+                        </a>
+                    @elseif (auth()->user()->esProfesor())
+                        <div class="menu-header">Navegación Docente</div>
+                        <a href="/profesor" class="nav-link">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="/profesor/secciones" class="nav-link">
+                            <i class="bi bi-collection"></i>
+                            <span>Mis Secciones</span>
+                        </a>
+                        <a href="/profesor/equipos" class="nav-link">
+                            <i class="bi bi-people"></i>
+                            <span>Mis Equipos</span>
+                        </a>
+
+                        <div class="menu-header">Gestión y Seguimiento</div>
+                        <a href="/profesor/puntos-control" class="nav-link">
+                            <i class="bi bi-flag"></i>
+                            <span>Puntos de Control</span>
+                        </a>
+                        <a href="/profesor/esquemas-evaluacion" class="nav-link">
+                            <i class="bi bi-sliders"></i>
+                            <span>Esquemas de Evaluación</span>
+                        </a>
+                        <a href="{{ route('evaluaciones.index') }}" class="nav-link {{ request()->routeIs('evaluaciones.*') ? 'active' : '' }}">
+                            <i class="bi bi-journal-check text-danger"></i>
+                            <span>Evaluación por Trayecto</span>
+                        </a>
+                        <a href="/profesor/socializaciones" class="nav-link">
+                            <i class="bi bi-mic"></i>
+                            <span>Socializaciones</span>
+                        </a>
+                        <a href="/profesor/entregables" class="nav-link">
+                            <i class="bi bi-file-earmark-check"></i>
+                            <span>Entregables</span>
+                        </a>
+                        <a href="/profesor/estudiantes/buscar" class="nav-link">
+                            <i class="bi bi-person-badge"></i>
+                            <span>Expediente Estudiantes</span>
+                        </a>
+                    @elseif (auth()->user()->esLider())
+                        <div class="menu-header">Mi Proyecto</div>
+                        <a href="/lider" class="nav-link">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="/lider/equipo" class="nav-link">
+                            <i class="bi bi-people"></i>
+                            <span>Mi Equipo</span>
+                        </a>
+                        <a href="/lider/proyecto" class="nav-link">
+                            <i class="bi bi-building"></i>
+                            <span>Mi Comunidad</span>
+                        </a>
+
+                        <div class="menu-header">Acciones</div>
+                        <a href="/lider/entregables" class="nav-link">
+                            <i class="bi bi-cloud-upload"></i>
+                            <span>Entregables</span>
+                        </a>
+                        <a href="{{ route('evaluaciones.index') }}" class="nav-link {{ request()->routeIs('evaluaciones.*') ? 'active' : '' }}">
+                            <i class="bi bi-check-circle text-danger"></i>
+                            <span>Autoevaluación PST</span>
+                        </a>
+                        <a href="/lider/carta" class="nav-link">
+                            <i class="bi bi-send"></i>
+                            <span>Carta de Presentación</span>
+                        </a>
+                        <a href="/lider/historial-academico" class="nav-link">
+                            <i class="bi bi-mortarboard"></i>
+                            <span>Historial Académico</span>
+                        </a>
+                    @else
+                        <div class="menu-header">Navegación</div>
+                        <a href="/" class="nav-link">
+                            <i class="bi bi-house"></i>
+                            <span>Inicio</span>
+                        </a>
+                        <a href="{{ route('evaluaciones.index') }}" class="nav-link {{ request()->routeIs('evaluaciones.*') ? 'active' : '' }}">
+                            <i class="bi bi-journal-check text-danger"></i>
+                            <span>Evaluación</span>
+                        </a>
+                    @endif
+                @else
+                    <div class="menu-header">Portal</div>
+                    <a href="{{ route('evaluaciones.invitado') }}" class="nav-link">
+                        <i class="bi bi-key text-warning"></i>
+                        <span>Acceso Invitado (PIN)</span>
+                    </a>
+                @endauth
             </div>
         </aside>
 
@@ -281,8 +389,10 @@
                             <span class="fw-semibold small">{{ auth()->user()?->usu_primer_nombre ?? 'Usuario' }} {{ auth()->user()?->usu_primer_apellido ?? '' }}</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                            <li><a class="dropdown-item small" href="/coordinador/configuracion"><i class="bi bi-gear me-2"></i>Configuración</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            @if(auth()->user()->esCoordinador())
+                                <li><a class="dropdown-item small" href="/coordinador/configuracion"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                            @endif
                             <li>
                                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                                     @csrf

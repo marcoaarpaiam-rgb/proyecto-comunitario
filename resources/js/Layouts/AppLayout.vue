@@ -624,6 +624,12 @@ const menuProfesor = [
         href: "/evaluaciones",
     },
     {
+        label: "Esquemas de Evaluación",
+        svg: svgs.table,
+        icon: "bi bi-sliders",
+        href: "/profesor/esquemas-evaluacion",
+    },
+    {
         label: "Socializaciones",
         svg: svgs.socializaciones,
         icon: "bi bi-mic-fill",

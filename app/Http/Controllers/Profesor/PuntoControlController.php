@@ -9,6 +9,9 @@ use App\Models\Trayecto;
 use App\Models\SeguimientoEquipo;
 use App\Models\AsistenciaPuntoControl;
 use App\Models\Usuario;
+use App\Models\TipoEncuentro;
+use App\Models\AcuerdoEncuentro;
+use App\Services\DiagnosticoProyectoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Http\Controllers\Concerns\AutorizaPorSeccion;
@@ -16,6 +19,14 @@ use App\Http\Controllers\Concerns\AutorizaPorSeccion;
 class PuntoControlController extends Controller
 {   
     use AutorizaPorSeccion;
+
+    protected DiagnosticoProyectoService $diagnosticoService;
+
+    public function __construct(DiagnosticoProyectoService $diagnosticoService)
+    {
+        $this->diagnosticoService = $diagnosticoService;
+    }
+
     public function index()
     {
         $profesor  = auth()->user();
@@ -32,7 +43,14 @@ class PuntoControlController extends Controller
 
         $puntos = PuntoControl::whereIn('puc_id_equ', $equipos->pluck('equ_id'))
             ->where('puc_status', true)
-            ->with(['equipo.integrantes.usuario', 'trayecto', 'seguimientos.asistencias.usuario'])
+            ->with([
+                'equipo.integrantes.usuario',
+                'trayecto',
+                'seguimientos.asistencias.usuario',
+                'seguimientos.asistencias.usuarioUpdated',
+                'seguimientos.acuerdos',
+                'seguimientos.tipoEncuentro'
+            ])
             ->orderBy('puc_fecha_limite')
             ->get();
 
@@ -53,11 +71,31 @@ class PuntoControlController extends Controller
             }
         }
 
+        // Estimar semana actual de la fase (1 a 18) con base en la fecha o último punto registrado
+        $semanaActual = 1;
+        $maxSemanaRegistrada = $puntos->max('puc_semana');
+        if ($maxSemanaRegistrada) {
+            $semanaActual = min(18, max(1, (int) $maxSemanaRegistrada));
+        }
+
+        // Diagnósticos de ruta crítica y semáforo de equipos
+        $diagnosticosEquipos = $this->diagnosticoService->diagnosticarSeccion(
+            $equipos->pluck('equ_id')->toArray(),
+            $semanaActual
+        );
+
+        $tiposEncuentro = \Illuminate\Support\Facades\Schema::hasTable('tipos_encuentro_puntual')
+            ? TipoEncuentro::where('tep_activo', true)->get()
+            : collect([]);
+
         return Inertia::render('Profesor/PuntosControl', [
-            'puntosControl' => $puntos,
-            'equipos'   => $equipos,
-            'secciones' => $profSecciones->map(fn($ps) => $ps->seccion)->filter()->values(),
-            'trayectos' => Trayecto::where('tra_status', true)->get(),
+            'puntosControl'       => $puntos,
+            'equipos'             => $equipos,
+            'secciones'           => $profSecciones->map(fn($ps) => $ps->seccion)->filter()->values(),
+            'trayectos'           => Trayecto::where('tra_status', true)->get(),
+            'diagnosticosEquipos' => $diagnosticosEquipos,
+            'semanaActual'        => $semanaActual,
+            'tiposEncuentro'      => $tiposEncuentro,
         ]);
     }
 
@@ -158,6 +196,10 @@ class PuntoControlController extends Controller
             'seq_observaciones'            => 'nullable|string',
             'seq_cumplio_previo'           => 'nullable|boolean',
             'seq_obs_previas_verificacion' => 'nullable|string',
+            'seq_estado_semaforo'          => 'nullable|in:positivo,neutral,negativo',
+            'seq_valoracion_avance'        => 'nullable|integer|min:0|max:100',
+            'seq_id_tipo_encuentro'        => 'nullable|exists:tipos_encuentro_puntual,tep_id',
+            'acuerdos'                     => 'nullable|array',
             'asistencias'                  => 'nullable',
         ]);
 
@@ -185,10 +227,43 @@ class PuntoControlController extends Controller
                 'seq_cumplio_previo'           => $request->seq_cumplio_previo,
                 'seq_obs_previas_verificacion' => $request->seq_obs_previas_verificacion,
                 'seq_observaciones'            => $request->seq_observaciones,
+                'seq_estado_semaforo'          => $request->seq_estado_semaforo ?? ($request->seq_cumplido ? 'positivo' : 'negativo'),
+                'seq_valoracion_avance'        => $request->seq_valoracion_avance,
+                'seq_id_tipo_encuentro'        => $request->seq_id_tipo_encuentro,
                 'seq_fecha_registro'           => now()->toDateString(),
                 'seq_id_usu_updated'           => auth()->id(),
             ]
         );
+
+        // Registro y actualización de acuerdos / compromisos del encuentro
+        if ($request->has('acuerdos') && is_array($request->acuerdos)) {
+            foreach ($request->acuerdos as $acuerdo) {
+                if (empty($acuerdo['descripcion'])) continue;
+                $estadoAcuerdo = in_array($acuerdo['estado'] ?? '', ['pendiente', 'en_proceso', 'rectificado'], true)
+                    ? $acuerdo['estado']
+                    : 'pendiente';
+
+                if (!empty($acuerdo['acue_id'])) {
+                    AcuerdoEncuentro::where('acue_id', $acuerdo['acue_id'])
+                        ->where('acue_id_seq', $seq->seq_id)
+                        ->update([
+                            'acue_descripcion'        => $acuerdo['descripcion'],
+                            'acue_estado'             => $estadoAcuerdo,
+                            'acue_fecha_limite'       => !empty($acuerdo['fecha_limite']) ? $acuerdo['fecha_limite'] : null,
+                            'acue_observacion_cierre' => $acuerdo['observacion_cierre'] ?? null,
+                            'updated_at'              => now(),
+                        ]);
+                } else {
+                    AcuerdoEncuentro::create([
+                        'acue_id_seq'             => $seq->seq_id,
+                        'acue_descripcion'        => $acuerdo['descripcion'],
+                        'acue_estado'             => $estadoAcuerdo,
+                        'acue_fecha_limite'       => !empty($acuerdo['fecha_limite']) ? $acuerdo['fecha_limite'] : null,
+                        'acue_observacion_cierre' => $acuerdo['observacion_cierre'] ?? null,
+                    ]);
+                }
+            }
+        }
 
         $rawAsistencias = $request->input('asistencias', []);
         $asistenciasList = [];
@@ -211,16 +286,33 @@ class PuntoControlController extends Controller
 
         foreach ($asistenciasList as $asistencia) {
             if (empty($asistencia['usu_id'])) continue;
-            AsistenciaPuntoControl::updateOrCreate(
-                ['apc_id_seq' => $seq->seq_id, 'apc_id_usu' => $asistencia['usu_id']],
-                [
-                    'apc_asistio'        => (bool)($asistencia['asistio'] ?? false),
-                    'apc_justificado'    => (bool)($asistencia['justificado'] ?? false),
-                    'apc_justificativo'  => $asistencia['justificativo'] ?? null,
-                    'apc_observaciones'  => $asistencia['observacion'] ?? ($asistencia['observaciones'] ?? null),
-                    'apc_id_usu_created' => auth()->id(),
-                ]
-            );
+
+            $existente = AsistenciaPuntoControl::where('apc_id_seq', $seq->seq_id)
+                ->where('apc_id_usu', $asistencia['usu_id'])
+                ->first();
+
+            $datos = [
+                'apc_asistio'       => (bool)($asistencia['asistio'] ?? false),
+                'apc_justificado'   => (bool)($asistencia['justificado'] ?? false),
+                'apc_participo'     => (bool)($asistencia['participo'] ?? false),
+                'apc_justificativo' => $asistencia['justificativo'] ?? null,
+                'apc_observaciones' => $asistencia['observacion'] ?? ($asistencia['observaciones'] ?? null),
+            ];
+
+            if ($existente) {
+                // Si ya existía, registrar trazabilidad de edición si cambió o si se especificó motivo
+                if (!empty($asistencia['motivo_edicion'])) {
+                    $datos['apc_motivo_edicion'] = $asistencia['motivo_edicion'];
+                }
+                $datos['apc_updated_at']      = now();
+                $datos['apc_id_usu_updated']  = auth()->id();
+                $existente->update($datos);
+            } else {
+                $datos['apc_id_seq']         = $seq->seq_id;
+                $datos['apc_id_usu']         = $asistencia['usu_id'];
+                $datos['apc_id_usu_created'] = auth()->id();
+                AsistenciaPuntoControl::create($datos);
+            }
         }
 
         return back()->with('success', 'Seguimiento y asistencia registrados correctamente.');

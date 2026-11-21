@@ -7,88 +7,10 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-        <div class="sb" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-av">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Profesor de Proyecto</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/profesor" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Dashboard</Link
-                >
-                <Link href="/profesor/secciones" class="sb-lnk"
-                    ><i class="bi bi-collection"></i> Mis Secciones</Link
-                >
-                <div class="sb-sec">Gestión</div>
-                <Link href="/profesor/puntos-control" class="sb-lnk"
-                    ><i class="bi bi-flag"></i> Puntos de Control</Link
-                >
-                <Link href="/profesor/socializaciones" class="sb-lnk active"
-                    ><i class="bi bi-mic"></i> Socializaciones</Link
-                >
-                <Link href="/profesor/entregables" class="sb-lnk"
-                    ><i class="bi bi-file-earmark-check"></i> Entregables</Link
-                >
-                <Link href="/profesor/estudiantes/buscar" class="sb-lnk"
-                    ><i class="bi bi-person-badge"></i> Expediente Estudiantes</Link
-                >
-                <div style="padding: 0.75rem 1.4rem">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-lnk w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <SidebarProfesor
+            :sidebar-open="sidebarOpen"
+            @close="sidebarOpen = false"
+        />
         <div class="main">
             <div class="topbar">
                 <div class="d-flex align-items-center gap-3">
@@ -1005,6 +927,7 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
+import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
 const props = defineProps({
     socializaciones: Array,
@@ -1298,7 +1221,7 @@ const guardarResultado = () => {
     );
 };
 </script>
-<style>
+<style scoped>
 :root {
     --rojo: #dc3545;
     --bg-body: #f0f2f5;

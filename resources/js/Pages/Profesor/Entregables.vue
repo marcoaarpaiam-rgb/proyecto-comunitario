@@ -7,91 +7,10 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-        <div class="sb" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-av">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Profesor de Proyecto</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/profesor" class="sb-lnk"
-                    ><i class="bi bi-speedometer2"></i> Dashboard</Link
-                >
-                <Link href="/profesor/secciones" class="sb-lnk"
-                    ><i class="bi bi-collection"></i> Mis Secciones</Link
-                >
-                <div class="sb-sec">Gestión</div>
-                <Link href="/profesor/puntos-control" class="sb-lnk"
-                    ><i class="bi bi-flag"></i> Puntos de Control</Link
-                >
-                <Link href="/profesor/socializaciones" class="sb-lnk"
-                    ><i class="bi bi-mic"></i> Socializaciones</Link
-                >
-                <Link href="/profesor/entregables" class="sb-lnk active"
-                    ><i class="bi bi-file-earmark-check"></i> Entregables
-                    <span v-if="pendientes > 0" class="sb-badge">{{
-                        pendientes
-                    }}</span></Link
-                >
-                <Link href="/profesor/estudiantes/buscar" class="sb-lnk"
-                    ><i class="bi bi-person-badge"></i> Expediente Estudiantes</Link
-                >
-                <div style="padding: 0.75rem 1.4rem">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-lnk w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <SidebarProfesor
+            :sidebar-open="sidebarOpen"
+            @close="sidebarOpen = false"
+        />
         <div class="main">
             <div class="topbar">
                 <div class="d-flex align-items-center gap-3">
@@ -147,6 +66,89 @@
                             ><span v-else>Todos los entregables revisados</span>
                         </p>
                     </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <select
+                                v-model="equipoFiltro"
+                                class="form-select form-select-sm"
+                                style="max-width: 280px;"
+                            >
+                                <option value="">Todos los equipos</option>
+                                <option
+                                    v-for="eq in props.equipos"
+                                    :key="eq.equ_id"
+                                    :value="eq.equ_id"
+                                >
+                                    {{ eq.equ_codigo }} - {{ eq.equ_titulo?.substring(0, 22) }}...
+                                </option>
+                            </select>
+                            <button
+                                class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold"
+                                @click="mostrarCatalogo = !mostrarCatalogo"
+                            >
+                                <i class="bi bi-journal-bookmark me-1 text-primary"></i>
+                                {{ mostrarCatalogo ? 'Ocultar Checklist' : 'Ver Checklist PNFI' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Catálogo Oficial PNFI Desplegable con Checklist -->
+                <div v-if="mostrarCatalogo" class="sc mb-4 p-3" style="border-left: 4px solid #0d6efd;">
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-primary">
+                                <i class="bi bi-card-checklist me-2"></i>Checklist de Entregables Oficiales PNFI
+                            </h6>
+                            <p class="text-muted small mb-0">
+                                {{ equipoFiltro ? 'Mostrando estado de cumplimiento del equipo seleccionado' : 'Selecciona un equipo arriba para ver el checklist individualizado' }}
+                            </p>
+                        </div>
+                        <span class="badge bg-primary">{{ catalogoFiltrado.length }} entregables en catálogo</span>
+                    </div>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm align-middle mb-0" style="font-size: 0.84rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Trayecto</th>
+                                    <th>Sem.</th>
+                                    <th>Entregable Oficial</th>
+                                    <th>Semanas Sugeridas</th>
+                                    <th>Obligatorio</th>
+                                    <th v-if="equipoFiltro" class="text-center">Estado del Equipo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="cep in catalogoFiltrado" :key="cep.cep_id">
+                                    <td class="fw-semibold">
+                                        {{ cep.trayecto?.tra_nombre || ('Trayecto ' + (cep.cep_id_trayecto || '')) }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary">Semestre {{ cep.cep_semestre }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ cep.cep_nombre }}</div>
+                                        <div v-if="cep.cep_descripcion" class="text-muted small">{{ cep.cep_descripcion }}</div>
+                                    </td>
+                                    <td>
+                                        <span v-if="cep.cep_semana_inicio_sugerida && cep.cep_semana_limite_sugerida">
+                                            Sem. {{ cep.cep_semana_inicio_sugerida }} a {{ cep.cep_semana_limite_sugerida }}
+                                        </span>
+                                        <span v-else class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <span v-if="cep.cep_es_obligatorio" class="badge bg-danger-subtle text-danger">Obligatorio</span>
+                                        <span v-else class="badge bg-light text-muted border">Opcional</span>
+                                    </td>
+                                    <td v-if="equipoFiltro" class="text-center">
+                                        <span :class="['badge', getEstadoCatalogoEquipo(cep.cep_id, equipoFiltro).badge]">
+                                            {{ getEstadoCatalogoEquipo(cep.cep_id, equipoFiltro).label }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="sc">
                     <div class="table-responsive">
@@ -163,7 +165,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-if="entregables.length === 0">
+                                <tr v-if="entregablesFiltrados.length === 0">
                                     <td
                                         colspan="7"
                                         class="text-center py-5"
@@ -173,7 +175,7 @@
                                     </td>
                                 </tr>
                                 <tr
-                                    v-for="ent in entregables"
+                                    v-for="ent in entregablesFiltrados"
                                     :key="ent.entr_id"
                                 >
                                     <td class="ps-4">
@@ -182,6 +184,11 @@
                                             style="font-size: 0.88rem"
                                         >
                                             {{ ent.entr_nombre_archivo }}
+                                        </div>
+                                        <div v-if="ent.catalogo_pnfi?.cep_nombre" class="mt-1">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.72rem; font-weight: 600;">
+                                                <i class="bi bi-bookmark-check me-1"></i>{{ ent.catalogo_pnfi.cep_nombre }}
+                                            </span>
                                         </div>
                                         <div
                                             v-if="ent.entr_observacion_rechazo"
@@ -397,10 +404,51 @@ import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
+import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
-const props = defineProps({ entregables: Array });
+const props = defineProps({
+    entregables: { type: Array, default: () => [] },
+    catalogoPnfi: { type: Array, default: () => [] },
+    equipos: { type: Array, default: () => [] },
+    semestreActivo: { type: String, default: "Semestre 1" },
+});
 const page = usePage();
 const sidebarOpen = ref(false);
+const mostrarCatalogo = ref(false);
+const equipoFiltro = ref("");
+
+const catalogoFiltrado = computed(() => {
+    let list = props.catalogoPnfi || [];
+    if (equipoFiltro.value) {
+        const eq = props.equipos?.find((e) => e.equ_id == equipoFiltro.value);
+        if (eq && eq.equ_id_tra) {
+            list = list.filter((c) => c.cep_id_trayecto == eq.equ_id_tra);
+        }
+    }
+    return list;
+});
+
+const getEstadoCatalogoEquipo = (cepId, eqId) => {
+    const entregablesAsociados = (props.entregables || []).filter(
+        (e) => e.entr_id_cep === cepId && (!eqId || e.entr_id_equ == eqId),
+    );
+    if (!entregablesAsociados.length)
+        return { estado: "pendiente", label: "Sin subir", badge: "bg-light text-muted border" };
+    if (entregablesAsociados.some((e) => e.entr_aprobado === true))
+        return { estado: "aprobado", label: "Aprobado", badge: "bg-success text-white" };
+    if (entregablesAsociados.some((e) => e.entr_aprobado === null))
+        return { estado: "revision", label: "En revisión", badge: "bg-warning text-dark" };
+    return { estado: "rechazado", label: "Rechazado", badge: "bg-danger text-white" };
+};
+
+const entregablesFiltrados = computed(() => {
+    let list = props.entregables || [];
+    if (equipoFiltro.value) {
+        list = list.filter((e) => e.entr_id_equ == equipoFiltro.value);
+    }
+    return list;
+});
+
 const tema = ref(localStorage.getItem("prof-theme") || "light");
 const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
@@ -449,7 +497,7 @@ const confirmarRechazar = () => {
     );
 };
 </script>
-<style>
+<style scoped>
 :root {
     --rojo: #dc3545;
     --bg-body: #f0f2f5;

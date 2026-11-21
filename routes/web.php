@@ -541,6 +541,18 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('estudiantes.buscar');
     Route::get('estudiantes/{id}/expediente', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'show'])
         ->name('estudiantes.expediente');
+
+    // Esquemas de Evaluación Configurables (Profesor)
+    Route::get('esquemas-evaluacion', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'index'])
+        ->name('esquemas.index');
+    Route::post('esquemas-evaluacion', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'store'])
+        ->name('esquemas.store');
+    Route::put('esquemas-evaluacion/{id}', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'update'])
+        ->name('esquemas.update');
+    Route::delete('esquemas-evaluacion/{id}', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'destroy'])
+        ->name('esquemas.destroy');
+    Route::post('esquemas-evaluacion/asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'asignarSeccion'])
+        ->name('esquemas.asignar');
     // Equipos — el profesor crea, el coordinador también puede todo
     Route::get('equipos', [EquipoController::class, 'index'])
         ->name('equipos.index');

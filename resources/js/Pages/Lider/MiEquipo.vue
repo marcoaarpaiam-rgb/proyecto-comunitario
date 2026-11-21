@@ -7,117 +7,9 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-        <div class="sb" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-av">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">
-                        <i
-                            class="bi bi-star-fill me-1"
-                            style="color: #ffd700; font-size: 0.65rem"
-                        ></i
-                        >Líder de Equipo
-                    </div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Mi Proyecto</div>
-                <Link
-                    href="/lider"
-                    class="sb-lnk d-flex align-items-center justify-content-between"
-                >
-                    <span
-                        ><i class="bi bi-speedometer2 me-2"></i>Dashboard</span
-                    >
-                    <span
-                        v-if="notifNoLeidas > 0"
-                        style="
-                            background: #dc3545;
-                            color: #fff;
-                            border-radius: 50%;
-                            width: 18px;
-                            height: 18px;
-                            font-size: 0.7rem;
-                            font-weight: 800;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            flex-shrink: 0;
-                        "
-                    >
-                        {{ notifNoLeidas > 9 ? "9+" : notifNoLeidas }}
-                    </span>
-                </Link>
-                <Link href="/lider/equipo" class="sb-lnk active"
-                    ><i class="bi bi-people"></i> Mi Equipo</Link
-                >
-                <Link href="/lider/proyecto" class="sb-lnk"
-                    ><i class="bi bi-building"></i> Mi Comunidad</Link
-                >
-                <div class="sb-sec">Acciones</div>
-                <Link href="/lider/entregables" class="sb-lnk"
-                    ><i class="bi bi-cloud-upload"></i> Entregables</Link
-                >
-                <Link href="/lider/carta" class="sb-lnk"
-                    ><i class="bi bi-send"></i> Carta de Presentación</Link
-                >
-                <Link href="/lider/historial-academico" class="sb-lnk"
-                    ><i class="bi bi-mortarboard"></i> Historial Académico</Link
-                >
-                <div style="padding: 0.75rem 1.4rem">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-lnk w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- SIDEBAR LIDER UNIFICADO -->
+        <SidebarLider :sidebar-open="sidebarOpen" @close="sidebarOpen = false" />
+
         <div class="main">
             <div class="topbar">
                 <div class="d-flex align-items-center gap-3">
@@ -188,6 +80,94 @@
                 </div>
 
                 <div v-else>
+                    <!-- BLOQUE 6: Panel de Acompañamiento, Semáforo y Transparencia del Líder -->
+                    <div v-if="diagnostico" class="mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                                <span>📌</span> Estado del Proyecto y Ruta Crítica
+                            </h5>
+                        </div>
+                        <SemaforoEquipo :diagnostico="diagnostico" />
+
+                        <!-- Acuerdos y compromisos pendientes -->
+                        <div v-if="acuerdosPendientes && acuerdosPendientes.length > 0" class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-warning bg-opacity-10 border-0 py-2 d-flex align-items-center justify-content-between">
+                                <span class="fw-bold text-dark small">
+                                    <i class="bi bi-list-check me-1 text-warning"></i> Compromisos y Correcciones Pendientes ({{ acuerdosPendientes.length }})
+                                </span>
+                            </div>
+                            <div class="card-body p-2">
+                                <ul class="list-group list-group-flush">
+                                    <li
+                                        v-for="ac in acuerdosPendientes"
+                                        :key="ac.acue_id"
+                                        class="list-group-item px-2 py-2 d-flex justify-content-between align-items-center border-0 border-bottom"
+                                    >
+                                        <div>
+                                            <div class="small fw-semibold text-dark">{{ ac.acue_descripcion }}</div>
+                                            <small v-if="ac.acue_fecha_limite" class="text-muted">
+                                                <i class="bi bi-clock me-1"></i> Límite: {{ ac.acue_fecha_limite }}
+                                            </small>
+                                        </div>
+                                        <span :class="ac.acue_estado === 'en_proceso' ? 'badge bg-info text-dark' : 'badge bg-warning text-dark'">
+                                            {{ ac.acue_estado === 'en_proceso' ? 'En proceso' : 'Pendiente' }}
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Mis asistencias recientes -->
+                        <div v-if="misAsistencias && misAsistencias.length > 0" class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-light border-0 py-2">
+                                <span class="fw-bold text-muted small">
+                                    <i class="bi bi-clipboard-check me-1"></i> Mi Registro de Asistencias Recientes
+                                </span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0" style="font-size: 0.82rem">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="ps-3">Punto de Control</th>
+                                                <th>Fecha</th>
+                                                <th class="text-end pe-3">Condición</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="asist in misAsistencias" :key="asist.apc_id">
+                                                <td class="ps-3 fw-medium">
+                                                    {{ asist.punto_control }}
+                                                    <div v-if="asist.motivo_edicion" class="text-muted" style="font-size: 0.7rem">
+                                                        <i class="bi bi-pencil-square text-warning me-1"></i>Motivo de edición: {{ asist.motivo_edicion }}
+                                                    </div>
+                                                </td>
+                                                <td class="text-muted">
+                                                    {{ asist.fecha }}
+                                                    <span v-if="asist.updated_at" class="badge bg-light text-muted border ms-1" style="font-size: 0.65rem">Modificada</span>
+                                                </td>
+                                                <td class="text-end pe-3">
+                                                    <span v-if="asist.asistio" class="badge bg-success">
+                                                        <i class="bi bi-check-lg me-1"></i> Presente
+                                                    </span>
+                                                    <span v-else-if="asist.justificado" class="badge bg-warning text-dark">
+                                                        <i class="bi bi-file-earmark-medical me-1"></i> Justificado
+                                                    </span>
+                                                    <span v-else class="badge bg-danger">
+                                                        <i class="bi bi-x-lg me-1"></i> Ausente
+                                                    </span>
+                                                    <span v-if="asist.participo" class="badge bg-primary ms-1" title="Participación activa verificada">
+                                                        <i class="bi bi-hand-thumbs-up-fill"></i> Participó
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="sc mb-3">
                         <div class="sh">
                             <h6>
@@ -504,11 +484,16 @@ import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import SemaforoEquipo from "@/Components/SemaforoEquipo.vue";
+import SidebarLider from "@/Components/SidebarLider.vue";
 
 const props = defineProps({
     equipo: Object,
     tutor: Object,
     profesoresDisponibles: Array,
+    diagnostico: { type: Object, default: null },
+    acuerdosPendientes: { type: Array, default: () => [] },
+    misAsistencias: { type: Array, default: () => [] },
 });
 const page = usePage();
 const sidebarOpen = ref(false);

@@ -26,7 +26,20 @@ class SeguimientoEquipo extends Model
         'seq_id_puc',
         'seq_id_usu_created',
         'seq_id_usu_updated',
+        'seq_estado_semaforo',
+        'seq_valoracion_avance',
+        'seq_id_tipo_encuentro',
     ];
+
+    public function tipoEncuentro()
+    {
+        return $this->belongsTo(TipoEncuentro::class, 'seq_id_tipo_encuentro', 'tep_id');
+    }
+
+    public function acuerdos()
+    {
+        return $this->hasMany(AcuerdoEncuentro::class, 'acue_id_seq', 'seq_id');
+    }
 
     public function equipo()
     {

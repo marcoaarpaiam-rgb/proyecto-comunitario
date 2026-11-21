@@ -7,117 +7,10 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-        <div class="sb" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-av">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">
-                        <i
-                            class="bi bi-star-fill me-1"
-                            style="color: #ffd700; font-size: 0.65rem"
-                        ></i
-                        >Líder de Equipo
-                    </div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Mi Proyecto</div>
-                <Link
-                    href="/lider"
-                    class="sb-lnk d-flex align-items-center justify-content-between"
-                >
-                    <span
-                        ><i class="bi bi-speedometer2 me-2"></i>Dashboard</span
-                    >
-                    <span
-                        v-if="notifNoLeidas > 0"
-                        style="
-                            background: #dc3545;
-                            color: #fff;
-                            border-radius: 50%;
-                            width: 18px;
-                            height: 18px;
-                            font-size: 0.7rem;
-                            font-weight: 800;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            flex-shrink: 0;
-                        "
-                    >
-                        {{ notifNoLeidas > 9 ? "9+" : notifNoLeidas }}
-                    </span>
-                </Link>
-                <Link href="/lider/equipo" class="sb-lnk"
-                    ><i class="bi bi-people"></i> Mi Equipo</Link
-                >
-                <Link href="/lider/proyecto" class="sb-lnk"
-                    ><i class="bi bi-building"></i> Mi Comunidad</Link
-                >
-                <div class="sb-sec">Acciones</div>
-                <Link href="/lider/entregables" class="sb-lnk active"
-                    ><i class="bi bi-cloud-upload"></i> Entregables</Link
-                >
-                <Link href="/lider/carta" class="sb-lnk"
-                    ><i class="bi bi-send"></i> Carta de Presentación</Link
-                >
-                <Link href="/lider/historial-academico" class="sb-lnk"
-                    ><i class="bi bi-mortarboard"></i> Historial Académico</Link
-                >
-                <div style="padding: 0.75rem 1.4rem">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-lnk w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <SidebarLider
+            :sidebar-open="sidebarOpen"
+            @close="sidebarOpen = false"
+        />
         <div class="main">
             <div class="topbar">
                 <div class="d-flex align-items-center gap-3">
@@ -195,6 +88,67 @@
                     </p>
                 </div>
 
+                <!-- Catálogo Oficial PNFI del Trayecto -->
+                <div v-if="catalogoPnfi && catalogoPnfi.length" class="sc mb-4 p-3" style="border-left: 4px solid #dc3545;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-danger">
+                                <i class="bi bi-card-checklist me-2"></i>Ruta Oficial de Entregables PNFI
+                            </h6>
+                            <p class="text-muted small mb-0">
+                                Guía de entregables normativos requeridos para la aprobación de tu proyecto socio-tecnológico.
+                            </p>
+                        </div>
+                        <button
+                            class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                            @click="mostrarChecklist = !mostrarChecklist"
+                        >
+                            <i class="bi" :class="mostrarChecklist ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            {{ mostrarChecklist ? 'Ocultar' : 'Ver Detalles' }}
+                        </button>
+                    </div>
+
+                    <div v-if="mostrarChecklist" class="table-responsive mt-3">
+                        <table class="table table-sm align-middle mb-0" style="font-size: 0.84rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Semestre</th>
+                                    <th>Entregable Normativo</th>
+                                    <th>Semanas Sugeridas</th>
+                                    <th>Tipo</th>
+                                    <th class="text-center">Estado del Equipo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="cep in catalogoPnfi" :key="cep.cep_id">
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary">Semestre {{ cep.cep_semestre }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ cep.cep_nombre }}</div>
+                                        <div v-if="cep.cep_descripcion" class="text-muted small">{{ cep.cep_descripcion }}</div>
+                                    </td>
+                                    <td>
+                                        <span v-if="cep.cep_semana_inicio_sugerida && cep.cep_semana_limite_sugerida">
+                                            Sem. {{ cep.cep_semana_inicio_sugerida }} a {{ cep.cep_semana_limite_sugerida }}
+                                        </span>
+                                        <span v-else class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <span v-if="cep.cep_es_obligatorio" class="badge bg-danger-subtle text-danger">Obligatorio</span>
+                                        <span v-else class="badge bg-light text-muted border">Opcional</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span :class="['badge', getEstadoCatalogo(cep.cep_id).badge]">
+                                            {{ getEstadoCatalogo(cep.cep_id).label }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="sc">
                     <div class="sh">
                         <h6>
@@ -246,6 +200,11 @@
                                     style="font-size: 0.9rem"
                                 >
                                     {{ ent.entr_nombre_archivo }}
+                                </div>
+                                <div v-if="ent.catalogo_pnfi?.cep_nombre" class="mt-1">
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem; font-weight: 600;">
+                                        <i class="bi bi-bookmark-check me-1"></i>{{ ent.catalogo_pnfi.cep_nombre }}
+                                    </span>
                                 </div>
                                 <div
                                     style="
@@ -359,6 +318,27 @@
                                 </div>
                             </div>
                             <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    Vincular a Catálogo Oficial PNFI <span class="text-muted fw-normal small">(opcional)</span>
+                                </label>
+                                <select
+                                    v-model="form.entr_id_cep"
+                                    class="form-select"
+                                >
+                                    <option value="">-- Ninguno / Entregable adicional --</option>
+                                    <option
+                                        v-for="cep in catalogoPnfi"
+                                        :key="cep.cep_id"
+                                        :value="cep.cep_id"
+                                    >
+                                        Sem. {{ cep.cep_semestre }}: {{ cep.cep_nombre }} {{ cep.cep_es_obligatorio ? '★ (Obligatorio)' : '' }}
+                                    </option>
+                                </select>
+                                <div class="form-text small" style="color: var(--text-muted)">
+                                    Vincular al catálogo oficial actualiza la ruta crítica y el semáforo institucional del proyecto.
+                                </div>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Archivo
                                     <span class="text-danger">*</span></label
@@ -453,18 +433,29 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import SidebarLider from "@/Components/SidebarLider.vue";
 
 const props = defineProps({
-    entregables: Array,
+    entregables: { type: Array, default: () => [] },
     tiposEntregable: { type: Array, default: () => [] },
+    catalogoPnfi: { type: Array, default: () => [] },
     cartaAprobada: { type: Boolean, default: false },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
+const mostrarChecklist = ref(true);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
 const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem("lid-theme", tema.value);
+};
+
+const getEstadoCatalogo = (cepId) => {
+    const entregablesAsociados = (props.entregables || []).filter(e => e.entr_id_cep === cepId);
+    if (!entregablesAsociados.length) return { estado: 'pendiente', label: 'Pendiente', badge: 'bg-light text-muted border' };
+    if (entregablesAsociados.some(e => e.entr_aprobado === true)) return { estado: 'aprobado', label: 'Aprobado', badge: 'bg-success text-white' };
+    if (entregablesAsociados.some(e => e.entr_aprobado === null)) return { estado: 'revision', label: 'En revisión', badge: 'bg-warning text-dark' };
+    return { estado: 'rechazado', label: 'Rechazado', badge: 'bg-danger text-white' };
 };
 
 const modalLogout = ref(null);
@@ -482,6 +473,7 @@ const iniciales = computed(() => {
 });
 const form = ref({
     entr_id_tet: "",
+    entr_id_cep: "",
     archivo: null,
     entr_version: "1.0",
     entr_descripcion: "",
@@ -492,6 +484,7 @@ let modal = null;
 const abrirModal = () => {
     form.value = {
         entr_id_tet: "",
+        entr_id_cep: "",
         archivo: null,
         entr_version: "1.0",
         entr_descripcion: "",
@@ -504,6 +497,7 @@ const guardar = () => {
     loading.value = true;
     const data = new FormData();
     data.append("entr_id_tet", form.value.entr_id_tet);
+    if (form.value.entr_id_cep) data.append("entr_id_cep", form.value.entr_id_cep);
     if (form.value.archivo) data.append("archivo", form.value.archivo);
     data.append("entr_version", form.value.entr_version);
     data.append("entr_descripcion", form.value.entr_descripcion);
@@ -533,7 +527,7 @@ onMounted(() => {
         .catch(() => {});
 });
 </script>
-<style>
+<style scoped>
 :root {
     --rojo: #dc3545;
     --bg-body: #f0f2f5;

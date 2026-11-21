@@ -9,10 +9,18 @@ use Inertia\Inertia;
 use App\Models\Usuario; 
 use App\Models\UsuarioRol; 
 use App\Models\ProfesorSeccion; 
+use App\Services\DiagnosticoProyectoService;
 use Illuminate\Http\Request;
 
 class SeccionDetalleController extends Controller
 {
+    protected DiagnosticoProyectoService $diagnosticoService;
+
+    public function __construct(DiagnosticoProyectoService $diagnosticoService)
+    {
+        $this->diagnosticoService = $diagnosticoService;
+    }
+
     public function show($id)
     {
         $seccion = Seccion::with(['trayecto','turno'])->findOrFail($id);
@@ -26,9 +34,22 @@ class SeccionDetalleController extends Controller
                 'trayecto',
             ])->get();
 
+        $semanaActual = 1;
+        $maxSemana = \App\Models\PuntoControl::whereIn('puc_id_equ', $equipos->pluck('equ_id'))->max('puc_semana');
+        if ($maxSemana) {
+            $semanaActual = min(18, max(1, (int) $maxSemana));
+        }
+
+        $diagnosticosEquipos = $this->diagnosticoService->diagnosticarSeccion(
+            $equipos->pluck('equ_id')->toArray(),
+            $semanaActual
+        );
+
         return Inertia::render('Coordinador/SeccionDetalle', [
             'seccion' => $seccion,
             'equipos' => $equipos,
+            'diagnosticosEquipos' => $diagnosticosEquipos,
+            'semanaActual'        => $semanaActual,
             'profesorActual' => Usuario::whereHas('seccionesProfesor', fn($q) => $q->where('pse_id_sec', $id)->where('pse_status', true))
                 ->first(['usu_id', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_cedula']),
             'profesores' => Usuario::where('usu_status', true)

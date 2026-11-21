@@ -88,37 +88,56 @@ class LiderController extends Controller
         return Inertia::render('Lider/Entregables', [
             'equipo'      => $equipo,
             'entregables' => Entregable::where('entr_id_equ', $equipo->equ_id)
-                ->with(['tipoEntregable'])
+                ->with(['tipoEntregable', 'catalogoPnfi'])
                 ->orderBy('entr_fecha_subida', 'desc')
                 ->get(),
             'tiposEntregable' => TipoEntregableTrayecto::where(
                 'tet_trayecto_numero',
                 $equipo->trayecto->tra_numero
             )->where('tet_status', true)->get(),
+            'catalogoPnfi' => \App\Models\CatalogoEntregablePnfi::where('cep_id_trayecto', $equipo->equ_id_tra)
+                ->where('cep_activo', true)
+                ->orderBy('cep_semestre')
+                ->orderBy('cep_orden')
+                ->get(),
             'cartaAprobada' => $equipo && $equipo->proyectoComunidad
                 ? \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad->pco_id)
                     ->whereNotNull('cpr_fecha_aprobacion')
                     ->exists()
                 : false,
+            'semestreActivo' => app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion((int) ($equipo->equ_id_sec ?? 0)),
         ]);
     }
 
     public function subirEntregable(Request $request)
     {
         $request->validate([
-            'entr_id_tet'       => 'required|exists:tipo_entregable_trayecto,tet_id',
+            'entr_id_tet'         => 'nullable|exists:tipo_entregable_trayecto,tet_id',
+            'entr_id_cep'         => 'nullable|exists:catalogo_entregables_pnfi,cep_id',
             'entr_nombre_archivo' => 'required|string|max:255',
-            'archivo' => 'required|file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,odt,zip,png,jpg,jpeg',
+            'archivo'             => 'required|file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,odt,zip,png,jpg,jpeg',
         ], [
-            'entr_id_tet.required'         => 'El tipo de entregable es obligatorio.',
             'entr_nombre_archivo.required' => 'El nombre del archivo es obligatorio.',
             'archivo.required'             => 'Debes seleccionar un archivo.',
             'archivo.max'                  => 'El archivo no puede superar 20MB.',
         ]);
 
+        if (empty($request->entr_id_tet) && empty($request->entr_id_cep)) {
+            return back()->withErrors(['archivo' => 'Debes seleccionar el tipo o entregable del catálogo PNFI.']);
+        }
+
         $equipo = $this->getEquipo();
         if (!$equipo) return back()->withErrors(['equipo' => 'No tienes equipo asignado.']);
         
+        // Si no viene entr_id_tet pero viene entr_id_cep, mapear un default para compatibilidad con esquemas viejos
+        $idTet = $request->entr_id_tet;
+        if (empty($idTet) && !empty($request->entr_id_cep)) {
+            $defaultTet = TipoEntregableTrayecto::where('tet_trayecto_numero', $equipo->trayecto?->tra_numero ?? 1)
+                ->where('tet_status', true)
+                ->value('tet_id');
+            $idTet = $defaultTet ?: null;
+        }
+
         // Verificar que la carta de presentación está aprobada
         $carta = \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad?->pco_id)
             ->whereNotNull('cpr_fecha_aprobacion')
@@ -136,40 +155,50 @@ class LiderController extends Controller
             ]);
         }
 
-        
-
         $fechaLimite = $equipo->proyectoComunidad?->pco_fecha_limite;
         $aTiempo = $fechaLimite ? now()->toDateString() <= $fechaLimite : null;
-        // Verificar si ya existe un entregable del mismo tipo pendiente o aprobado
-        $activo = \App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
-            ->where('entr_id_tet', $request->entr_id_tet)
+        
+        // Verificar si ya existe un entregable del mismo tipo o catálogo pendiente o aprobado
+        $activoQuery = \App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
             ->where('entr_status', true)
-            ->where(fn($q) => $q->whereNull('entr_aprobado')->orWhere('entr_aprobado', true))
-            ->first();
+            ->where(fn($q) => $q->whereNull('entr_aprobado')->orWhere('entr_aprobado', true));
+
+        if (!empty($request->entr_id_cep)) {
+            $activoQuery->where('entr_id_cep', $request->entr_id_cep);
+        } elseif (!empty($idTet)) {
+            $activoQuery->where('entr_id_tet', $idTet);
+        }
+        $activo = $activoQuery->first();
 
         if ($activo) {
             return back()->withErrors([
-                'entr_id_tet' => is_null($activo->entr_aprobado)
+                'archivo' => is_null($activo->entr_aprobado)
                     ? 'Ya tienes un entregable de este tipo en revisión. Espera la respuesta del profesor.'
                     : 'Este tipo de entregable ya fue aprobado; no es necesario subir otro.',
             ]);
         }
 
-        $nuevaVersion = (\App\Models\Entregable::where('entr_id_equ', $equipo->equ_id)
-            ->where('entr_id_tet', $request->entr_id_tet)->count() + 1) . '.0';
+        $versionQuery = \App\Models\Entregable::where('entr_id_equ', $equipo->equ_id);
+        if (!empty($request->entr_id_cep)) {
+            $versionQuery->where('entr_id_cep', $request->entr_id_cep);
+        } elseif (!empty($idTet)) {
+            $versionQuery->where('entr_id_tet', $idTet);
+        }
+        $nuevaVersion = ($versionQuery->count() + 1) . '.0';
 
         $ruta = $request->file('archivo')->store('entregables/' . $equipo->codigo_archivo, 'public');
         Entregable::create([
-            'entr_id_equ'          => $equipo->equ_id,
-            'entr_id_tet'          => $request->entr_id_tet,
-            'entr_nombre_archivo'  => $request->entr_nombre_archivo,
-            'entr_ruta'            => $ruta,
-            'entr_version' => $nuevaVersion, 
+            'entr_id_equ'              => $equipo->equ_id,
+            'entr_id_tet'              => $idTet,
+            'entr_id_cep'              => $request->entr_id_cep,
+            'entr_nombre_archivo'      => $request->entr_nombre_archivo,
+            'entr_ruta'                => $ruta,
+            'entr_version'             => $nuevaVersion, 
             'entr_es_entregable_final' => $request->entr_es_entregable_final ?? false,
-            'entr_a_tiempo'        => $aTiempo,
-            'entr_aprobado'        => null,
-            'entr_status'          => true,
-            'entr_id_usu_created'  => auth()->id(),
+            'entr_a_tiempo'            => $aTiempo,
+            'entr_aprobado'            => null,
+            'entr_status'              => true,
+            'entr_id_usu_created'      => auth()->id(),
         ]);
 
         // Notificar al profesor(es) de la sección
@@ -202,8 +231,47 @@ class LiderController extends Controller
         if (!$equipo) {
             return redirect('/lider');
         }
+
+        $semanaActual = 1;
+        $maxSem = PuntoControl::where('puc_id_equ', $equipo->equ_id)->max('puc_semana');
+        if ($maxSem) {
+            $semanaActual = min(18, max(1, (int) $maxSem));
+        }
+
+        $diagnosticoService = new \App\Services\DiagnosticoProyectoService();
+        $diagnostico = $diagnosticoService->diagnosticarEquipo($equipo->equ_id, $semanaActual);
+
+        $acuerdosPendientes = \Illuminate\Support\Facades\Schema::hasTable('acuerdos_encuentro')
+            ? \App\Models\AcuerdoEncuentro::whereHas('seguimiento', fn($q) => $q->where('seq_id_equ', $equipo->equ_id))
+                ->whereIn('acue_estado', ['pendiente', 'en_proceso'])
+                ->orderBy('acue_fecha_limite')
+                ->get()
+            : collect([]);
+
+        $misAsistencias = \Illuminate\Support\Facades\DB::table('asistencia_punto_control as apc')
+            ->join('seguimiento_equipo as seq', 'apc.apc_id_seq', '=', 'seq.seq_id')
+            ->join('punto_control as puc', 'seq.seq_id_puc', '=', 'puc.puc_id')
+            ->where('seq.seq_id_equ', $equipo->equ_id)
+            ->where('apc.apc_id_usu', auth()->id())
+            ->select(
+                'apc.apc_id',
+                'puc.puc_nombre as punto_control',
+                'seq.seq_fecha_registro as fecha',
+                'apc.apc_asistio as asistio',
+                'apc.apc_justificado as justificado',
+                'apc.apc_participo as participo',
+                'apc.apc_motivo_edicion as motivo_edicion',
+                'apc.apc_updated_at as updated_at'
+            )
+            ->orderBy('seq.seq_fecha_registro', 'desc')
+            ->take(8)
+            ->get();
+
         return Inertia::render('Lider/MiEquipo', [
             'equipo' => $equipo,
+            'diagnostico' => $diagnostico,
+            'acuerdosPendientes' => $acuerdosPendientes,
+            'misAsistencias' => $misAsistencias,
             'tutor' => \App\Models\Tutor::where('tut_id_equ', $equipo->equ_id)
                 ->where('tut_status', true)
                 ->with('usuario')

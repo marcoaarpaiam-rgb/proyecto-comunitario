@@ -70,11 +70,20 @@ class ExpedienteController extends Controller
             $idProyecto ? (int) $idProyecto : null
         );
 
+        $semanaActual = 1;
+        $maxSem = $equipo->puntosControl?->max('puc_semana');
+        if ($maxSem) {
+            $semanaActual = min(18, max(1, (int) $maxSem));
+        }
+        $diagnostico = app(\App\Services\DiagnosticoProyectoService::class)->diagnosticarEquipo((int) $equipo->equ_id, $semanaActual);
+
         return Inertia::render('Coordinador/ExpedienteEquipo', [
             'equipo'               => $equipo,
             'evaluaciones'         => $evaluaciones,
             'actaFinal'            => $actaFinal,
             'metricasIndividuales' => $metricasIndividuales,
+            'diagnostico'          => $diagnostico,
+            'semanaActual'         => $semanaActual,
         ]);
     }
 }
