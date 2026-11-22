@@ -194,6 +194,66 @@
                             </div>
                         </div>
 
+                        <!-- BANNER DEL ESQUEMA DE EVALUACIÓN ASIGNADO Y SU RESPALDO FORMATIVO -->
+                        <div v-if="esquemaActual" class="mt-3 p-3 rounded-3 bg-white border border-light-subtle shadow-xs">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-circle">
+                                        <i class="bi bi-file-earmark-ruled fs-6"></i>
+                                    </span>
+                                    <div>
+                                        <div class="fw-bold text-dark small d-flex align-items-center gap-2">
+                                            <span>Esquema de Evaluación Asignado: {{ esquemaActual.nombre }}</span>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size: 0.68rem;">
+                                                Lapso {{ esquemaActual.lapso }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">
+                                            Modalidad: <strong class="text-capitalize">{{ (esquemaActual.modo || '').replace('_', ' ') }}</strong> · Escala: <strong>{{ esquemaActual.escala_min }} - {{ esquemaActual.escala_max }} pts</strong> (Mín. Aprobatorio: {{ esquemaActual.nota_aprobatoria }} pts)
+                                        </small>
+                                    </div>
+                                </div>
+                                <Link
+                                    href="/profesor/esquemas-evaluacion"
+                                    class="btn btn-sm btn-outline-danger py-1 px-3 rounded-pill fw-semibold"
+                                    style="font-size: 0.73rem;"
+                                >
+                                    <i class="bi bi-sliders me-1"></i>Ver / Gestionar Esquemas
+                                </Link>
+                            </div>
+
+                            <!-- Respaldo de los indicadores para la evaluación -->
+                            <div class="row g-2 pt-1">
+                                <div class="col-md-4">
+                                    <div class="p-2 rounded bg-light border-0 d-flex align-items-start gap-2 h-100">
+                                        <i class="bi bi-person-check-fill text-success mt-1"></i>
+                                        <div>
+                                            <div class="fw-bold text-dark" style="font-size: 0.76rem;">Asistencia y Puntualidad</div>
+                                            <div class="text-muted" style="font-size: 0.71rem;">Garantiza la participación continua en los puntos de control requeridos por el esquema.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-2 rounded bg-light border-0 d-flex align-items-start gap-2 h-100">
+                                        <i class="bi bi-file-earmark-check-fill text-primary mt-1"></i>
+                                        <div>
+                                            <div class="fw-bold text-dark" style="font-size: 0.76rem;">Entregables del Catálogo PNFI</div>
+                                            <div class="text-muted" style="font-size: 0.71rem;">Constituyen las evidencias técnicas auditables evaluadas según los criterios del PNF.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-2 rounded bg-light border-0 d-flex align-items-start gap-2 h-100">
+                                        <i class="bi bi-check2-circle text-warning mt-1"></i>
+                                        <div>
+                                            <div class="fw-bold text-dark" style="font-size: 0.76rem;">Acuerdos Rectificados</div>
+                                            <div class="text-muted" style="font-size: 0.71rem;">Certifican la subsanación de correcciones metodológicas para el cierre evaluativo formal.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- PANEL COMPLETO SOLO PARA EL EQUIPO SELECCIONADO -->
                         <div v-if="equipoSeleccionadoDiag && diagnosticosEquipos[equipoSeleccionadoDiag]" class="mt-3 pt-3 border-top">
                             <div class="d-flex align-items-center justify-content-between mb-2">
@@ -211,6 +271,74 @@
                             </div>
                             <SemaforoEquipo :diagnostico="diagnosticosEquipos[equipoSeleccionadoDiag]" />
                         </div>
+                    </div>
+                </div>
+
+                <!-- TABS DE NAVEGACIÓN: PENDIENTES VS ARCHIVADOS -->
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <ul class="nav nav-pills gap-2" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                                :class="tabPuntos === 'pendientes' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                type="button"
+                                @click="tabPuntos = 'pendientes'"
+                            >
+                                <i class="bi bi-clock-history"></i>
+                                <span>Pendientes por Confirmar</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="tabPuntos === 'pendientes' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalPendientes }}
+                                </span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                                :class="tabPuntos === 'archivados' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                type="button"
+                                @click="tabPuntos = 'archivados'"
+                            >
+                                <i class="bi bi-archive-fill"></i>
+                                <span>Confirmados / Archivados</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="tabPuntos === 'archivados' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalArchivados }}
+                                </span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ALERTA DE CONFIRMACIÓN EXITOSA CON ENLACE AL EXPEDIENTE -->
+                <div
+                    v-if="puntoConfirmadoReciente"
+                    class="alert alert-success alert-dismissible fade show d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 shadow-sm border-success"
+                    role="alert"
+                >
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill fs-5 text-success"></i>
+                        <span>
+                            Punto de control <strong>{{ puntoConfirmadoReciente.nombre_punto }}</strong> confirmado exitosamente y archivado.
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <Link
+                            :href="`/profesor/equipos/${puntoConfirmadoReciente.id_equipo}/expediente`"
+                            class="btn btn-sm btn-success fw-bold text-white rounded-pill px-3"
+                        >
+                            <i class="bi bi-folder2-open me-1"></i>Ver Expediente del {{ puntoConfirmadoReciente.codigo_equipo }}
+                        </Link>
+                        <button
+                            type="button"
+                            class="btn-close position-static p-2"
+                            @click="puntoConfirmadoReciente = null"
+                            aria-label="Close"
+                        ></button>
                     </div>
                 </div>
 
@@ -234,7 +362,7 @@
                                         class="text-center py-5"
                                         style="color: var(--text-muted)"
                                     >
-                                        Sin puntos de control
+                                        {{ tabPuntos === 'pendientes' ? 'No hay puntos de control pendientes por confirmar' : 'No hay puntos de control confirmados / archivados' }}
                                     </td>
                                 </tr>
                                 <tr v-for="puc in filtrados" :key="puc.puc_id">
@@ -244,6 +372,15 @@
                                     <td>
                                         <div class="d-flex align-items-center gap-1 flex-wrap">
                                             <span class="bs bp">{{ puc.equipo?.equ_codigo }}</span>
+                                            <Link
+                                                :href="`/profesor/equipos/${puc.puc_id_equ}/expediente`"
+                                                class="btn btn-xs btn-outline-info py-0 px-2 rounded-pill d-inline-flex align-items-center gap-1"
+                                                style="font-size: 0.72rem;"
+                                                title="Ver expediente del equipo"
+                                            >
+                                                <i class="bi bi-folder2-open"></i>
+                                                <span>Expediente</span>
+                                            </Link>
                                             <button
                                                 v-if="diagnosticosEquipos && diagnosticosEquipos[puc.puc_id_equ]"
                                                 type="button"
@@ -320,7 +457,7 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <!-- Si ya fue evaluado: corte Excel, ver y candado -->
+                                        <!-- Si ya fue evaluado: corte Excel, consultar/editar -->
                                         <template v-if="estaEvaluado(puc)">
                                             <a
                                                 :href="`/inventario/excel/punto-control/${puc.puc_id}`"
@@ -334,21 +471,12 @@
                                             <button
                                                 class="btn btn-sm btn-outline-primary me-1"
                                                 @click="
-                                                    abrirSeguimiento(puc, true)
+                                                    abrirSeguimiento(puc, false)
                                                 "
-                                                title="Ver evaluación registrada (Bloqueado)"
+                                                title="Consultar o editar seguimiento"
                                             >
-                                                <i class="bi bi-eye"></i>
+                                                <i class="bi bi-pencil-square me-1"></i>Editar
                                             </button>
-                                            <span
-                                                class="badge bg-light text-muted border px-2 py-1"
-                                                title="Punto de control evaluado - No modificable"
-                                                style="vertical-align: middle"
-                                            >
-                                                <i
-                                                    class="bi bi-lock-fill text-secondary"
-                                                ></i>
-                                            </span>
                                         </template>
                                         <!-- Si no está evaluado: registrar, reprogramar, eliminar -->
                                         <template v-else>
@@ -1437,6 +1565,7 @@ const props = defineProps({
     diagnosticosEquipos: { type: Object, default: () => ({}) },
     semanaActual: { type: Number, default: 1 },
     tiposEncuentro: { type: Array, default: () => [] },
+    esquemasPorSeccion: { type: Object, default: () => ({}) },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -1456,6 +1585,35 @@ const busqueda = ref("");
 const seccionSeleccionadaModal = ref("");
 const filtroSemaforo = ref("");
 const equipoSeleccionadoDiag = ref("");
+const tabPuntos = ref("pendientes"); // "pendientes" | "archivados"
+const puntoConfirmadoReciente = ref(null);
+
+const esConfirmado = (puc) => {
+    const seg = puc?.seguimientos?.[0] || puc?.seguimiento;
+    return Boolean(seg && (seg.seq_cumplido === true || seg.seq_cumplido === 1));
+};
+
+const totalPendientes = computed(() => {
+    return (props.puntosControl || []).filter((p) => !esConfirmado(p)).length;
+});
+
+const totalArchivados = computed(() => {
+    return (props.puntosControl || []).filter((p) => esConfirmado(p)).length;
+});
+
+const esquemaActual = computed(() => {
+    if (equipoSeleccionadoDiag.value) {
+        const eq = (props.equipos || []).find((e) => String(e.equ_id) === String(equipoSeleccionadoDiag.value));
+        if (eq?.equ_id_sec && props.esquemasPorSeccion?.[eq.equ_id_sec]) {
+            return props.esquemasPorSeccion[eq.equ_id_sec];
+        }
+    }
+    const keys = Object.keys(props.esquemasPorSeccion || {});
+    if (keys.length > 0) {
+        return props.esquemasPorSeccion[keys[0]];
+    }
+    return null;
+});
 
 const contarPorSemaforo = (tipo) => {
     if (!props.equipos || !props.diagnosticosEquipos) return 0;
@@ -1634,6 +1792,11 @@ const esCercano = (f) => {
 };
 const filtrados = computed(() => {
     let list = props.puntosControl || [];
+    if (tabPuntos.value === 'pendientes') {
+        list = list.filter((p) => !esConfirmado(p));
+    } else {
+        list = list.filter((p) => esConfirmado(p));
+    }
     if (busqueda.value.trim()) {
         const q = busqueda.value.toLowerCase();
         list = list.filter(
@@ -1695,7 +1858,7 @@ const estaEvaluado = (puc) => {
 
 const abrirSeguimiento = (puc, soloLectura = false) => {
     puntoActual.value = puc;
-    modoSoloLecturaSeg.value = soloLectura || estaEvaluado(puc);
+    modoSoloLecturaSeg.value = soloLectura;
     const initialAsist = {};
     const ints = puc.equipo?.integrantes || [];
     const prevSeg = puc.seguimientos?.[0];
@@ -1780,20 +1943,34 @@ const eliminarAcuerdoModal = (idx) => {
     formSeg.value.acuerdos.splice(idx, 1);
 };
 const guardarSeguimiento = () => {
-    if (modoSoloLecturaSeg.value || estaEvaluado(puntoActual.value)) return;
+    if (modoSoloLecturaSeg.value) return;
     if (formSeg.value.seq_cumplido === null || formSeg.value.seq_cumplido === undefined) {
         erroresSeg.value = { seq_cumplido: "Debe indicar si el equipo cumplió o no con este punto de control." };
         return;
     }
     loadingSeg.value = true;
+    const idPunto = puntoActual.value?.puc_id;
+    const idEquipo = puntoActual.value?.puc_id_equ;
+    const codEquipo = puntoActual.value?.equipo?.equ_codigo || `Equipo #${idEquipo}`;
+    const nomPunto = puntoActual.value?.puc_nombre || "Punto de control";
+    const esConfirmadoGuardado = Boolean(formSeg.value.seq_cumplido);
+
     router.post(
-        `/profesor/puntos-control/${puntoActual.value.puc_id}/seguimiento`,
+        `/profesor/puntos-control/${idPunto}/seguimiento`,
         formSeg.value,
         {
             preserveScroll: true,
             onSuccess: () => {
                 loadingSeg.value = false;
                 mSeg?.hide();
+                if (esConfirmadoGuardado) {
+                    tabPuntos.value = "archivados";
+                    puntoConfirmadoReciente.value = {
+                        id_equipo: idEquipo,
+                        codigo_equipo: codEquipo,
+                        nombre_punto: nomPunto,
+                    };
+                }
             },
             onError: (e) => {
                 loadingSeg.value = false;

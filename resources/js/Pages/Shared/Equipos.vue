@@ -298,15 +298,14 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <template v-if="!verDisueltos">
-                                            <a
-                                                v-if="!esProfesor"
-                                                :href="`/coordinador/equipos/${equ.equ_id}/expediente`"
+                                            <Link
+                                                :href="`${base}/equipos/${equ.equ_id}/expediente`"
                                                 class="btn btn-sm btn-outline-info me-1"
                                                 title="Expediente"
                                                 ><i
                                                     class="bi bi-folder2-open"
                                                 ></i
-                                            ></a>
+                                            ></Link>
                                             <button
                                                 class="btn btn-sm btn-outline-warning me-1"
                                                 @click="

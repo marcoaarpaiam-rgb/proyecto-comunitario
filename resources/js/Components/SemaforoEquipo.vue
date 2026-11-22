@@ -9,7 +9,10 @@
                 <span :class="`badge bg-${diagnostico.color || 'secondary'} text-white fw-bold`">
                     {{ etiquetaSemaforo }}
                 </span>
-                <small class="text-muted fw-semibold">Semana {{ diagnostico.semana_actual || 1 }}</small>
+                <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                    <i class="bi bi-calendar3 text-primary"></i>
+                    <strong>Semana {{ diagnostico.semana_actual || 1 }}</strong> del Lapso
+                </span>
             </div>
             <button
                 v-if="mostrarBotonDetalle"

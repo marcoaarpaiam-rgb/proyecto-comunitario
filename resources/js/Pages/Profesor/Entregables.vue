@@ -150,6 +150,56 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- TABS DE NAVEGACIÓN: PENDIENTES VS ARCHIVADOS -->
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <ul class="nav nav-pills gap-2" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                                :class="tabEntregables === 'pendientes' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                type="button"
+                                @click="tabEntregables = 'pendientes'"
+                            >
+                                <i class="bi bi-clock-history"></i>
+                                <span>Pendientes por Revisar</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="tabEntregables === 'pendientes' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalPendientes }}
+                                </span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                                :class="tabEntregables === 'archivados' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                type="button"
+                                @click="tabEntregables = 'archivados'"
+                            >
+                                <i class="bi bi-archive-fill"></i>
+                                <span>Revisados / Archivados</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="tabEntregables === 'archivados' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalArchivados }}
+                                </span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div v-if="equipoFiltro" class="d-flex align-items-center gap-2">
+                        <Link
+                            :href="`/profesor/equipos/${equipoFiltro}/expediente`"
+                            class="btn btn-sm btn-outline-info rounded-pill px-3 fw-semibold"
+                        >
+                            <i class="bi bi-folder2-open me-1"></i>Ver Expediente de este Equipo
+                        </Link>
+                    </div>
+                </div>
+
                 <div class="sc">
                     <div class="table-responsive">
                         <table class="ct">
@@ -171,7 +221,7 @@
                                         class="text-center py-5"
                                         style="color: var(--text-muted)"
                                     >
-                                        Sin entregables
+                                        {{ tabEntregables === 'pendientes' ? 'No hay entregables pendientes por revisar' : 'No hay entregables revisados / archivados' }}
                                     </td>
                                 </tr>
                                 <tr
@@ -205,9 +255,20 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="bs bp">{{
-                                            ent.equipo?.equ_codigo
-                                        }}</span>
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            <span class="bs bp">{{
+                                                ent.equipo?.equ_codigo
+                                            }}</span>
+                                            <Link
+                                                :href="`/profesor/equipos/${ent.entr_id_equ}/expediente`"
+                                                class="btn btn-xs btn-outline-info py-0 px-2 rounded-pill d-inline-flex align-items-center gap-1"
+                                                style="font-size: 0.72rem;"
+                                                title="Ver expediente del equipo"
+                                            >
+                                                <i class="bi bi-folder2-open"></i>
+                                                <span>Expediente</span>
+                                            </Link>
+                                        </div>
                                     </td>
                                     <td
                                         style="
@@ -278,14 +339,24 @@
                                                 <i class="bi bi-x-lg"></i>
                                             </button>
                                         </template>
-                                        <span
-                                            v-else
-                                            style="
-                                                font-size: 0.78rem;
-                                                color: var(--text-muted);
-                                            "
-                                            >Revisado</span
-                                        >
+                                        <template v-else>
+                                            <a
+                                                v-if="ent.entr_ruta"
+                                                :href="`/storage/${ent.entr_ruta}`"
+                                                target="_blank"
+                                                class="btn btn-sm btn-outline-secondary me-1 py-0 px-2"
+                                                title="Ver / Descargar archivo"
+                                            >
+                                                <i class="bi bi-download me-1"></i>Ver
+                                            </a>
+                                            <span
+                                                class="badge"
+                                                :class="ent.entr_aprobado ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'"
+                                                style="font-size: 0.76rem;"
+                                            >
+                                                {{ ent.entr_aprobado ? 'Aprobado' : 'Rechazado' }}
+                                            </span>
+                                        </template>
                                     </td>
                                 </tr>
                             </tbody>
@@ -416,6 +487,15 @@ const page = usePage();
 const sidebarOpen = ref(false);
 const mostrarCatalogo = ref(false);
 const equipoFiltro = ref("");
+const tabEntregables = ref("pendientes"); // "pendientes" | "archivados"
+
+const totalPendientes = computed(
+    () => (props.entregables || []).filter((e) => e.entr_aprobado === null).length,
+);
+
+const totalArchivados = computed(
+    () => (props.entregables || []).filter((e) => e.entr_aprobado !== null).length,
+);
 
 const catalogoFiltrado = computed(() => {
     let list = props.catalogoPnfi || [];
@@ -443,6 +523,11 @@ const getEstadoCatalogoEquipo = (cepId, eqId) => {
 
 const entregablesFiltrados = computed(() => {
     let list = props.entregables || [];
+    if (tabEntregables.value === "pendientes") {
+        list = list.filter((e) => e.entr_aprobado === null);
+    } else {
+        list = list.filter((e) => e.entr_aprobado !== null);
+    }
     if (equipoFiltro.value) {
         list = list.filter((e) => e.entr_id_equ == equipoFiltro.value);
     }
@@ -477,8 +562,15 @@ const aprobar = (ent) => {
 const confirmarAprobar = () => {
     router.post(
         `/profesor/entregables/${entSeleccionado.value.entr_id}/aprobar`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                tabEntregables.value = "archivados";
+                mAp?.hide();
+            },
+        },
     );
-    mAp?.hide();
 };
 const abrirRechazar = (ent) => {
     entSeleccionado.value = ent;
@@ -493,7 +585,13 @@ const confirmarRechazar = () => {
     router.post(
         `/profesor/entregables/${entSeleccionado.value.entr_id}/rechazar`,
         { observacion: observacionRechazo.value },
-        { onSuccess: () => mRech?.hide() },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                tabEntregables.value = "archivados";
+                mRech?.hide();
+            },
+        },
     );
 };
 </script>

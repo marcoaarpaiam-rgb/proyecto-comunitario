@@ -7,7 +7,13 @@
             color: var(--text-main);
         "
     >
+        <SidebarProfesor
+            v-if="esProfesor"
+            :sidebar-open="sidebarOpen"
+            @close="sidebarOpen = false"
+        />
         <SidebarCoordinador
+            v-else
             :sidebar-open="sidebarOpen"
             @close="sidebarOpen = false"
         />
@@ -724,7 +730,7 @@
                     <!-- Puntos de Control -->
                     <div class="col-12" v-if="equipo.puntos_control?.length">
                         <div class="sc">
-                            <div class="sh">
+                            <div class="sh d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h6>
                                     <i
                                         class="bi bi-flag-fill text-danger me-2"
@@ -738,7 +744,7 @@
                                         "
                                         >{{ cumplidos }} /
                                         {{ equipo.puntos_control.length }}
-                                        cumplidos</span
+                                        confirmados</span
                                     >
                                 </h6>
                             </div>
@@ -747,8 +753,11 @@
                                     <thead>
                                         <tr>
                                             <th class="ps-4">Punto</th>
-                                            <th>Fecha de Encuentro</th>
-                                            <th>Cumplido</th>
+                                            <th>Fecha Límite</th>
+                                            <th>Estado / Semáforo</th>
+                                            <th>Avance</th>
+                                            <th>Asistencias</th>
+                                            <th>Acuerdos</th>
                                             <th>Observaciones</th>
                                         </tr>
                                     </thead>
@@ -757,8 +766,12 @@
                                             v-for="puc in equipo.puntos_control"
                                             :key="puc.puc_id"
                                         >
-                                            <td class="ps-4 fw-semibold">
-                                                {{ puc.puc_nombre }}
+                                            <td class="ps-4">
+                                                <div class="fw-semibold">{{ puc.puc_nombre }}</div>
+                                                <div v-if="puc.puc_resumen" class="small text-muted">{{ puc.puc_resumen }}</div>
+                                                <div v-if="obtenerSeguimiento(puc)?.tipo_encuentro" class="badge bg-light text-dark border mt-1">
+                                                    {{ obtenerSeguimiento(puc).tipo_encuentro?.ten_nombre }}
+                                                </div>
                                             </td>
                                             <td>
                                                 <span
@@ -779,22 +792,17 @@
                                                     v-if="
                                                         puc.puc_fecha_reprogramada
                                                     "
-                                                    style="
-                                                        font-size: 0.73rem;
-                                                        color: var(
-                                                            --text-muted
-                                                        );
-                                                        margin-left: 4px;
-                                                    "
-                                                    >(reprog.)</span
+                                                    class="badge bg-warning text-dark ms-1"
+                                                    style="font-size: 0.68rem;"
+                                                    >reprog.</span
                                                 >
                                             </td>
                                             <td>
                                                 <span
                                                     v-if="esCumplido(puc)"
-                                                    class="bs ba"
+                                                    class="bs ba d-inline-flex align-items-center gap-1 mb-1"
                                                     style="font-size: 0.72rem"
-                                                    >✓ Cumplido</span
+                                                    ><i class="bi bi-check-circle-fill"></i> Confirmado</span
                                                 >
                                                 <span
                                                     v-else-if="
@@ -812,11 +820,53 @@
                                                     style="font-size: 0.72rem"
                                                     >Pendiente</span
                                                 >
+                                                <div v-if="obtenerSeguimiento(puc)?.seq_estado_semaforo">
+                                                    <span
+                                                        class="badge"
+                                                        :class="{
+                                                            'bg-success': obtenerSeguimiento(puc).seq_estado_semaforo === 'positivo',
+                                                            'bg-warning text-dark': obtenerSeguimiento(puc).seq_estado_semaforo === 'neutral',
+                                                            'bg-danger': obtenerSeguimiento(puc).seq_estado_semaforo === 'negativo',
+                                                        }"
+                                                        style="font-size: 0.68rem;"
+                                                    >
+                                                        Semáforo: {{ obtenerSeguimiento(puc).seq_estado_semaforo }}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span v-if="obtenerSeguimiento(puc)?.seq_valoracion_avance !== null && obtenerSeguimiento(puc)?.seq_valoracion_avance !== undefined" class="fw-bold text-dark">
+                                                    {{ obtenerSeguimiento(puc).seq_valoracion_avance }}%
+                                                </span>
+                                                <span v-else class="text-muted">—</span>
+                                            </td>
+                                            <td>
+                                                <div v-if="obtenerAsistencias(puc)?.length" class="small">
+                                                    <span class="badge bg-secondary">
+                                                        {{ obtenerAsistencias(puc).filter(a => a.apc_asistio).length }} / {{ obtenerAsistencias(puc).length }} presentes
+                                                    </span>
+                                                </div>
+                                                <span v-else class="text-muted small">—</span>
+                                            </td>
+                                            <td>
+                                                <div v-if="obtenerAcuerdos(puc)?.length" class="small">
+                                                    <span class="badge bg-info text-dark">
+                                                        {{ obtenerAcuerdos(puc).length }} acuerdos
+                                                    </span>
+                                                    <div v-for="ac in obtenerAcuerdos(puc)" :key="ac.acue_id" class="text-muted small mt-1" style="max-width: 180px;">
+                                                        &bull; {{ ac.acue_descripcion }}
+                                                        <span class="badge ms-1" :class="ac.acue_estado === 'rectificado' ? 'bg-success' : ac.acue_estado === 'en_proceso' ? 'bg-warning text-dark' : 'bg-secondary'" style="font-size: 0.65rem;">
+                                                            {{ ac.acue_estado }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span v-else class="text-muted small">—</span>
                                             </td>
                                             <td
                                                 style="
                                                     font-size: 0.83rem;
                                                     color: var(--text-muted);
+                                                    max-width: 200px;
                                                 "
                                             >
                                                 {{ obtenerObservacion(puc) }}
@@ -862,31 +912,43 @@
                                                 color: var(--text-muted);
                                             "
                                         >
+                                            <span v-if="ent.catalogo_pnfi" class="badge bg-secondary me-1">
+                                                {{ ent.catalogo_pnfi.cep_nombre }}
+                                            </span>
                                             {{
                                                 ent.tipo_entregable?.tet_nombre
                                             }}
                                             · v{{ ent.entr_version || "1" }}
+                                            <span v-if="ent.entr_fecha_revision"> · Rev: {{ ent.entr_fecha_revision }}</span>
+                                        </div>
+                                        <div v-if="ent.entr_observacion_rechazo" class="small text-danger mt-1">
+                                            Obs: {{ ent.entr_observacion_rechazo }}
                                         </div>
                                     </div>
-                                    <span
-                                        class="bs"
-                                        :class="
-                                            ent.entr_aprobado === null
-                                                ? 'bw'
-                                                : ent.entr_aprobado
-                                                  ? 'ba'
-                                                  : 'bd'
-                                        "
-                                        style="font-size: 0.7rem"
-                                    >
-                                        {{
-                                            ent.entr_aprobado === null
-                                                ? "Revisión"
-                                                : ent.entr_aprobado
-                                                  ? "Aprobado"
-                                                  : "Rechazado"
-                                        }}
-                                    </span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a v-if="ent.entr_ruta" :href="'/storage/' + ent.entr_ruta" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Descargar archivo">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <span
+                                            class="bs"
+                                            :class="
+                                                ent.entr_aprobado === null
+                                                    ? 'bw'
+                                                    : ent.entr_aprobado
+                                                      ? 'ba'
+                                                      : 'bd'
+                                            "
+                                            style="font-size: 0.7rem"
+                                        >
+                                            {{
+                                                ent.entr_aprobado === null
+                                                    ? "Pendiente"
+                                                    : ent.entr_aprobado
+                                                      ? "Aprobado"
+                                                      : "Rechazado"
+                                            }}
+                                        </span>
+                                    </div>
                                 </li>
                             </ul>
                         </div>
@@ -1129,6 +1191,22 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import SemaforoEquipo from "@/Components/SemaforoEquipo.vue";
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SidebarProfesor from "@/Components/SidebarProfesor.vue";
+
+const page = usePage();
+const esProfesor = computed(() => {
+    return (
+        page.props.auth.user?.rol?.rol_nombre === "profesor_proyecto" ||
+        page.props.auth.user?.id_rol === 2 ||
+        window.location.pathname.startsWith("/profesor")
+    );
+});
+
+// Detectar si viene del profesor o del coordinador
+const rutaBase = computed(() => {
+    return esProfesor.value ? "/profesor" : "/coordinador";
+});
+
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
@@ -1154,12 +1232,6 @@ const props = defineProps({
         type: Number,
         default: 1,
     },
-});
-// Detectar si viene del profesor o del coordinador
-const rutaBase = computed(() => {
-    return window.location.pathname.startsWith("/profesor")
-        ? "/profesor"
-        : "/coordinador";
 });
 
 const socFinalProgramada = computed(() => {
@@ -1217,12 +1289,13 @@ const guardarSocFinalExpediente = () => {
         }
     );
 };
-const page = usePage();
+
 const sidebarOpen = ref(false);
-const tema = ref(localStorage.getItem("coord-theme") || "light");
+const temaKey = computed(() => (esProfesor.value ? "prof-theme" : "coord-theme"));
+const tema = ref(localStorage.getItem(temaKey.value) || "light");
 const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
-    localStorage.setItem("coord-theme", tema.value);
+    localStorage.setItem(temaKey.value, tema.value);
 };
 const logout = () => router.post("/logout");
 const volver = () => {
@@ -1242,6 +1315,8 @@ const estaVencido = (f) => f && new Date(f) < new Date();
 const obtenerSeguimiento = (puc) => puc.seguimiento || (puc.seguimientos && puc.seguimientos[0]) || null;
 const esCumplido = (puc) => Boolean(obtenerSeguimiento(puc)?.seq_cumplido);
 const obtenerObservacion = (puc) => obtenerSeguimiento(puc)?.seq_observaciones || "—";
+const obtenerAcuerdos = (puc) => obtenerSeguimiento(puc)?.acuerdos || [];
+const obtenerAsistencias = (puc) => obtenerSeguimiento(puc)?.asistencias || [];
 const cumplidos = computed(
     () =>
         (props.equipo.puntos_control || []).filter(esCumplido).length,

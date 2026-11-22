@@ -11,8 +11,12 @@ class DiagnosticoProyectoService
      * Diagnóstico integral de un equipo para una semana dada.
      * Retorna semáforo, porcentajes, alertas de ruta crítica y viabilidad.
      */
-    public function diagnosticarEquipo(int $idEquipo, int $semanaActual = 1): array
+    public function diagnosticarEquipo(int $idEquipo, ?int $semanaActual = null): array
     {
+        if ($semanaActual === null || $semanaActual <= 0) {
+            $semanaActual = $this->calcularSemanaActualPeriodo();
+        }
+
         $equipo = DB::table('equipo')->where('equ_id', $idEquipo)->first();
 
         $codigo       = $equipo->equ_codigo ?? ('EQ-' . $idEquipo);
@@ -53,7 +57,33 @@ class DiagnosticoProyectoService
     }
 
     /**
+     * Calcula la semana académica actual basada en el período activo en periodos_academicos.
+     * Retorna un entero entre 1 y 18.
+     */
+    public function calcularSemanaActualPeriodo(): int
+    {
+        if (Schema::hasTable('periodos_academicos')) {
+            $periodo = DB::table('periodos_academicos')
+                ->where('activo', 1)
+                ->first();
+
+            if ($periodo && !empty($periodo->fecha_inicio)) {
+                $inicio = \Carbon\Carbon::parse($periodo->fecha_inicio)->startOfDay();
+                $hoy = now()->startOfDay();
+                if ($hoy->greaterThanOrEqualTo($inicio)) {
+                    $dias = $inicio->diffInDays($hoy);
+                    $semana = (int) floor($dias / 7) + 1;
+                    return min(18, max(1, $semana));
+                }
+            }
+        }
+
+        return 1;
+    }
+
+    /**
      * Determina el semestre correspondiente a una sección.
+     * Mapea valores numéricos de trayecto/carrera (ej. 2, 4, 6, 8 => 'Semestre 2', 1, 3, 5, 7 => 'Semestre 1').
      * Si sec_semestre es NULL, consulta el período académico activo en periodos_academicos
      * mapeando 'Impar' => 'Semestre 1' y 'Par' => 'Semestre 2'.
      */
@@ -66,7 +96,14 @@ class DiagnosticoProyectoService
                 ->first();
 
             if (!empty($seccion?->sec_semestre)) {
-                return $seccion->sec_semestre;
+                $val = $seccion->sec_semestre;
+                if (is_numeric($val)) {
+                    return ((int) $val % 2 === 0) ? 'Semestre 2' : 'Semestre 1';
+                }
+                if (str_contains(strtolower((string) $val), '2')) {
+                    return 'Semestre 2';
+                }
+                return 'Semestre 1';
             }
         }
 
@@ -322,8 +359,12 @@ class DiagnosticoProyectoService
      * Diagnóstico masivo para los equipos de una sección.
      * Retorna array asociativo [id_equipo => datos_diagnostico].
      */
-    public function diagnosticarSeccion(array $idsEquipos, int $semanaActual = 1): array
+    public function diagnosticarSeccion(array $idsEquipos, ?int $semanaActual = null): array
     {
+        if ($semanaActual === null || $semanaActual <= 0) {
+            $semanaActual = $this->calcularSemanaActualPeriodo();
+        }
+
         $resultado = [];
         foreach ($idsEquipos as $idEquipo) {
             $resultado[$idEquipo] = $this->diagnosticarEquipo((int) $idEquipo, $semanaActual);

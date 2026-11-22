@@ -117,36 +117,91 @@
                             </div>
                         </div>
 
-                        <!-- Mis asistencias recientes -->
-                        <div v-if="misAsistencias && misAsistencias.length > 0" class="card border-0 shadow-sm mb-3">
-                            <div class="card-header bg-light border-0 py-2">
-                                <span class="fw-bold text-muted small">
-                                    <i class="bi bi-clipboard-check me-1"></i> Mi Registro de Asistencias Recientes
-                                </span>
+                        <!-- BLOQUE DE TRANSPARENCIA GRUPAL: Asistencias, Participaciones y Traza de Auditoría -->
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                                        <i class="bi bi-shield-check text-success fs-5"></i>
+                                        <span>Transparencia Grupal del Equipo</span>
+                                    </h6>
+                                    <small class="text-muted">
+                                        Supervisión de asistencias, participación activa y traza de modificaciones docentes de todos los integrantes.
+                                    </small>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <label class="small text-muted fw-semibold mb-0 d-none d-sm-inline">Filtrar:</label>
+                                    <select v-model="filtroIntegrante" class="form-select form-select-sm" style="min-width: 190px;">
+                                        <option value="todos">Todos los integrantes ({{ resumenIntegrantes.length }})</option>
+                                        <option v-for="int in resumenIntegrantes" :key="int.usu_id" :value="int.usu_id">
+                                            {{ int.nombre }} {{ int.es_lider ? '(Líder)' : '' }}
+                                        </option>
+                                    </select>
+                                </div>
                             </div>
+
+                            <!-- Tarjetas resumen por integrante -->
+                            <div v-if="resumenIntegrantes && resumenIntegrantes.length > 0" class="card-body bg-light border-bottom p-3">
+                                <div class="row g-2">
+                                    <div v-for="int in resumenIntegrantes" :key="int.usu_id" class="col-md-4 col-sm-6">
+                                        <div class="bg-white p-2 rounded border shadow-sm h-100">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <div>
+                                                    <span class="fw-bold text-dark small d-block text-truncate" style="max-width: 140px;">{{ int.nombre }}</span>
+                                                    <span class="text-muted" style="font-size: 0.72rem;">C.I. {{ int.cedula }}</span>
+                                                </div>
+                                                <span v-if="int.es_lider" class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle" style="font-size: 0.65rem;">Líder</span>
+                                                <span v-else class="badge bg-light text-muted border" style="font-size: 0.65rem;">Integrante</span>
+                                            </div>
+                                            <div class="d-flex align-items-center justify-content-between mt-2 pt-1 border-top" style="font-size: 0.75rem;">
+                                                <span>Asistencia:</span>
+                                                <span :class="int.porcentaje_asistencia >= 85 ? 'fw-bold text-success' : (int.porcentaje_asistencia >= 75 ? 'fw-bold text-warning' : 'fw-bold text-danger')">
+                                                    {{ int.porcentaje_asistencia }}% ({{ int.asistencias + int.justificados }}/{{ int.total_encuentros }})
+                                                </span>
+                                            </div>
+                                            <div class="d-flex align-items-center justify-content-between text-muted" style="font-size: 0.72rem;">
+                                                <span>Participaciones:</span>
+                                                <span class="fw-semibold text-primary">{{ int.participaciones }} activa(s)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tabla detallada de asistencias y traza de modificaciones -->
                             <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover mb-0" style="font-size: 0.82rem">
+                                <div v-if="listaAsistencias.length === 0" class="p-4 text-center text-muted small">
+                                    <i class="bi bi-calendar-x fs-4 d-block mb-2"></i>
+                                    No se registran encuentros de control de asistencia para los criterios seleccionados.
+                                </div>
+                                <div v-else class="table-responsive">
+                                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.82rem">
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="ps-3">Punto de Control</th>
+                                                <th class="ps-3">Integrante</th>
+                                                <th>Punto de Control</th>
                                                 <th>Fecha</th>
-                                                <th class="text-end pe-3">Condición</th>
+                                                <th>Asistencia</th>
+                                                <th>Participación</th>
+                                                <th class="pe-3" style="min-width: 200px;">Traza de Auditoría / Edición</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="asist in misAsistencias" :key="asist.apc_id">
-                                                <td class="ps-3 fw-medium">
-                                                    {{ asist.punto_control }}
-                                                    <div v-if="asist.motivo_edicion" class="text-muted" style="font-size: 0.7rem">
-                                                        <i class="bi bi-pencil-square text-warning me-1"></i>Motivo de edición: {{ asist.motivo_edicion }}
-                                                    </div>
+                                            <tr v-for="asist in listaAsistencias" :key="asist.apc_id">
+                                                <td class="ps-3">
+                                                    <div class="fw-bold text-dark">{{ asist.estudiante || 'Estudiante' }}</div>
+                                                    <small class="text-muted" style="font-size: 0.72rem;">C.I. {{ asist.cedula }}</small>
                                                 </td>
-                                                <td class="text-muted">
+                                                <td>
+                                                    <div class="fw-semibold">{{ asist.punto_control }}</div>
+                                                    <small v-if="asist.semana" class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.65rem;">
+                                                        Semana {{ asist.semana }}
+                                                    </small>
+                                                </td>
+                                                <td class="text-muted text-nowrap">
                                                     {{ asist.fecha }}
-                                                    <span v-if="asist.updated_at" class="badge bg-light text-muted border ms-1" style="font-size: 0.65rem">Modificada</span>
                                                 </td>
-                                                <td class="text-end pe-3">
+                                                <td>
                                                     <span v-if="asist.asistio" class="badge bg-success">
                                                         <i class="bi bi-check-lg me-1"></i> Presente
                                                     </span>
@@ -156,8 +211,30 @@
                                                     <span v-else class="badge bg-danger">
                                                         <i class="bi bi-x-lg me-1"></i> Ausente
                                                     </span>
-                                                    <span v-if="asist.participo" class="badge bg-primary ms-1" title="Participación activa verificada">
-                                                        <i class="bi bi-hand-thumbs-up-fill"></i> Participó
+                                                </td>
+                                                <td>
+                                                    <span v-if="asist.participo" class="badge bg-primary" title="Participación activa verificada por el docente">
+                                                        <i class="bi bi-hand-thumbs-up-fill me-1"></i> Participó
+                                                    </span>
+                                                    <span v-else class="text-muted small">
+                                                        —
+                                                    </span>
+                                                </td>
+                                                <td class="pe-3">
+                                                    <div v-if="asist.updated_at || asist.motivo_edicion" class="p-1 px-2 rounded bg-warning bg-opacity-10 border border-warning-subtle text-dark" style="font-size: 0.72rem;">
+                                                        <div class="d-flex align-items-center gap-1 text-warning-emphasis fw-bold">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                            <span>Modificada el {{ asist.updated_at }}</span>
+                                                        </div>
+                                                        <div v-if="asist.editado_por" class="text-muted mt-0" style="font-size: 0.7rem;">
+                                                            Por: {{ asist.editado_por }}
+                                                        </div>
+                                                        <div v-if="asist.motivo_edicion" class="mt-1 small fst-italic">
+                                                            "{{ asist.motivo_edicion }}"
+                                                        </div>
+                                                    </div>
+                                                    <span v-else class="text-muted small" style="font-size: 0.72rem;">
+                                                        <i class="bi bi-check2 text-success me-1"></i>Registro original sin cambios
                                                     </span>
                                                 </td>
                                             </tr>
@@ -494,6 +571,8 @@ const props = defineProps({
     diagnostico: { type: Object, default: null },
     acuerdosPendientes: { type: Array, default: () => [] },
     misAsistencias: { type: Array, default: () => [] },
+    asistenciasGrupo: { type: Array, default: () => [] },
+    resumenIntegrantes: { type: Array, default: () => [] },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -502,6 +581,17 @@ const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem("lid-theme", tema.value);
 };
+
+const filtroIntegrante = ref("todos");
+const listaAsistencias = computed(() => {
+    const list = props.asistenciasGrupo && props.asistenciasGrupo.length > 0
+        ? props.asistenciasGrupo
+        : props.misAsistencias;
+    if (filtroIntegrante.value === "todos") {
+        return list;
+    }
+    return list.filter((a) => String(a.usu_id) === String(filtroIntegrante.value));
+});
 
 const modalLogout = ref(null);
 const logout = () => {
@@ -537,7 +627,7 @@ onMounted(() => {
         .catch(() => {});
 });
 </script>
-<style>
+<style scoped>
 :root {
     --rojo: #dc3545;
     --bg-body: #f0f2f5;

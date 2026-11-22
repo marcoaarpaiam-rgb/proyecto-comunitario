@@ -77,6 +77,46 @@
                         </p>
                     </div>
                 </div>
+                <!-- TABS DE NAVEGACIÓN: EN CURSO / PENDIENTES VS FINALIZADAS / ARCHIVADAS -->
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <ul class="nav nav-pills gap-2" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                                :class="tabSocializaciones === 'pendientes' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                type="button"
+                                @click="tabSocializaciones = 'pendientes'"
+                            >
+                                <i class="bi bi-clock-history"></i>
+                                <span>En Curso / Pendientes</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="tabSocializaciones === 'pendientes' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalPendientes }}
+                                </span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                                :class="tabSocializaciones === 'archivadas' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                type="button"
+                                @click="tabSocializaciones = 'archivadas'"
+                            >
+                                <i class="bi bi-archive-fill"></i>
+                                <span>Finalizadas / Archivadas</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="tabSocializaciones === 'archivadas' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalArchivadas }}
+                                </span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
                 <div class="sc">
                     <div class="table-responsive">
                         <table class="ct">
@@ -91,29 +131,41 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-if="!socializaciones?.length">
+                                <tr v-if="!socializacionesFiltradas?.length">
                                     <td
                                         colspan="6"
                                         class="text-center py-5"
                                         style="color: var(--text-muted)"
                                     >
-                                        Sin socializaciones registradas
+                                        {{ tabSocializaciones === 'pendientes' ? 'No hay socializaciones en curso o pendientes' : 'No hay socializaciones finalizadas / archivadas' }}
                                     </td>
                                 </tr>
                                 <tr
-                                    v-for="soc in socializaciones"
+                                    v-for="soc in socializacionesFiltradas"
                                     :key="soc.soc_id"
                                 >
                                     <td class="ps-4">
-                                        <button
-                                            type="button"
-                                            class="btn btn-link p-0 text-danger fw-bold text-decoration-none text-start d-flex align-items-center gap-1"
-                                            @click="abrirDetalleEquipo(soc)"
-                                            title="Ver todas las opciones del equipo"
-                                        >
-                                            <i class="bi bi-box-arrow-up-right small"></i>
-                                            <span>{{ soc.equipo?.equ_codigo }}</span>
-                                        </button>
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            <button
+                                                type="button"
+                                                class="btn btn-link p-0 text-danger fw-bold text-decoration-none text-start d-flex align-items-center gap-1"
+                                                @click="abrirDetalleEquipo(soc)"
+                                                title="Ver todas las opciones del equipo"
+                                            >
+                                                <i class="bi bi-box-arrow-up-right small"></i>
+                                                <span>{{ soc.equipo?.equ_codigo }}</span>
+                                            </button>
+                                            <Link
+                                                v-if="soc.equipo?.equ_id"
+                                                :href="`/profesor/equipos/${soc.equipo.equ_id}/expediente`"
+                                                class="btn btn-xs btn-outline-info py-0 px-2 rounded-pill d-inline-flex align-items-center gap-1"
+                                                style="font-size: 0.72rem;"
+                                                title="Ver expediente del equipo"
+                                            >
+                                                <i class="bi bi-folder2-open"></i>
+                                                <span>Expediente</span>
+                                            </Link>
+                                        </div>
                                         <div class="small text-muted text-truncate" style="max-width: 170px;" :title="soc.equipo?.equ_titulo">
                                             {{ soc.equipo?.equ_titulo || 'Proyecto PST' }}
                                         </div>
@@ -1146,6 +1198,7 @@ const guardar = () => {
     });
 };
 const modoSoloLecturaRes = ref(false);
+const tabSocializaciones = ref("pendientes"); // "pendientes" | "archivadas"
 
 const estaEvaluada = (soc) => {
     if (!soc) return false;
@@ -1154,6 +1207,24 @@ const estaEvaluada = (soc) => {
     }
     return soc.soc_aprobado !== null && soc.soc_aprobado !== undefined;
 };
+
+const totalPendientes = computed(
+    () => (props.socializaciones || []).filter((s) => !estaEvaluada(s)).length,
+);
+
+const totalArchivadas = computed(
+    () => (props.socializaciones || []).filter((s) => estaEvaluada(s)).length,
+);
+
+const socializacionesFiltradas = computed(() => {
+    let list = props.socializaciones || [];
+    if (tabSocializaciones.value === "pendientes") {
+        list = list.filter((s) => !estaEvaluada(s));
+    } else {
+        list = list.filter((s) => estaEvaluada(s));
+    }
+    return list;
+});
 
 const abrirResultado = (soc, soloLectura = false) => {
     socActual.value = soc;
@@ -1202,9 +1273,10 @@ const guardarResultado = () => {
         `/profesor/socializaciones/${socActual.value.soc_id}/resultado`,
         formRes.value,
         {
-            preserveScroll: true, // AGREGA ESTA LÍNEA
+            preserveScroll: true,
             onSuccess: () => {
                 loading.value = false;
+                tabSocializaciones.value = "archivadas";
                 mRes?.hide();
                 socActual.value = null;
                 formRes.value = {

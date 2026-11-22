@@ -71,10 +71,10 @@ class PuntoControlController extends Controller
             }
         }
 
-        // Estimar semana actual de la fase (1 a 18) con base en la fecha o último punto registrado
-        $semanaActual = 1;
+        // Estimar semana actual de la fase (1 a 18) con base en el período académico activo o último punto registrado
+        $semanaActual = $this->diagnosticoService->calcularSemanaActualPeriodo();
         $maxSemanaRegistrada = $puntos->max('puc_semana');
-        if ($maxSemanaRegistrada) {
+        if ($semanaActual <= 1 && $maxSemanaRegistrada) {
             $semanaActual = min(18, max(1, (int) $maxSemanaRegistrada));
         }
 
@@ -83,6 +83,46 @@ class PuntoControlController extends Controller
             $equipos->pluck('equ_id')->toArray(),
             $semanaActual
         );
+
+        // Esquemas de evaluación asignados a las secciones del profesor
+        $esquemaPorDefecto = \App\Models\EsquemaEvaluacion::where('esq_activo', true)
+            ->where('esq_es_plantilla', true)
+            ->first();
+
+        $esquemasPorSeccion = [];
+        foreach ($profSecciones as $ps) {
+            $secId = $ps->pse_id_sec;
+            $esq = \Illuminate\Support\Facades\DB::table('esquema_seccion as es')
+                ->join('esquemas_evaluacion as ee', 'es.esq_sec_id_esq', '=', 'ee.esq_id')
+                ->where('es.esq_sec_id_sec', $secId)
+                ->where('es.esq_sec_activo', 1)
+                ->where('ee.esq_activo', 1)
+                ->select(
+                    'ee.esq_id',
+                    'ee.esq_nombre',
+                    'ee.esq_modo',
+                    'ee.esq_escala_min',
+                    'ee.esq_escala_max',
+                    'ee.esq_nota_aprobatoria',
+                    'ee.esq_criterios',
+                    'es.esq_sec_lapso'
+                )
+                ->first();
+
+            $rawCriterios = $esq?->esq_criterios ?? $esquemaPorDefecto?->esq_criterios;
+            $criterios = is_string($rawCriterios) ? json_decode($rawCriterios, true) : ($rawCriterios ?: []);
+
+            $esquemasPorSeccion[$secId] = [
+                'esq_id'           => $esq->esq_id ?? $esquemaPorDefecto?->esq_id,
+                'nombre'           => $esq->esq_nombre ?? $esquemaPorDefecto?->esq_nombre ?? 'Evaluación Cuantitativa PST UPTP',
+                'modo'             => $esq->esq_modo ?? $esquemaPorDefecto?->esq_modo ?? 'cuantitativo',
+                'escala_min'       => $esq->esq_escala_min ?? $esquemaPorDefecto?->esq_escala_min ?? 1,
+                'escala_max'       => $esq->esq_escala_max ?? $esquemaPorDefecto?->esq_escala_max ?? 20,
+                'nota_aprobatoria' => $esq->esq_nota_aprobatoria ?? $esquemaPorDefecto?->esq_nota_aprobatoria ?? 16,
+                'lapso'            => $esq->esq_sec_lapso ?? '2026-II',
+                'criterios'        => $criterios,
+            ];
+        }
 
         $tiposEncuentro = \Illuminate\Support\Facades\Schema::hasTable('tipos_encuentro_puntual')
             ? TipoEncuentro::where('tep_activo', true)->get()
@@ -96,6 +136,7 @@ class PuntoControlController extends Controller
             'diagnosticosEquipos' => $diagnosticosEquipos,
             'semanaActual'        => $semanaActual,
             'tiposEncuentro'      => $tiposEncuentro,
+            'esquemasPorSeccion'  => $esquemasPorSeccion,
         ]);
     }
 
@@ -207,14 +248,10 @@ class PuntoControlController extends Controller
 
         $this->autorizarEquipoId($punto->puc_id_equ);
 
-        // Bloquear si ya fue evaluado
+        // Permitir registrar o actualizar el seguimiento del punto de control
         $seguimientoExistente = SeguimientoEquipo::where('seq_id_equ', $punto->puc_id_equ)
             ->where('seq_id_puc', $punto->puc_id)
             ->first();
-
-        if ($seguimientoExistente && $seguimientoExistente->seq_cumplido !== null) {
-            return back()->withErrors(['error' => 'Este punto de control ya ha sido evaluado y su resultado no puede ser modificado.']);
-        }
 
         $seq = SeguimientoEquipo::updateOrCreate(
             ['seq_id_equ' => $punto->puc_id_equ, 'seq_id_puc' => $punto->puc_id],

@@ -232,13 +232,13 @@ class LiderController extends Controller
             return redirect('/lider');
         }
 
-        $semanaActual = 1;
+        $diagnosticoService = new \App\Services\DiagnosticoProyectoService();
+        $semanaActual = $diagnosticoService->calcularSemanaActualPeriodo();
         $maxSem = PuntoControl::where('puc_id_equ', $equipo->equ_id)->max('puc_semana');
-        if ($maxSem) {
+        if ($semanaActual <= 1 && $maxSem) {
             $semanaActual = min(18, max(1, (int) $maxSem));
         }
 
-        $diagnosticoService = new \App\Services\DiagnosticoProyectoService();
         $diagnostico = $diagnosticoService->diagnosticarEquipo($equipo->equ_id, $semanaActual);
 
         $acuerdosPendientes = \Illuminate\Support\Facades\Schema::hasTable('acuerdos_encuentro')
@@ -248,30 +248,61 @@ class LiderController extends Controller
                 ->get()
             : collect([]);
 
-        $misAsistencias = \Illuminate\Support\Facades\DB::table('asistencia_punto_control as apc')
+        // Registro completo de asistencias y participaciones de todo el equipo (Transparencia Grupal)
+        $asistenciasGrupo = \Illuminate\Support\Facades\DB::table('asistencia_punto_control as apc')
             ->join('seguimiento_equipo as seq', 'apc.apc_id_seq', '=', 'seq.seq_id')
             ->join('punto_control as puc', 'seq.seq_id_puc', '=', 'puc.puc_id')
+            ->join('usuario as usu', 'apc.apc_id_usu', '=', 'usu.usu_id')
+            ->leftJoin('usuario as editor', 'apc.apc_id_usu_updated', '=', 'editor.usu_id')
             ->where('seq.seq_id_equ', $equipo->equ_id)
-            ->where('apc.apc_id_usu', auth()->id())
             ->select(
                 'apc.apc_id',
+                'apc.apc_id_usu as usu_id',
+                'usu.usu_cedula as cedula',
+                \Illuminate\Support\Facades\DB::raw("CONCAT(usu.usu_primer_nombre, ' ', usu.usu_primer_apellido) as estudiante"),
                 'puc.puc_nombre as punto_control',
+                'puc.puc_semana as semana',
                 'seq.seq_fecha_registro as fecha',
                 'apc.apc_asistio as asistio',
                 'apc.apc_justificado as justificado',
                 'apc.apc_participo as participo',
                 'apc.apc_motivo_edicion as motivo_edicion',
-                'apc.apc_updated_at as updated_at'
+                'apc.apc_updated_at as updated_at',
+                \Illuminate\Support\Facades\DB::raw("CONCAT(editor.usu_primer_nombre, ' ', editor.usu_primer_apellido) as editado_por")
             )
             ->orderBy('seq.seq_fecha_registro', 'desc')
-            ->take(8)
+            ->orderBy('usu.usu_primer_apellido', 'asc')
             ->get();
+
+        $resumenIntegrantes = $equipo->integrantes->filter(fn($i) => $i->ein_status !== false)->map(function ($int) use ($asistenciasGrupo) {
+            $registros = $asistenciasGrupo->where('usu_id', $int->ein_id_usu);
+            $total = $registros->count();
+            $asistencias = $registros->where('asistio', 1)->count();
+            $justificados = $registros->where('justificado', 1)->count();
+            $participaciones = $registros->where('participo', 1)->count();
+            $porcentajeAsistencia = $total > 0 ? round((($asistencias + $justificados) / $total) * 100, 1) : 100.0;
+            return [
+                'usu_id' => $int->ein_id_usu,
+                'nombre' => $int->usuario ? ($int->usuario->usu_primer_nombre . ' ' . $int->usuario->usu_primer_apellido) : 'Sin nombre',
+                'cedula' => $int->usuario?->usu_cedula ?? 'S/C',
+                'es_lider' => (bool) $int->ein_es_lider,
+                'total_encuentros' => $total,
+                'asistencias' => $asistencias,
+                'justificados' => $justificados,
+                'participaciones' => $participaciones,
+                'porcentaje_asistencia' => $porcentajeAsistencia,
+            ];
+        })->values();
+
+        $misAsistencias = $asistenciasGrupo->where('usu_id', auth()->id())->take(8)->values();
 
         return Inertia::render('Lider/MiEquipo', [
             'equipo' => $equipo,
             'diagnostico' => $diagnostico,
             'acuerdosPendientes' => $acuerdosPendientes,
             'misAsistencias' => $misAsistencias,
+            'asistenciasGrupo' => $asistenciasGrupo,
+            'resumenIntegrantes' => $resumenIntegrantes,
             'tutor' => \App\Models\Tutor::where('tut_id_equ', $equipo->equ_id)
                 ->where('tut_status', true)
                 ->with('usuario')

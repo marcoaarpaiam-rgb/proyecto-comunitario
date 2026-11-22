@@ -25,9 +25,14 @@ class ExpedienteController extends Controller
             'proyectoComunidad.comunidad',
             'proyectoComunidad.tipoProyecto',
             'proyectoComunidad.modalidad',
+            'puntosControl.seguimiento.tipoEncuentro',
+            'puntosControl.seguimiento.acuerdos',
             'puntosControl.seguimiento.asistencias.usuario',
+            'puntosControl.seguimientos.tipoEncuentro',
+            'puntosControl.seguimientos.acuerdos',
             'puntosControl.seguimientos.asistencias.usuario',
             'entregables.tipoEntregable',
+            'entregables.catalogoPnfi',
             'socializaciones.tipoSocializacion',
             'cartaPresentacion',
             'resultadoProyecto.estadoProyecto',
@@ -70,12 +75,13 @@ class ExpedienteController extends Controller
             $idProyecto ? (int) $idProyecto : null
         );
 
-        $semanaActual = 1;
+        $diagnosticoService = app(\App\Services\DiagnosticoProyectoService::class);
+        $semanaActual = $diagnosticoService->calcularSemanaActualPeriodo();
         $maxSem = $equipo->puntosControl?->max('puc_semana');
-        if ($maxSem) {
+        if ($semanaActual <= 1 && $maxSem) {
             $semanaActual = min(18, max(1, (int) $maxSem));
         }
-        $diagnostico = app(\App\Services\DiagnosticoProyectoService::class)->diagnosticarEquipo((int) $equipo->equ_id, $semanaActual);
+        $diagnostico = $diagnosticoService->diagnosticarEquipo((int) $equipo->equ_id, $semanaActual);
 
         return Inertia::render('Coordinador/ExpedienteEquipo', [
             'equipo'               => $equipo,

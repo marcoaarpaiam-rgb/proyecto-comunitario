@@ -293,7 +293,10 @@ class DatabaseSeeder extends Seeder
                 'usu_segundo_nombre'  => $e[2],
                 'usu_primer_apellido' => $e[3],
                 'usu_segundo_apellido'=> $e[4],
-                'usu_email'           => strtolower($e[1].'.'.$e[3]).'@estudiante.uptp.edu.ve',
+                'usu_email'           => strtr(mb_strtolower($e[1].'.'.$e[3], 'UTF-8'), [
+                    'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u',
+                    'ñ' => 'n', 'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u',
+                ]).'@estudiante.uptp.edu.ve',
                 'usu_username'        => $e[0],
                 'usu_password'        => Hash::make($e[0]),
                 'usu_tiene_acceso'    => false,
