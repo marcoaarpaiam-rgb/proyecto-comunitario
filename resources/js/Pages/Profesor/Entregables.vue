@@ -502,7 +502,13 @@ const catalogoFiltrado = computed(() => {
     if (equipoFiltro.value) {
         const eq = props.equipos?.find((e) => e.equ_id == equipoFiltro.value);
         if (eq && eq.equ_id_tra) {
-            list = list.filter((c) => c.cep_id_trayecto == eq.equ_id_tra);
+            return list.filter((c) => c.cep_id_trayecto == eq.equ_id_tra);
+        }
+    }
+    if (props.equipos && props.equipos.length > 0) {
+        const trayectosProf = [...new Set(props.equipos.map((e) => e.equ_id_tra).filter(Boolean))];
+        if (trayectosProf.length > 0) {
+            return list.filter((c) => trayectosProf.includes(c.cep_id_trayecto));
         }
     }
     return list;

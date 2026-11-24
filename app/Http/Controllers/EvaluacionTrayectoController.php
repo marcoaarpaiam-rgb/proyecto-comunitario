@@ -30,7 +30,12 @@ class EvaluacionTrayectoController extends Controller
      */
     public function index(Request $request)
     {
-        $proyectos = DB::table('proyecto_comunidad as p')
+        $user = auth()->user();
+        $roles = $user ? $user->roles()->pluck('rol_nombre')->toArray() : [];
+        $esProfesor = in_array('profesor_proyecto', $roles) || in_array('profesor', $roles);
+        $esCoordinador = in_array('coordinador', $roles) || in_array('admin', $roles);
+
+        $query = DB::table('proyecto_comunidad as p')
             ->join('equipo as e', 'e.equ_id', '=', 'p.pco_id_equ')
             ->leftJoin('trayecto as t', 't.tra_id', '=', 'e.equ_id_tra')
             ->leftJoin('seccion as s', 's.sec_id', '=', 'e.equ_id_sec')
@@ -55,9 +60,17 @@ class EvaluacionTrayectoController extends Controller
                 'a.cerrada as acta_cerrada',
                 'a.hash_verificacion',
             ])
-            ->where('p.pco_status', true)
-            ->orderBy('e.equ_codigo')
-            ->get();
+            ->where('p.pco_status', true);
+
+        if ($esProfesor && !$esCoordinador) {
+            $seccionesProf = DB::table('profesor_seccion')
+                ->where('pse_id_usu', $user->usu_id)
+                ->where('pse_status', true)
+                ->pluck('pse_id_sec');
+            $query->whereIn('e.equ_id_sec', $seccionesProf);
+        }
+
+        $proyectos = $query->orderBy('e.equ_codigo')->get();
 
         // Cargar estado de Semestre 1 y Semestre 2 para cada proyecto
         foreach ($proyectos as $proy) {
@@ -80,7 +93,9 @@ class EvaluacionTrayectoController extends Controller
             $proy->semestre2 = $recorridos->get('Semestre 2');
         }
 
-        return view('evaluaciones.index', compact('proyectos'));
+        return Inertia::render('Evaluacion/Index', [
+            'proyectos' => $proyectos,
+        ]);
     }
 
     /**
@@ -116,7 +131,7 @@ class EvaluacionTrayectoController extends Controller
             (int) $id_proyecto
         );
 
-        return view('evaluaciones.recorrido', [
+        return Inertia::render('Evaluacion/Recorrido', [
             'proyecto'                => $data->proyecto,
             'semestres'               => $data->semestres,
             'acta'                    => $data->acta,
@@ -296,7 +311,7 @@ class EvaluacionTrayectoController extends Controller
             ->orderBy('u.usu_primer_nombre')
             ->get();
 
-        return view('evaluaciones.evaluar', [
+        return Inertia::render('Evaluacion/Evaluar', [
             'recorrido'        => $recorrido,
             'rubrica'          => $rubrica,
             'criterios'        => $criterios,
@@ -482,7 +497,10 @@ class EvaluacionTrayectoController extends Controller
             ])
             ->first();
 
-        return view('evaluaciones.verificar', compact('acta', 'hash'));
+        return Inertia::render('Evaluacion/Verificar', [
+            'acta' => $acta,
+            'hash' => $hash,
+        ]);
     }
 
     /**

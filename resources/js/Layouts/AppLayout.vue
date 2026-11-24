@@ -606,12 +606,6 @@ const menuCoordinador = [
 const menuProfesor = [
     { label: "Dashboard", svg: svgs.dashboard, icon: "bi bi-grid-fill", href: "/profesor" },
     {
-        label: "Mis Equipos",
-        svg: svgs.people,
-        icon: "bi bi-people-fill",
-        href: "/profesor/equipos",
-    },
-    {
         label: "Puntos de Control",
         svg: svgs.puntosControl,
         icon: "bi bi-flag-fill",
@@ -687,19 +681,31 @@ const logout = () => {
     router.post("/logout");
 };
 
-const modoOscuro = ref(localStorage.getItem("modo") === "dark");
+const modoOscuro = ref(
+    localStorage.getItem("modo") === "dark" ||
+    localStorage.getItem("coord-theme") === "dark" ||
+    localStorage.getItem("prof-theme") === "dark" ||
+    localStorage.getItem("lid-theme") === "dark"
+);
 
 const toggleModo = () => {
     modoOscuro.value = !modoOscuro.value;
-    localStorage.setItem("modo", modoOscuro.value ? "dark" : "light");
+    const val = modoOscuro.value ? "dark" : "light";
+    localStorage.setItem("modo", val);
+    localStorage.setItem("coord-theme", val);
+    localStorage.setItem("prof-theme", val);
+    localStorage.setItem("lid-theme", val);
     aplicarModo();
 };
 
 const aplicarModo = () => {
-    document.documentElement.setAttribute(
-        "data-bs-theme",
-        modoOscuro.value ? "dark" : "light",
-    );
+    const val = modoOscuro.value ? "dark" : "light";
+    document.documentElement.setAttribute("data-bs-theme", val);
+    document.documentElement.setAttribute("data-theme", val);
+    if (document.body) {
+        document.body.setAttribute("data-bs-theme", val);
+        document.body.setAttribute("data-theme", val);
+    }
 };
 
 onMounted(() => {

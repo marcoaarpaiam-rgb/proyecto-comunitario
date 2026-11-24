@@ -62,13 +62,6 @@
                 >
                     <i class="bi bi-collection"></i> Mis Secciones
                 </Link>
-                <Link
-                    href="/profesor/equipos"
-                    class="sb-lnk"
-                    :class="{ active: currentPath.startsWith('/profesor/equipos') }"
-                >
-                    <i class="bi bi-people"></i> Mis Equipos
-                </Link>
 
                 <div class="sb-sec">Gestión y Seguimiento</div>
                 <Link

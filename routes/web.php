@@ -553,8 +553,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('esquemas.destroy');
     Route::post('esquemas-evaluacion/asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'asignarSeccion'])
         ->name('esquemas.asignar');
-    // Equipos — el profesor crea, el coordinador también puede todo
-    Route::get('equipos', [EquipoController::class, 'index'])
+    // Equipos — Redirección al módulo de Mis Secciones para el rol profesor
+    Route::get('equipos', fn() => redirect('/profesor/secciones'))
         ->name('equipos.index');
     Route::post('equipos', [EquipoController::class, 'store'])
         ->name('equipos.store');
