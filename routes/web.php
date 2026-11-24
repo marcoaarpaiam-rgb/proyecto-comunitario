@@ -1,0 +1,704 @@
+<?php
+
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Coordinador\MaestraController;
+use App\Http\Controllers\Coordinador\ComunidadController;
+use App\Http\Controllers\Coordinador\SeccionController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use App\Models\Equipo;
+use App\Models\ProyectoComunidad;
+use App\Models\PuntoControl;
+use App\Models\Comunidad;
+use App\Http\Controllers\Coordinador\TablaMaestraController;
+use App\Http\Controllers\Coordinador\EquipoController;
+use App\Http\Controllers\Profesor\PuntoControlController;
+use App\Http\Controllers\Coordinador\ProyectoController;
+use App\Http\Controllers\Profesor\SocializacionController;
+use App\Http\Controllers\Profesor\EntregableController;
+use App\Http\Controllers\Lider\LiderController;
+use App\Http\Controllers\Coordinador\ResultadoController;
+use App\Http\Controllers\Coordinador\ReporteController;
+use App\Http\Controllers\Coordinador\CartaController;
+use App\Http\Controllers\Coordinador\BitacoraController;
+use App\Http\Controllers\Coordinador\SocializacionCoordController;
+use App\Http\Controllers\Coordinador\SeccionDetalleController;
+use App\Http\Controllers\Coordinador\ConfiguracionController;
+use App\Http\Controllers\Coordinador\ExpedienteController;
+use App\Http\Controllers\EvaluacionTrayectoController;
+use App\Http\Controllers\InventarioPstExcelController;
+
+
+// Rutas públicas
+Route::get('/', [LoginController::class, 'index'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->name('login.post')->middleware('throttle:5,1');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::get('/home', fn() => Inertia::render('Home'))->name('home');
+
+
+Route::middleware('auth')->group(function () {
+    // GET: solo lectura — devuelve las notificaciones existentes del usuario
+    Route::get('/notificaciones/lista', function () {
+        $user = auth()->user();
+        if (!$user) return response()->json([]);
+
+        return \App\Models\Notificacion::where('not_id_usu', $user->usu_id)
+            ->orderBy('not_fecha_generacion', 'desc')
+            ->take(20)
+            ->get();
+    });
+
+    // POST: genera notificaciones automáticas (polling asíncrono, no navegación web)
+    Route::post('/notificaciones/generar', function () {
+        $user = auth()->user();
+        if (!$user) return response()->json([]);
+        $userId = $user->usu_id;
+
+        // 1. Líder: puntos de control cercanos
+        $liderEquipos = \App\Models\EquipoIntegrante::where('ein_id_usu', $userId)
+            ->where('ein_es_lider', true)
+            ->where('ein_status', true)
+            ->pluck('ein_id_equ');
+
+        if ($liderEquipos->isNotEmpty()) {
+            $puntosCercanos = \App\Models\PuntoControl::whereIn('puc_id_equ', $liderEquipos)
+                ->where('puc_status', true)
+                ->where('puc_fecha_limite', '>=', now()->toDateString())
+                ->where('puc_fecha_limite', '<=', now()->addDays(7)->toDateString())
+                ->get();
+
+            foreach ($puntosCercanos as $punto) {
+                $yaNotificado = \App\Models\Notificacion::where('not_id_usu', $userId)
+                    ->where('not_id_puc', $punto->puc_id)
+                    ->where('not_mensaje', 'like', '%día de encuentro%')
+                    ->exists();
+
+                if (!$yaNotificado) {
+                    \App\Models\Notificacion::create([
+                        'not_id_usu'           => $userId,
+                        'not_id_tno'           => \App\Models\TipoNotificacion::first()?->tno_id,
+                        'not_id_equ'           => $punto->puc_id_equ,
+                        'not_id_puc'           => $punto->puc_id,
+                        'not_mensaje'          => "Recordatorio: El punto de control \"{$punto->puc_nombre}\" tiene su día de encuentro el {$punto->puc_fecha_limite}.",
+                        'not_leida'            => false,
+                        'not_fecha_generacion' => now(),
+                    ]);
+                }
+            }
+        }
+
+        // 2. Profesor: puntos de control por vencer en sus secciones
+        if ($user->esProfesor()) {
+            $seccionesIds = $user->seccionesProfesor()
+                ->where('pse_status', true)
+                ->pluck('pse_id_sec');
+
+            if ($seccionesIds->isNotEmpty()) {
+                $equiposProf = \App\Models\Equipo::whereIn('equ_id_sec', $seccionesIds)
+                    ->where('equ_status', true)
+                    ->get();
+
+                $puntosProf = \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposProf->pluck('equ_id'))
+                    ->where('puc_status', true)
+                    ->where('puc_fecha_limite', '>=', now()->toDateString())
+                    ->where('puc_fecha_limite', '<=', now()->addDays(7)->toDateString())
+                    ->with('equipo')
+                    ->get();
+
+                foreach ($puntosProf as $punto) {
+                    $yaNotificado = \App\Models\Notificacion::where('not_id_usu', $userId)
+                        ->where('not_id_puc', $punto->puc_id)
+                        ->where('not_mensaje', 'like', '%día de encuentro%')
+                        ->exists();
+
+                    if (!$yaNotificado) {
+                        \App\Models\Notificacion::create([
+                            'not_id_usu'           => $userId,
+                            'not_id_tno'           => \App\Models\TipoNotificacion::first()?->tno_id,
+                            'not_id_equ'           => $punto->puc_id_equ,
+                            'not_id_puc'           => $punto->puc_id,
+                            'not_mensaje'          => "El punto de control \"{$punto->puc_nombre}\" del equipo {$punto->equipo?->equ_codigo} tiene su día de encuentro el {$punto->puc_fecha_limite}.",
+                            'not_leida'            => false,
+                            'not_fecha_generacion' => now(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        return response()->json(['ok' => true]);
+    });
+
+    Route::post('/notificaciones/{id}/leer', function ($id) {
+        \App\Models\Notificacion::where('not_id', $id)
+            ->where('not_id_usu', auth()->id())
+            ->update([
+                'not_leida'        => true,
+                'not_fecha_lectura'=> now(),
+            ]);
+        return response()->json(['ok' => true]);
+    });
+
+    Route::post('/notificaciones/leer-todas', function () {
+        \App\Models\Notificacion::where('not_id_usu', auth()->id())
+            ->update([
+                'not_leida'        => true,
+                'not_fecha_lectura'=> now(),
+            ]);
+        return response()->json(['ok' => true]);
+    });
+});
+
+// Coordinador
+Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coordinador.')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('Coordinador/Dashboard', [
+            'stats' => [
+                'estudiantes'      => \App\Models\EstudianteSeccion::where('ese_status', true)->count(),
+                'equipos'          => \App\Models\Equipo::where('equ_status', true)->count(),
+                'comunidades'      => \App\Models\Comunidad::where('com_status', true)->count(),
+                'porVencer'        => \App\Models\ProyectoComunidad::where('pco_status', true)
+                    ->whereBetween('pco_fecha_limite', [now()->toDateString(), now()->addDays(30)->toDateString()])->count(),
+                'aprobados'        => \App\Models\ResultadoProyecto::whereHas('estadoProyecto', fn($q) => $q->where('epr_nombre', 'Aprobado'))->count(),
+                'profesores'       => \App\Models\Usuario::where('usu_status', true)
+                    ->whereHas('usuarioRoles', fn($q) => $q->where('uro_status', true)
+                        ->whereHas('rol', fn($r) => $r->where('rol_nombre', 'profesor_proyecto')))->count(),
+                'notificaciones'   => \App\Models\Notificacion::where('not_id_usu', auth()->id())->where('not_leida', false)->count(),
+                'cartasPendientes' => \App\Models\CartaPresentacion::where('cpr_solicitada', true)->whereNull('cpr_fecha_aprobacion')->count(),
+            ],
+            'secciones' => \App\Models\Seccion::with([
+                    'turno',
+                    'equipos' => fn($q) => $q->where('equ_status', true)->with([
+                        'proyectoComunidad',
+                        'puntosControl.seguimientos',
+                        'entregables',
+                        'socializaciones.tipoSocializacion',
+                        'resultadoProyecto',
+                    ]),
+                ])
+                ->where('sec_status', true)
+                ->orderBy('sec_codigo')
+                ->get()
+                ->map(function ($s) {
+                    $equipos = $s->equipos;
+                    $total = $equipos->count();
+                    $avance = 0;
+                    if ($total > 0) {
+                        $sumaAvances = 0;
+                        foreach ($equipos as $eq) {
+                            if ($eq->resultadoProyecto) {
+                                $sumaAvances += 100;
+                                continue;
+                            }
+                            $puntos = 10;
+                            if ($eq->proyectoComunidad) {
+                                $puntos += 25;
+                            }
+                            $pucActivos = $eq->puntosControl->where('puc_status', true);
+                            if ($pucActivos->isNotEmpty()) {
+                                $cumplidos = $pucActivos->filter(fn($p) => $p->seguimientos->where('seq_cumplido', true)->isNotEmpty())->count();
+                                $puntos += round(($cumplidos / $pucActivos->count()) * 25);
+                            }
+                            $entrActivos = $eq->entregables->where('entr_status', true);
+                            if ($entrActivos->isNotEmpty()) {
+                                $entrAprob = $entrActivos->where('entr_aprobado', true)->count();
+                                $puntos += round(($entrAprob / $entrActivos->count()) * 20);
+                            }
+                            $preSocApta = $eq->socializaciones
+                                ->filter(fn($soc) => $soc->tipoSocializacion?->tso_orden === 1 && $soc->soc_apto === true)
+                                ->isNotEmpty();
+                            if ($preSocApta) {
+                                $puntos += 20;
+                            }
+                            $sumaAvances += min(100, $puntos);
+                        }
+                        $avance = round($sumaAvances / $total);
+                    }
+
+                    return [
+                        'sec_id'        => $s->sec_id,
+                        'sec_codigo'    => $s->sec_codigo,
+                        'turno'         => $s->turno,
+                        'total_equipos' => $total,
+                        'avance'        => $avance,
+                    ];
+                }),
+            'notificaciones' => \App\Models\Notificacion::where('not_id_usu', auth()->id())
+                ->latest('not_fecha_generacion')
+                ->take(10)
+                ->get(),
+        ]);
+    })->name('dashboard');
+
+    // Tablas maestras
+    Route::resource('tipos-proyecto', MaestraController::class)
+        ->parameters(['tipos-proyecto' => 'id'])
+        ->except(['create', 'show', 'edit']);
+
+    Route::resource('comunidades', ComunidadController::class)
+        ->parameters(['comunidades' => 'id'])
+        ->except(['create', 'show', 'edit']);
+    Route::get('comunidades/{id}/radar-proyectos', [ComunidadController::class, 'radarProyectos'])
+        ->name('comunidades.radar-proyectos');
+
+    Route::resource('secciones', SeccionController::class)
+        ->parameters(['secciones' => 'id'])
+        ->except(['create', 'show', 'edit']);
+
+    
+
+    // Tablas maestras genéricas
+    Route::get('maestras/{tabla}', [TablaMaestraController::class, 'index'])->name('maestras.index');
+    Route::post('maestras/{tabla}', [TablaMaestraController::class, 'store'])->name('maestras.store');
+    Route::put('maestras/{tabla}/{id}', [TablaMaestraController::class, 'update'])->name('maestras.update');
+    Route::delete('maestras/{tabla}/{id}', [TablaMaestraController::class, 'destroy'])->name('maestras.destroy');
+    Route::post('maestras/{tabla}/{id}/reactivar', [TablaMaestraController::class, 'reactivar'])->name('maestras.reactivar');
+
+    
+
+   Route::resource('equipos', EquipoController::class)
+        ->parameters(['equipos' => 'id'])
+        ->except(['create', 'show', 'edit']);
+   Route::post('equipos/{id_equipo}/generar-link-jurado', [EvaluacionTrayectoController::class, 'generarLinkJurado'])
+        ->name('equipos.generar-link-jurado');
+
+    
+
+    Route::resource('proyectos', ProyectoController::class)
+        ->parameters(['proyectos' => 'id'])
+        ->except(['edit','create','show']);
+    
+    // Resultados
+    Route::get('resultados', [ResultadoController::class, 'index'])
+        ->name('resultados.index');
+    Route::post('resultados', [ResultadoController::class, 'store'])
+        ->name('resultados.store');
+    Route::post('resultados/{id}/habilitar-tardio',
+        [ResultadoController::class, 'habilitarTardio'])
+        ->name('resultados.habilitar-tardio');
+
+    // Reportes
+    Route::get('reportes', [ReporteController::class, 'index'])
+        ->name('reportes.index');
+    Route::get('reportes/solvencia', [ReporteController::class, 'solvencia'])
+        ->name('reportes.solvencia');
+    Route::get('reportes/filtrar', [ReporteController::class, 'filtrar'])
+        ->name('reportes.filtrar');
+    Route::get('reportes/por-comunidad', [ReporteController::class, 'porComunidad'])
+        ->name('reportes.porComunidad');
+    Route::get('reportes/entregables', [ReporteController::class, 'porEntregables'])
+        ->name('reportes.entregables');
+    Route::get('reportes/puntos-control', [ReporteController::class, 'porPuntosControl'])
+        ->name('reportes.puntosControl');
+
+    // Cartas
+    Route::get('cartas', [CartaController::class, 'index'])
+        ->name('cartas.index');
+    Route::post('cartas/{id}/aprobar',
+        [CartaController::class, 'aprobar'])
+        ->name('cartas.aprobar');
+    Route::post('cartas/firma',
+        [CartaController::class, 'actualizarFirma'])
+        ->name('cartas.firma');
+
+    // Bitácora
+    Route::get('bitacora', [BitacoraController::class, 'index'])
+        ->name('bitacora.index');
+    
+
+    Route::get('socializaciones',
+        [SocializacionCoordController::class, 'index'])
+        ->name('socializaciones.index');
+    Route::post('socializaciones/programar-final',
+        [SocializacionController::class, 'programarFinal'])
+        ->name('socializaciones.programar-final');
+    
+
+    Route::get('secciones/{id}/detalle',
+        [SeccionDetalleController::class, 'show'])
+        ->name('secciones.detalle');
+    
+    Route::post('secciones/{id}/profesores', [SeccionDetalleController::class, 'asignarProfesor']);
+
+    // Exportaciones Excel Oficiales UPTP
+    Route::get('secciones/{id}/excel/vinculacion', [\App\Http\Controllers\ExcelExportController::class, 'descargarPlanillaVinculacion'])
+        ->name('secciones.excel.vinculacion');
+    Route::get('secciones/{id}/excel/inventario', [\App\Http\Controllers\ExcelExportController::class, 'descargarInventarioPst'])
+        ->name('secciones.excel.inventario');
+
+    // Expediente del Estudiante (Coordinador)
+    Route::get('estudiantes/buscar', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'buscar'])
+        ->name('estudiantes.buscar');
+    Route::get('estudiantes/{id}/expediente', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'show'])
+        ->name('estudiantes.expediente');
+
+    // Transición Semestral (Impar a Par)
+    Route::get('transicion-semestral', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'index'])
+        ->name('transicion-semestral.index');
+    Route::post('transicion-semestral/equipo/{id_equipo}', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'promoverEquipo'])
+        ->name('transicion-semestral.equipo');
+    Route::post('transicion-semestral/seccion/{id_sec}', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'promoverSeccion'])
+        ->name('transicion-semestral.seccion');
+    Route::post('transicion-semestral/equipo/{id_equipo}/repositorio', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'cerrarRepositorioEquipo'])
+        ->name('transicion-semestral.equipo.repositorio');
+    Route::post('transicion-semestral/seccion/{id_sec}/repositorio', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'cerrarRepositorioSeccion'])
+        ->name('transicion-semestral.seccion.repositorio');
+
+    Route::get('cartas/{id}/descargar',
+        [CartaController::class, 'descargar'])
+        ->name('cartas.descargar');
+    
+
+    Route::get('configuracion', [ConfiguracionController::class, 'index'])
+        ->name('configuracion.index');
+    Route::post('configuracion/lapso-academico',
+        [ConfiguracionController::class, 'guardarLapsoAcademico'])
+        ->name('configuracion.lapso');
+    Route::post('configuracion/lapso-academico/{id}/activar',
+        [ConfiguracionController::class, 'activarLapsoAcademico'])
+        ->name('configuracion.lapso.activar');
+    Route::post('configuracion/firma',
+        [ConfiguracionController::class, 'actualizarFirma'])
+        ->name('configuracion.firma');
+    Route::post('configuracion/perfil',
+        [ConfiguracionController::class, 'actualizarPerfil'])
+        ->name('configuracion.perfil');
+    Route::post('configuracion/password',
+        [ConfiguracionController::class, 'cambiarPassword'])
+        ->name('configuracion.password');
+    Route::get('reportes/exportar-solvencia',
+        [ReporteController::class, 'exportarSolvenciaPdf'])
+        ->name('reportes.exportar-solvencia');
+    Route::get('reportes/exportar-general',
+        [ReporteController::class, 'exportarGeneralPdf'])
+        ->name('reportes.exportar-general');
+
+    
+    Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
+        ->name('equipos.disolver');
+
+    Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
+        [EquipoController::class, 'removerIntegrante'])
+        ->name('equipos.integrantes.remover');
+
+    Route::post('equipos/{equipoId}/integrantes/{integranteId}/trasladar',
+        [EquipoController::class, 'trasladarIntegrante'])
+        ->name('equipos.integrantes.trasladar');
+
+    Route::post('equipos/{equipoId}/cambiar-lider',
+        [EquipoController::class, 'cambiarLider'])
+        ->name('equipos.cambiar-lider');
+
+    Route::get('equipos/{equipoId}/historial',
+        [EquipoController::class, 'historial'])
+        ->name('equipos.historial');
+
+    Route::get('equipos/{id}/historial-academico',
+        [EquipoController::class, 'historialAcademico'])
+        ->name('equipos.historial-academico');
+
+    Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
+        ->name('equipos.expediente');
+    
+    Route::get('/equipos/{id}/paquete-cierre', [EquipoController::class, 'generarPaqueteCierre'])
+        ->name('equipos.paqueteCierre');
+    
+    Route::post('configuracion/reset-lider',
+        [ConfiguracionController::class, 'resetPasswordLider'])
+        ->name('configuracion.reset-lider');
+
+    Route::post('/equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
+        ->name('equipos.reactivar');
+    
+});
+
+// Grupo Profesor 
+    Route::middleware(['auth', 'rol:profesor_proyecto'])
+        ->prefix('profesor')->name('profesor.')->group(function () {
+
+        Route::get('/', function () {
+        $profesor = auth()->user();
+        $secciones = $profesor->seccionesProfesor()
+            ->where('pse_status', true)->pluck('pse_id_sec');
+        $equiposIds = \App\Models\Equipo::whereIn('equ_id_sec', $secciones)
+            ->where('equ_status', true)->pluck('equ_id');
+
+        $equipos = \App\Models\Equipo::whereIn('equ_id', $equiposIds)
+            ->with(['seccion','trayecto','integrantes.usuario'])
+            ->where('equ_status', true)
+            ->orderBy('equ_codigo')
+            ->get();
+
+        $notificacionesBase = \App\Models\Notificacion::where('not_id_usu', auth()->id())
+            ->where(function ($q) {
+                $q->whereNull('not_id_equ')
+                  ->orWhereHas('equipo', fn($eq) => $eq->where('equ_status', true));
+            });
+
+        return Inertia::render('Profesor/Dashboard', [
+            'stats' => [
+                'secciones'             => $secciones->count(),
+                'equipos'               => $equiposIds->count(),
+                'puntosVencer'          => \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposIds)
+                    ->where('puc_status', true)
+                    ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+                    ->whereBetween('puc_fecha_limite', [now()->toDateString(), now()->addDays(7)->toDateString()])
+                    ->count(),
+                'entregablesPendientes' => \App\Models\Entregable::whereIn('entr_id_equ', $equiposIds)
+                    ->where('entr_status', true)
+                    ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+                    ->whereNull('entr_aprobado')->count(),
+                'notificaciones'        => (clone $notificacionesBase)->where('not_leida', false)->count(),
+            ],
+            'notificaciones' => (clone $notificacionesBase)
+                ->orderByDesc('not_fecha_generacion')->take(15)->get(),
+            'notificacionesSinLeer' => (clone $notificacionesBase)
+                ->where('not_leida', false)->count(),
+            'equipos'               => $equipos,
+            'proximosPuntos'        => \App\Models\PuntoControl::whereIn('puc_id_equ', $equiposIds)
+                ->where('puc_status', true)
+                ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+                ->where('puc_fecha_limite', '>=', now()->toDateString())
+                ->orderBy('puc_fecha_limite')->take(5)->with('equipo')->get()
+                ->map(fn($p) => [
+                    'id'      => $p->puc_id,
+                    'nombre'  => $p->puc_nombre,
+                    'equipo'  => $p->equipo?->equ_codigo,
+                    'fecha'   => $p->puc_fecha_limite,
+                    'urgente' => $p->puc_fecha_limite <= now()->addDays(3)->toDateString(),
+                ]),
+            'entregablesPendientes' => \App\Models\Entregable::whereIn('entr_id_equ', $equiposIds)
+                ->where('entr_status', true)
+                ->whereHas('equipo', fn($q) => $q->where('equ_status', true))
+                ->whereNull('entr_aprobado')->with('equipo')->take(5)->get()
+                ->map(fn($e) => [
+                    'id'     => $e->entr_id,
+                    'nombre' => $e->entr_nombre_archivo,
+                    'equipo' => $e->equipo?->equ_codigo,
+                ]),
+            
+        ]);
+    })->name('dashboard');
+
+    // Puntos de Control
+    Route::get('puntos-control',
+        [App\Http\Controllers\Profesor\PuntoControlController::class, 'index'])
+        ->name('puntos-control.index');
+    Route::post('puntos-control',
+        [App\Http\Controllers\Profesor\PuntoControlController::class, 'store'])
+        ->name('puntos-control.store');
+    Route::post('puntos-control/{id}/seguimiento',
+        [App\Http\Controllers\Profesor\PuntoControlController::class, 'registrarSeguimiento'])
+        ->name('puntos-control.seguimiento');
+    Route::post('puntos-control/{id}/reprogramar', [App\Http\Controllers\Profesor\PuntoControlController::class, 'reprogramar'])
+        ->name('puntos-control.reprogramar');
+    Route::delete('puntos-control/{id}',
+        [App\Http\Controllers\Profesor\PuntoControlController::class, 'destroy'])
+        ->name('puntos-control.destroy');
+
+    // Socializaciones
+    Route::get('socializaciones',
+        [App\Http\Controllers\Profesor\SocializacionController::class, 'index'])
+        ->name('socializaciones.index');
+    Route::post('socializaciones',
+        [App\Http\Controllers\Profesor\SocializacionController::class, 'store'])
+        ->name('socializaciones.store');
+    Route::post('socializaciones/programar-final',
+        [App\Http\Controllers\Profesor\SocializacionController::class, 'programarFinal'])
+        ->name('socializaciones.programar-final');
+    Route::post('equipos/{id_equipo}/generar-link-jurado',
+        [EvaluacionTrayectoController::class, 'generarLinkJurado'])
+        ->name('equipos.generar-link-jurado');
+    Route::post('socializaciones/{id}/resultado',
+        [App\Http\Controllers\Profesor\SocializacionController::class, 'registrarResultado'])
+        ->name('socializaciones.resultado');
+
+    // Entregables
+    Route::get('entregables',
+        [App\Http\Controllers\Profesor\EntregableController::class, 'index'])
+        ->name('entregables.index');
+    Route::post('entregables/{id}/aprobar',
+        [App\Http\Controllers\Profesor\EntregableController::class, 'aprobar'])
+        ->name('entregables.aprobar');
+    Route::post('entregables/{id}/rechazar',
+        [App\Http\Controllers\Profesor\EntregableController::class, 'rechazar'])
+        ->name('entregables.rechazar');
+    
+    // Secciones del profesor
+    Route::get('secciones', [EquipoController::class, 'misSecciones'])
+        ->name('secciones.index');
+    Route::get('secciones/{id}/equipos', [EquipoController::class, 'seccionEquipos'])
+        ->name('secciones.equipos');
+
+    // Exportaciones Excel Oficiales UPTP (Profesor)
+    Route::get('secciones/{id}/excel/vinculacion', [\App\Http\Controllers\ExcelExportController::class, 'descargarPlanillaVinculacion'])
+        ->name('secciones.excel.vinculacion');
+    Route::get('secciones/{id}/excel/inventario', [\App\Http\Controllers\ExcelExportController::class, 'descargarInventarioPst'])
+        ->name('secciones.excel.inventario');
+
+    // Expediente del Estudiante (Profesor)
+    Route::get('estudiantes/buscar', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'buscar'])
+        ->name('estudiantes.buscar');
+    Route::get('estudiantes/{id}/expediente', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'show'])
+        ->name('estudiantes.expediente');
+
+    // Esquemas de Evaluación Configurables (Profesor)
+    Route::get('esquemas-evaluacion', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'index'])
+        ->name('esquemas.index');
+    Route::post('esquemas-evaluacion', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'store'])
+        ->name('esquemas.store');
+    Route::put('esquemas-evaluacion/{id}', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'update'])
+        ->name('esquemas.update');
+    Route::delete('esquemas-evaluacion/{id}', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'destroy'])
+        ->name('esquemas.destroy');
+    Route::post('esquemas-evaluacion/asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'asignarSeccion'])
+        ->name('esquemas.asignar');
+    // Equipos — el profesor crea, el coordinador también puede todo
+    Route::get('equipos', [EquipoController::class, 'index'])
+        ->name('equipos.index');
+    Route::post('equipos', [EquipoController::class, 'store'])
+        ->name('equipos.store');
+    Route::put('equipos/{id}', [EquipoController::class, 'update'])
+        ->name('equipos.update');
+    Route::delete('equipos/{id}', [EquipoController::class, 'destroy'])
+        ->name('equipos.destroy');
+
+
+    Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
+        ->name('equipos.disolver');
+    Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
+        [EquipoController::class, 'removerIntegrante'])
+        ->name('equipos.integrantes.remover');
+    Route::post('equipos/{equipoId}/integrantes/{integranteId}/trasladar',
+        [EquipoController::class, 'trasladarIntegrante'])
+        ->name('equipos.integrantes.trasladar');
+    Route::post('equipos/{equipoId}/cambiar-lider',
+        [EquipoController::class, 'cambiarLider'])
+        ->name('equipos.cambiar-lider');
+    Route::get('equipos/{equipoId}/historial',
+        [EquipoController::class, 'historial'])
+        ->name('equipos.historial');
+    Route::get('equipos/{id}/historial-academico',
+        [EquipoController::class, 'historialAcademico'])
+        ->name('equipos.historial-academico');
+    Route::post('equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
+        ->name('equipos.reactivar');
+    Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
+        ->name('equipos.expediente');
+    Route::get('/equipos/{id}/paquete-cierre', [EquipoController::class, 'generarPaqueteCierre'])
+        ->name('equipos.paqueteCierre');
+
+    // Dentro del grupo profesor:
+    Route::post('/comunidades', [\App\Http\Controllers\Coordinador\ComunidadController::class, 'store'])
+        ->name('comunidades.store');
+
+    Route::post('tipos-proyecto', [MaestraController::class, 'store'])
+        ->name('tipos-proyecto.store');
+});
+// Grupo Líder 
+Route::middleware(['auth', 'rol:lider'])
+    ->prefix('lider')->name('lider.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Lider\LiderController::class, 'dashboard'])
+        ->name('dashboard');
+    Route::get('equipo',
+        [App\Http\Controllers\Lider\LiderController::class, 'miEquipo'])
+        ->name('equipo');
+    Route::get('proyecto',
+        [App\Http\Controllers\Lider\LiderController::class, 'miProyecto'])
+        ->name('proyecto');
+    Route::get('entregables',
+        [App\Http\Controllers\Lider\LiderController::class, 'entregables'])
+        ->name('entregables.index');
+    Route::post('entregables',
+        [App\Http\Controllers\Lider\LiderController::class, 'subirEntregable'])
+        ->name('entregables.store');
+
+    Route::get('historial-academico',
+        [App\Http\Controllers\Lider\LiderController::class, 'historialAcademico'])
+        ->name('historial-academico');
+    
+
+    Route::get('carta', function () {
+        $integrante = \App\Models\EquipoIntegrante::where('ein_id_usu', auth()->id())
+            ->where('ein_es_lider', true)->where('ein_status', true)->first();
+        if (!$integrante) return Inertia::render('Lider/Carta', [
+            'carta' => null, 'proyecto' => null
+        ]);
+        $equipo = \App\Models\Equipo::find($integrante->ein_id_equ);
+        $proyecto = \App\Models\ProyectoComunidad::where('pco_id_equ', $equipo->equ_id)
+            ->with(['comunidad'])->first();
+        $carta = $proyecto
+            ? \App\Models\CartaPresentacion::where('cpr_id_pco', $proyecto->pco_id)->first()
+            : null;
+        return Inertia::render('Lider/Carta', [
+            'carta'   => $carta,
+            'proyecto'=> $proyecto,
+            'equipo'  => $equipo,
+        ]);
+    })->name('carta');
+
+    Route::post('carta', [CartaController::class, 'solicitar'])
+        ->name('carta.solicitar');
+
+    
+    Route::get('/carta/{id}/descargar', [LiderController::class, 'descargarCarta'])
+        ->name('carta.descargar');
+
+    Route::post('/responsable', [LiderController::class, 'registrarResponsable'])
+        ->name('responsable.store');
+        
+    Route::delete('/responsable/{id}', [LiderController::class, 'eliminarResponsable'])
+        ->name('responsable.destroy');
+    
+    Route::post('/tutor', [LiderController::class, 'registrarTutor'])
+        ->name('tutor.store');
+});
+
+// =========================================================================
+// MOTOR DE EVALUACIÓN CUALITATIVA Y CUANTITATIVA POR TRAYECTO (SEMESTRES 1 Y 2)
+// =========================================================================
+Route::middleware(['auth'])->get('/api/comunidades/{id}/radar-proyectos', [ComunidadController::class, 'radarProyectos'])
+    ->name('api.comunidades.radar');
+
+Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->group(function () {
+    Route::get('/', [EvaluacionTrayectoController::class, 'index'])->name('index');
+    Route::get('/recorrido/{id_proyecto}', [EvaluacionTrayectoController::class, 'recorrido'])->name('recorrido');
+    Route::get('/evaluar/{id_recorrido}/{rol_evaluador}', [EvaluacionTrayectoController::class, 'evaluar'])->name('evaluar');
+    Route::post('/guardar', [EvaluacionTrayectoController::class, 'guardarEvaluacion'])->name('guardar');
+    Route::get('/pdf/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarActaPdf'])->name('pdf');
+    Route::post('/pin/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarPin'])->name('pin.generar');
+    Route::post('/socializacion-final/{id_proyecto}', [EvaluacionTrayectoController::class, 'guardarFechaSocializacion'])->name('socializacion.guardar');
+    Route::post('/transicion/{id_equipo}', [EvaluacionTrayectoController::class, 'transicionSemestre'])->name('transicion.semestre');
+    Route::post('/repositorio/{id_equipo}', [EvaluacionTrayectoController::class, 'enviarRepositorio'])->name('repositorio.enviar');
+});
+
+// Portal temporal para Jurados y Voceros Comunitarios (Vigencia estricta de 12 horas)
+Route::get('/evaluacion-jurado/{token}', [EvaluacionTrayectoController::class, 'panelJurado'])
+    ->name('evaluaciones.jurado.panel');
+Route::post('/evaluacion-jurado/{token}/calificar', [EvaluacionTrayectoController::class, 'guardarCalificacionJurado'])
+    ->name('evaluaciones.jurado.calificar');
+
+// Ruta informativa de acceso previo (desactivado por seguridad)
+Route::get('/evaluacion-invitado', [EvaluacionTrayectoController::class, 'mostrarAccesoInvitado'])
+    ->name('evaluaciones.invitado');
+Route::post('/evaluacion-invitado', [EvaluacionTrayectoController::class, 'procesarAccesoInvitado'])
+    ->name('evaluaciones.invitado.acceder');
+
+// Ruta pública de verificación de autenticidad de acta mediante Hash SHA-256
+Route::get('/evaluaciones/verificar/{hash}', [EvaluacionTrayectoController::class, 'verificarActa'])
+    ->name('evaluaciones.verificar');
+
+// =========================================================================
+// EXPORTACIONES DINÁMICAS EN EXCEL (INVENTARIO PST Y VINCULACIÓN UPTP)
+// =========================================================================
+Route::prefix('inventario')->name('inventario.')->group(function () {
+    Route::get('/excel/punto-control/{id_puc}', [InventarioPstExcelController::class, 'exportarPuntoControl'])
+        ->name('excel.punto');
+    Route::get('/excel/libro-seccion/{id_sec}', [InventarioPstExcelController::class, 'exportarLibroCompleto'])
+        ->name('excel.libro');
+    Route::match(['get', 'post'], '/excel/vinculacion/{id_proyecto}', [InventarioPstExcelController::class, 'exportarPlanillaVinculacion'])
+        ->name('excel.vinculacion');
+});
+
+
+

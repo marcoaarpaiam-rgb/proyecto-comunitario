@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Http\Controllers\Profesor;
+
+use App\Http\Controllers\Controller;
+use App\Models\Entregable;
+use App\Models\Equipo;
+use App\Models\Notificacion;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Concerns\AutorizaPorSeccion;
+
+class EntregableController extends Controller
+{
+    use AutorizaPorSeccion;
+
+    public function index()
+    {
+        $profesor  = auth()->user();
+        $secciones = $profesor->seccionesProfesor()
+            ->where('pse_status', true)->pluck('pse_id_sec');
+        $equiposModelos = Equipo::whereIn('equ_id_sec', $secciones)
+            ->where('equ_status', true)
+            ->with(['seccion', 'trayecto'])
+            ->get(['equ_id', 'equ_codigo', 'equ_titulo', 'equ_id_sec', 'equ_id_tra']);
+        $equiposIds = $equiposModelos->pluck('equ_id');
+
+        return Inertia::render('Profesor/Entregables', [
+            'equipos'     => $equiposModelos,
+            'entregables' => Entregable::whereIn('entr_id_equ', $equiposIds)
+                ->with(['equipo', 'tipoEntregable', 'catalogoPnfi'])
+                ->select('entr_id','entr_id_equ','entr_id_tet','entr_id_cep','entr_nombre_archivo',
+                        'entr_ruta','entr_version','entr_aprobado','entr_fecha_subida',
+                        'entr_observacion_rechazo')
+                ->orderBy('entr_fecha_subida', 'desc')
+                ->get(),
+            'catalogoPnfi' => \App\Models\CatalogoEntregablePnfi::where('cep_activo', true)
+                ->with('trayecto')
+                ->orderBy('cep_id_trayecto')
+                ->orderBy('cep_semestre')
+                ->orderBy('cep_orden')
+                ->get(),
+            'semestreActivo' => app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion(0),
+        ]);
+    }
+
+    public function aprobar(Request $request, $id)
+    {
+        $entregable = Entregable::with(['equipo.integrantes' => fn($q) =>
+            $q->where('ein_es_lider', true)->where('ein_status', true)
+        ])->findOrFail($id);
+
+        $this->autorizarEquipoId($entregable->entr_id_equ);
+
+        $entregable->update([
+            'entr_aprobado'           => true,
+            'entr_fecha_aprobacion'   => now(),
+            'entr_id_usu_aprobado'    => auth()->id(),
+            'entr_observacion_rechazo'=> null,
+        ]);
+
+        // Notificar al líder
+        $lider = $entregable->equipo?->integrantes?->first();
+        if ($lider) {
+            Notificacion::create([
+                'not_id_usu'           => $lider->ein_id_usu,
+                'not_id_tno' => DB::table('tipo_notificacion')
+                    ->where('tno_nombre', 'Entregable aprobado por el profesor')
+                    ->value('tno_id'),
+                'not_mensaje'          => "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue APROBADO por el profesor.",
+                'not_leida'            => false,
+                'not_id_equ'           => $entregable->entr_id_equ,
+            ]);
+        }
+
+        return back()->with('success', 'Entregable aprobado. El líder fue notificado.');
+    }
+
+    public function rechazar(Request $request, $id)
+    {
+        $request->validate([
+            'observacion' => 'required|string',
+        ], [
+            'observacion.required' => 'Debes indicar el motivo del rechazo.',
+        ]);
+
+        $entregable = Entregable::with(['equipo.integrantes' => fn($q) =>
+            $q->where('ein_es_lider', true)->where('ein_status', true)
+        ])->findOrFail($id);
+
+        $this->autorizarEquipoId($entregable->entr_id_equ);
+
+        $entregable->update([
+            'entr_aprobado'            => false,
+            'entr_fecha_aprobacion'    => now(),
+            'entr_id_usu_aprobado'     => auth()->id(),
+            'entr_observacion_rechazo' => $request->observacion,
+        ]);
+
+        // Notificar al líder
+        $lider = $entregable->equipo?->integrantes?->first();
+        if ($lider) {
+            Notificacion::create([
+                'not_id_usu'           => $lider->ein_id_usu,
+                'not_id_tno' => DB::table('tipo_notificacion')
+                    ->where('tno_nombre', 'Entregable rechazado por el profesor')
+                    ->value('tno_id'),
+                'not_mensaje' => "Tu entregable \"{$entregable->entr_nombre_archivo}\" fue RECHAZADO. Motivo: {$request->observacion}",
+                'not_leida'            => false,
+                'not_id_equ'           => $entregable->entr_id_equ,
+            ]);
+        }
+
+        return back()->with('success', 'Entregable rechazado. El líder fue notificado.');
+    }
+}
