@@ -5,8 +5,12 @@
             :class="bgHeaderClass"
         >
             <div class="d-flex align-items-center gap-2">
-                <span class="fs-5">{{ iconoSemaforo }}</span>
-                <span :class="`badge bg-${diagnostico.color || 'secondary'} text-white fw-bold`">
+                <span class="fs-5" :title="significadoSemaforo" style="cursor: help;">{{ iconoSemaforo }}</span>
+                <span
+                    :class="`badge bg-${diagnostico.color || 'secondary'} text-white fw-bold`"
+                    :title="significadoSemaforo"
+                    style="cursor: help;"
+                >
                     {{ etiquetaSemaforo }}
                 </span>
                 <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
@@ -26,8 +30,13 @@
         </div>
 
         <div class="card-body p-3">
-            <!-- Mensaje en lenguaje humano -->
-            <p class="mb-2 small text-dark fw-medium lh-sm">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                    Enfoque de Gestión de Proyectos y Procesos
+                </span>
+            </div>
+            <!-- Mensaje en lenguaje humano con significado al posar el mouse -->
+            <p class="mb-2 small text-dark fw-medium lh-sm" :title="significadoSemaforo" style="cursor: help;">
                 {{ diagnostico.mensaje }}
             </p>
 
@@ -73,14 +82,50 @@
                 </span>
             </div>
 
-            <!-- Alerta de inviabilidad o riesgo crítico -->
+            <!-- Alerta de no viabilidad o riesgo crítico -->
             <div
-                v-if="diagnostico.es_viable === false || diagnostico.semaforo === 'inviable'"
+                v-if="diagnostico.es_viable === false || diagnostico.semaforo === 'inviable' || diagnostico.semaforo === 'no_viable'"
                 class="mt-2 alert alert-dark py-1 px-2 mb-0 small d-flex align-items-center gap-1 border-0"
                 style="font-size: 0.75rem"
+                title="Cierre administrativo por falta de factibilidad."
             >
                 <i class="bi bi-shield-slash-fill text-danger"></i>
-                <span>Atención: Proyecto en ruta crítica con riesgo de aplazamiento.</span>
+                <span>Atención: Proyecto en cierre administrativo o no viable por falta de factibilidad.</span>
+            </div>
+
+            <!-- Leyenda Interactiva con tooltips al pasar el mouse -->
+            <div class="mt-3 pt-2 border-top">
+                <div class="d-flex flex-wrap gap-2 align-items-center" style="font-size: 0.72rem;">
+                    <span class="text-muted fw-bold">Enfoque de Gestión de Proyectos y Procesos:</span>
+                    <span
+                        class="badge bg-light text-dark border px-2 py-1"
+                        style="cursor: help;"
+                        title="Cumple con los estándares y metas."
+                    >
+                        🟢 Conforme
+                    </span>
+                    <span
+                        class="badge bg-light text-dark border px-2 py-1"
+                        style="cursor: help;"
+                        title="Tiene parametros menores que deben mejorarse."
+                    >
+                        🟡 Observado
+                    </span>
+                    <span
+                        class="badge bg-light text-dark border px-2 py-1"
+                        style="cursor: help;"
+                        title="Incumplimiento grave de los parámetros del proyecto."
+                    >
+                        🔴 No conforme
+                    </span>
+                    <span
+                        class="badge bg-light text-dark border px-2 py-1"
+                        style="cursor: help;"
+                        title="Cierre administrativo por falta de factibilidad."
+                    >
+                        ⚫ No viable
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -105,13 +150,17 @@ defineEmits(['ver-detalles'])
 const iconoSemaforo = computed(() => {
     switch (props.diagnostico?.semaforo) {
         case 'en_ruta':
+        case 'conforme':
             return '🟢'
         case 'acelerar':
+        case 'observado':
             return '🟡'
         case 'riesgo_alto':
+        case 'no_conforme':
             return '🔴'
         case 'inviable':
-            return '⛔'
+        case 'no_viable':
+            return '⚫'
         default:
             return '⚪'
     }
@@ -120,27 +169,54 @@ const iconoSemaforo = computed(() => {
 const etiquetaSemaforo = computed(() => {
     switch (props.diagnostico?.semaforo) {
         case 'en_ruta':
-            return 'En Ruta'
+        case 'conforme':
+            return 'Conforme'
         case 'acelerar':
-            return 'Acelerar'
+        case 'observado':
+            return 'Observado'
         case 'riesgo_alto':
-            return 'Riesgo Alto'
+        case 'no_conforme':
+            return 'No conforme'
         case 'inviable':
-            return 'Inviable'
+        case 'no_viable':
+            return 'No viable'
         default:
             return 'En Diagnóstico'
+    }
+})
+
+const significadoSemaforo = computed(() => {
+    switch (props.diagnostico?.semaforo) {
+        case 'en_ruta':
+        case 'conforme':
+            return 'Cumple con los estándares y metas.'
+        case 'acelerar':
+        case 'observado':
+            return 'Tiene parametros menores que deben mejorarse.'
+        case 'riesgo_alto':
+        case 'no_conforme':
+            return 'Incumplimiento grave de los parámetros del proyecto.'
+        case 'inviable':
+        case 'no_viable':
+            return 'Cierre administrativo por falta de factibilidad.'
+        default:
+            return 'Enfoque de Gestión de Proyectos y Procesos'
     }
 })
 
 const bgHeaderClass = computed(() => {
     switch (props.diagnostico?.semaforo) {
         case 'en_ruta':
+        case 'conforme':
             return 'bg-success bg-opacity-10'
         case 'acelerar':
+        case 'observado':
             return 'bg-warning bg-opacity-10'
         case 'riesgo_alto':
+        case 'no_conforme':
             return 'bg-danger bg-opacity-10'
         case 'inviable':
+        case 'no_viable':
             return 'bg-dark bg-opacity-10'
         default:
             return 'bg-light'

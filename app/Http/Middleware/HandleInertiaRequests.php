@@ -86,6 +86,19 @@ class HandleInertiaRequests extends Middleware
                 ->where('not_leida', false)
                 ->count()
             : 0,
+        'periodoActivo' => function () {
+            $p = \App\Models\PeriodoAcademico::periodoActivo();
+            if (!$p) return null;
+            return [
+                'id_periodo'           => $p->id_periodo,
+                'lapso_academico'      => $p->lapso_academico,
+                'tipo_semestre'        => $p->tipo_semestre,
+                'fecha_inicio'         => $p->fecha_inicio ? $p->fecha_inicio->format('Y-m-d') : null,
+                'fecha_fin'            => $p->fecha_fin ? $p->fecha_fin->format('Y-m-d') : null,
+                'fecha_inicio_formato' => $p->fecha_inicio ? $p->fecha_inicio->format('d/m/Y') : null,
+                'fecha_fin_formato'    => $p->fecha_fin ? $p->fecha_fin->format('d/m/Y') : null,
+            ];
+        },
         'googleMapsApiKey' => config('services.google_maps.key', ''),
     ];
 }

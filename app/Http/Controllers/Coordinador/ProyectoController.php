@@ -52,7 +52,7 @@ class ProyectoController extends Controller
         ], [
             'pco_id_equ.required'              => 'El equipo es obligatorio.',
             'pco_id_com.required'              => 'La comunidad es obligatoria.',
-            'pco_id_tpr.required'              => 'El tipo de proyecto es obligatorio.',
+            'pco_id_tpr.required'              => 'La línea de investigación es obligatoria.',
             'pco_id_mpr.required'              => 'La modalidad es obligatoria.',
             'pco_resumen.required'             => 'El resumen es obligatorio.',
             'pco_resumen.max'                  => 'El resumen no puede superar 150 caracteres.',
@@ -150,7 +150,7 @@ class ProyectoController extends Controller
             'beneficiarios.*.cantidad' => 'required|integer|min:1|max:10000',
         ], [
             'pco_id_com.required'             => 'La comunidad es obligatoria.',
-            'pco_id_tpr.required'             => 'El tipo de proyecto es obligatorio.',
+            'pco_id_tpr.required'             => 'La línea de investigación es obligatoria.',
             'pco_id_mpr.required'             => 'La modalidad es obligatoria.',
             'pco_resumen.required'            => 'El resumen es obligatorio.',
             'pco_resumen.max'                 => 'El resumen no puede superar 150 caracteres.',

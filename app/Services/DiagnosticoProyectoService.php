@@ -250,7 +250,7 @@ class DiagnosticoProyectoService
 
             $negativos = 0;
             foreach ($ultimos as $estado) {
-                if ($estado === 'negativo') {
+                if (in_array($estado, ['negativo', 'no_conforme', 'no_viable', 'inviable', 'riesgo_alto'])) {
                     $negativos++;
                 } else {
                     break;
@@ -270,43 +270,43 @@ class DiagnosticoProyectoService
     {
         $negativos = $encuentros['negativos_seguidos'] ?? 0;
 
-        // Criterios de inviabilidad (recta final semana >= 15 con avance nulo o múltiples encuentros negativos consecutivos)
+        // Criterios de no viabilidad (recta final semana >= 15 con avance nulo o múltiples encuentros negativos consecutivos)
         if ($semana >= 15 && $avance < 25 && $asistencia < 60) {
-            return 'inviable';
+            return 'no_viable';
         }
         if ($negativos >= 4) {
-            return 'inviable';
+            return 'no_viable';
         }
 
-        // Riesgo alto
+        // No conforme
         if ($asistencia < 65) {
-            return 'riesgo_alto';
+            return 'no_conforme';
         }
         if ($semana >= 10 && $avance < 30) {
-            return 'riesgo_alto';
+            return 'no_conforme';
         }
         if ($semana >= 14 && $avance < 60) {
-            return 'riesgo_alto';
+            return 'no_conforme';
         }
         if ($negativos >= 2 || $correcciones >= 3) {
-            return 'riesgo_alto';
+            return 'no_conforme';
         }
 
-        // Acelerar (alertas preventivas según la fase del semestre)
+        // Observado (alertas preventivas según la fase del semestre)
         if ($semana >= 7 && $avance < 40) {
-            return 'acelerar';
+            return 'observado';
         }
         if ($semana >= 12 && $avance < 70) {
-            return 'acelerar';
+            return 'observado';
         }
         if ($asistencia < 80) {
-            return 'acelerar';
+            return 'observado';
         }
         if ($correcciones >= 2) {
-            return 'acelerar';
+            return 'observado';
         }
 
-        return 'en_ruta';
+        return 'conforme';
     }
 
     /**
@@ -315,11 +315,11 @@ class DiagnosticoProyectoService
     private function colorSemaforo(string $semaforo): string
     {
         return match($semaforo) {
-            'en_ruta'    => 'success',
-            'acelerar'   => 'warning',
-            'riesgo_alto'=> 'danger',
-            'inviable'   => 'dark',
-            default      => 'secondary',
+            'conforme', 'en_ruta'         => 'success',
+            'observado', 'acelerar'       => 'warning',
+            'no_conforme', 'riesgo_alto'  => 'danger',
+            'no_viable', 'inviable'       => 'dark',
+            default                       => 'secondary',
         };
     }
 
@@ -329,14 +329,14 @@ class DiagnosticoProyectoService
     private function generarMensaje(string $semaforo, float $avance, float $asistencia, int $correcciones, int $semana): string
     {
         return match($semaforo) {
-            'en_ruta' => "✅ El equipo avanza a buen ritmo. Registra {$avance}% de entregables aprobados y {$asistencia}% de asistencia. ¡Excelente progreso en semana {$semana}!",
-            'acelerar' => "⚠️ Semana {$semana}: El equipo necesita acelerar el paso. Avance de entregables en {$avance}%." .
+            'conforme', 'en_ruta' => "🟢 Conforme: Cumple con los estándares y metas. Registra {$avance}% de entregables aprobados y {$asistencia}% de asistencia.",
+            'observado', 'acelerar' => "🟡 Observado: Tiene parametros menores que deben mejorarse. Avance en {$avance}%." .
                 ($correcciones > 0 ? " Mantiene {$correcciones} corrección(es) pendiente(s)." : "") .
                 " Asistencia promedio: {$asistencia}%.",
-            'riesgo_alto' => "🔴 ALERTA en semana {$semana}: El equipo está en riesgo crítico. Avance de apenas {$avance}% y asistencia de {$asistencia}%." .
+            'no_conforme', 'riesgo_alto' => "🔴 No conforme: Incumplimiento grave de los parámetros del proyecto. Avance de apenas {$avance}% y asistencia de {$asistencia}%." .
                 ($correcciones > 0 ? " Acumula {$correcciones} compromiso(s) sin solventar." : "") .
                 " Se aconseja acordar sesión de tutoría urgente.",
-            'inviable' => "⛔ ATENCIÓN - Semana {$semana}: Con {$avance}% de avance y {$asistencia}% de asistencia, matemáticamente el cumplimiento del trayecto está comprometido. Es imprescindible evaluar plan de recuperación o aplazamiento formal.",
+            'no_viable', 'inviable' => "⚫ No viable: Cierre administrativo por falta de factibilidad. Con {$avance}% de avance y {$asistencia}% de asistencia, el cumplimiento del trayecto no es viable.",
             default => "Información preliminar en semana {$semana}.",
         };
     }
@@ -346,7 +346,7 @@ class DiagnosticoProyectoService
      */
     private function evaluarViabilidad(string $semaforo, float $avance, float $asistencia, int $semana): bool
     {
-        if ($semaforo === 'inviable') {
+        if ($semaforo === 'no_viable' || $semaforo === 'inviable') {
             return false;
         }
         if ($semana >= 15 && $avance < 20) {

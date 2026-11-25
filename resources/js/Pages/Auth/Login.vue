@@ -1,5 +1,9 @@
 <template>
-    <div class="login-page">
+    <div
+        class="login-page"
+        :data-theme="theme"
+        :data-bs-theme="theme"
+    >
         <!-- ── BARRA SUPERIOR INSTITUCIONAL ── -->
         <div class="topbar-institution bg-dark text-white py-1">
             <div class="container d-flex justify-content-between align-items-center small">
@@ -18,12 +22,12 @@
         </div>
 
         <!-- ── HEADER ── -->
-        <header class="bg-white py-3 border-bottom shadow-sm">
+        <header class="login-header py-3 border-bottom shadow-sm">
             <div class="container position-relative">
                 <div class="d-flex align-items-center justify-content-between">
                     <!-- Acción izquierda -->
                     <div class="header-action-col d-none d-md-flex align-items-center">
-                        <Link href="/home" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                        <Link href="/home" class="btn btn-outline-secondary btn-sm rounded-pill px-3 header-back-btn">
                             <i class="bi bi-arrow-left me-1"></i>Volver al Inicio
                         </Link>
                     </div>
@@ -37,8 +41,8 @@
                                 style="height: 60px; object-fit: contain;"
                             />
                             <div class="ms-3 text-start">
-                                <span class="d-block fw-bold fs-4 text-dark lh-1">UPTP</span>
-                                <small class="text-muted fw-semibold" style="font-size: 0.85rem;">Juan de Jesús Montilla</small>
+                                <span class="d-block fw-bold fs-4 header-brand-text lh-1">UPTP</span>
+                                <small class="header-brand-sub fw-semibold" style="font-size: 0.85rem;">Juan de Jesús Montilla</small>
                             </div>
                         </Link>
                     </div>
@@ -67,6 +71,17 @@
                     <span class="d-inline d-sm-none">Gestión de Proyectos</span>
                 </span>
                 <div class="d-flex align-items-center gap-2">
+                    <!-- Botón de cambio de Modo Claro / Modo Oscuro -->
+                    <button
+                        type="button"
+                        class="btn btn-outline-light btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm"
+                        @click="toggleTheme"
+                        :title="theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+                    >
+                        <i class="bi" :class="theme === 'dark' ? 'bi-sun-fill text-warning' : 'bi-moon-stars-fill'"></i>
+                        <span class="small fw-semibold">{{ theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro' }}</span>
+                    </button>
+
                     <Link href="/home" class="btn btn-outline-light btn-sm rounded-pill px-3">
                         <i class="bi bi-house-door me-1"></i>Inicio
                     </Link>
@@ -86,7 +101,7 @@
                                 alt="Logo UPTP"
                                 class="logo-img"
                             />
-                            <h5>UPTP <span class="text-muted fw-normal">Juan de Jesús Montilla</span></h5>
+                            <h5 class="logo-title">UPTP <span class="logo-subtitle fw-normal">Juan de Jesús Montilla</span></h5>
                             <div>
                                 <span class="badge-sistema">
                                     <i class="bi bi-code-slash me-1"></i>Coordinación de Informática
@@ -166,7 +181,7 @@
                                         id="recordar"
                                         v-model="form.recordar"
                                     />
-                                    <label class="form-check-label text-muted" for="recordar" style="font-size: 0.82rem; cursor: pointer;">
+                                    <label class="form-check-label check-recordar" for="recordar" style="font-size: 0.82rem; cursor: pointer;">
                                         Recordarme
                                     </label>
                                 </div>
@@ -330,7 +345,7 @@
                             <div class="icon-circle bg-danger text-white">
                                 <i class="bi bi-key-fill"></i>
                             </div>
-                            <h5 class="modal-title fw-bold mb-0 text-dark">Recuperar Contraseña</h5>
+                            <h5 class="modal-title fw-bold mb-0">Recuperar Contraseña</h5>
                         </div>
                         <button
                             type="button"
@@ -340,15 +355,15 @@
                             &times;
                         </button>
                     </div>
-                    <p class="text-muted small mb-3">
+                    <p class="modal-desc small mb-3">
                         Por motivos de seguridad institucional, el restablecimiento de contraseñas se gestiona a través de la coordinación académica:
                     </p>
                     <div class="info-box-modal mb-3">
                         <div class="d-flex align-items-start gap-2 mb-2">
                             <i class="bi bi-check-circle-fill text-danger mt-1"></i>
                             <div>
-                                <strong class="text-dark">Estudiantes y Líderes de Equipo:</strong>
-                                <p class="text-muted small mb-0">
+                                <strong class="info-box-title">Estudiantes y Líderes de Equipo:</strong>
+                                <p class="info-box-desc small mb-0">
                                     Acude con tu profesor de proyecto o a la Coordinación del PNF Informática con tu cédula de identidad laminada.
                                 </p>
                             </div>
@@ -356,8 +371,8 @@
                         <div class="d-flex align-items-start gap-2">
                             <i class="bi bi-check-circle-fill text-danger mt-1"></i>
                             <div>
-                                <strong class="text-dark">Profesores y Jurados:</strong>
-                                <p class="text-muted small mb-0">
+                                <strong class="info-box-title">Profesores y Jurados:</strong>
+                                <p class="info-box-desc small mb-0">
                                     Comunícate directamente con la Coordinación de Proyecto o soporte DAECE para reactivar tu cuenta.
                                 </p>
                             </div>
@@ -379,7 +394,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 
 const page = usePage();
@@ -388,6 +403,29 @@ const errorMessage = ref("");
 const showPassword = ref(false);
 const loading = ref(false);
 const modalOlvido = ref(false);
+
+const theme = ref("light");
+
+const aplicarTema = (nuevoTema) => {
+    theme.value = nuevoTema;
+    localStorage.setItem("login-theme", nuevoTema);
+    localStorage.setItem("theme", nuevoTema);
+    document.documentElement.setAttribute("data-bs-theme", nuevoTema);
+    document.documentElement.setAttribute("data-theme", nuevoTema);
+    if (document.body) {
+        document.body.setAttribute("data-bs-theme", nuevoTema);
+        document.body.setAttribute("data-theme", nuevoTema);
+    }
+};
+
+const toggleTheme = () => {
+    aplicarTema(theme.value === "dark" ? "light" : "dark");
+};
+
+onMounted(() => {
+    const saved = localStorage.getItem("login-theme") || localStorage.getItem("theme") || "light";
+    aplicarTema(saved);
+});
 
 const form = ref({
     usu_username: "",
@@ -440,17 +478,51 @@ const submit = () => {
 </script>
 
 <style scoped>
-:root {
-    --rojo-uptp: #dc3545;
-    --rojo-oscuro: #b02a37;
-    --oscuro-uptp: #212529;
-}
-
+/* ── VARIABLES POR TEMA ── */
 .login-page {
+    --login-bg: #f8f9fa;
+    --login-header-bg: #ffffff;
+    --login-header-border: #dee2e6;
+    --login-card-bg: #ffffff;
+    --login-card-border: rgba(0, 0, 0, 0.08);
+    --login-text-title: #1a1a1a;
+    --login-text-sub: #6c757d;
+    --login-label: #212529;
+    --login-input-bg: #ffffff;
+    --login-input-border: #dee2e6;
+    --login-input-text: #212529;
+    --login-btn-eye-bg: #ffffff;
+    --login-btn-eye-text: #6c757d;
+    --login-modal-bg: #ffffff;
+    --login-modal-box: #f8f9fa;
+    --login-modal-box-border: #e9ecef;
+
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: #f8f9fa;
+    background-color: var(--login-bg);
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ── SOBREESCRITURA COMPLETA MODO OSCURO ── */
+.login-page[data-theme="dark"],
+.login-page[data-bs-theme="dark"] {
+    --login-bg: #0d0f13;
+    --login-header-bg: #16191f;
+    --login-header-border: #2d333f;
+    --login-card-bg: #16191f;
+    --login-card-border: rgba(255, 255, 255, 0.12);
+    --login-text-title: #f1f3f5;
+    --login-text-sub: #cbd5e1;
+    --login-label: #f1f3f5;
+    --login-input-bg: #0f1115;
+    --login-input-border: #3b4252;
+    --login-input-text: #ffffff;
+    --login-btn-eye-bg: #1f232b;
+    --login-btn-eye-text: #cbd5e1;
+    --login-modal-bg: #16191f;
+    --login-modal-box: #0f1115;
+    --login-modal-box-border: #2d333f;
 }
 
 /* ── BARRA SUPERIOR ── */
@@ -459,13 +531,34 @@ const submit = () => {
     letter-spacing: 0.2px;
 }
 
-/* ── HEADER CENTRADO ── */
+/* ── HEADER ── */
+.login-header {
+    background-color: var(--login-header-bg) !important;
+    border-bottom: 1px solid var(--login-header-border) !important;
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+}
 .header-action-col {
     flex: 1 1 0;
 }
 .header-logo-center {
     flex: 0 0 auto;
 }
+.header-brand-text {
+    color: var(--login-text-title) !important;
+}
+.header-brand-sub {
+    color: var(--login-text-sub) !important;
+}
+.header-back-btn {
+    color: var(--login-text-title) !important;
+    border-color: var(--login-header-border) !important;
+}
+.header-back-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
 @media (max-width: 767.98px) {
     .header-logo-center {
         width: 100%;
@@ -491,7 +584,7 @@ const submit = () => {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(30, 41, 59, 0.78) 50%, rgba(220, 53, 69, 0.35) 100%);
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.82) 0%, rgba(30, 41, 59, 0.82) 50%, rgba(220, 53, 69, 0.40) 100%);
     backdrop-filter: blur(2px);
     z-index: 1;
 }
@@ -517,12 +610,12 @@ const submit = () => {
 
 /* ── TARJETA DE LOGIN ── */
 .login-card {
-    background: #ffffff;
+    background-color: var(--login-card-bg) !important;
     border-radius: 18px;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--login-card-border) !important;
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .card-body-content {
@@ -539,14 +632,18 @@ const submit = () => {
     object-fit: contain;
     display: block;
     margin: 0 auto 0.6rem auto;
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12));
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.15));
 }
 
-.logo-area h5 {
+.logo-title {
     font-weight: 800;
     font-size: 1.15rem;
-    color: var(--oscuro-uptp, #212529);
+    color: var(--login-text-title) !important;
     margin: 0;
+}
+
+.logo-subtitle {
+    color: var(--login-text-sub) !important;
 }
 
 .badge-sistema {
@@ -564,35 +661,41 @@ const submit = () => {
 .login-title {
     font-size: 1.35rem;
     font-weight: 800;
-    color: var(--oscuro-uptp, #212529);
+    color: var(--login-text-title) !important;
     margin-bottom: 0.25rem;
 }
 
 .login-subtitle {
     font-size: 0.85rem;
-    color: #6c757d;
+    color: var(--login-text-sub) !important;
     margin-bottom: 1.25rem;
 }
 
 .form-label {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #343a40;
+    color: var(--login-label) !important;
     margin-bottom: 6px;
 }
 
 .form-control {
     border-radius: 8px;
-    border: 1.5px solid #dee2e6;
+    border: 1.5px solid var(--login-input-border) !important;
+    background-color: var(--login-input-bg) !important;
+    color: var(--login-input-text) !important;
     padding: 0.65rem 0.9rem;
     font-size: 0.92rem;
-    color: #212529;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.form-control::placeholder {
+    color: var(--login-text-sub) !important;
+    opacity: 0.75;
 }
 
 .form-control:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25) !important;
 }
 
 .input-group .form-control {
@@ -600,25 +703,29 @@ const submit = () => {
 }
 
 .input-group .btn-eye {
-    border: 1.5px solid #dee2e6;
-    border-left: none;
-    background: #ffffff;
-    color: #6c757d;
+    border: 1.5px solid var(--login-input-border) !important;
+    border-left: none !important;
+    background-color: var(--login-btn-eye-bg) !important;
+    color: var(--login-btn-eye-text) !important;
     border-radius: 0 8px 8px 0;
     padding: 0 0.95rem;
     font-size: 1rem;
-    transition: color 0.15s, background-color 0.15s;
+    transition: color 0.15s, background-color 0.15s, border-color 0.15s;
 }
 
 .input-group .btn-eye:hover {
-    color: #dc3545;
-    background: #fdf2f2;
+    color: #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.15) !important;
+}
+
+.check-recordar {
+    color: var(--login-text-sub) !important;
 }
 
 .btn-login {
     background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
     border: none;
-    color: white;
+    color: white !important;
     font-weight: 700;
     font-size: 0.98rem;
     padding: 0.78rem;
@@ -686,7 +793,7 @@ const submit = () => {
 .modal-backdrop-custom {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.7);
     z-index: 1060;
     display: flex;
     align-items: center;
@@ -702,10 +809,20 @@ const submit = () => {
 }
 
 .modal-content-custom {
-    background: #ffffff;
+    background-color: var(--login-modal-bg) !important;
     border-radius: 16px;
     padding: 1.8rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--login-card-border) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    color: var(--login-text-title) !important;
+}
+
+.modal-title {
+    color: var(--login-text-title) !important;
+}
+
+.modal-desc {
+    color: var(--login-text-sub) !important;
 }
 
 .icon-circle {
@@ -722,20 +839,28 @@ const submit = () => {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: #6c757d;
+    color: var(--login-text-sub) !important;
     cursor: pointer;
     line-height: 1;
 }
 
 .btn-close-custom:hover {
-    color: #000;
+    color: #dc3545 !important;
 }
 
 .info-box-modal {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background-color: var(--login-modal-box) !important;
+    border: 1px solid var(--login-modal-box-border) !important;
     border-radius: 10px;
     padding: 1rem;
+}
+
+.info-box-title {
+    color: var(--login-text-title) !important;
+}
+
+.info-box-desc {
+    color: var(--login-text-sub) !important;
 }
 
 @media (max-width: 576px) {

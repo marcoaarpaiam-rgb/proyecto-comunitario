@@ -18,26 +18,68 @@ class EsquemaEvaluacionController extends Controller
     {
         $profesor = Auth::user();
 
-        // IDs de secciones del profesor activo
+        // Roles del usuario
+        $esCoordinador = $profesor->roles()
+            ->whereIn('rol_nombre', ['coordinador', 'admin'])
+            ->exists();
+
+        // IDs de secciones donde el profesor está activo
         $idsSecciones = $profesor->seccionesProfesor()
             ->where('pse_status', true)
             ->pluck('pse_id_sec');
 
-        // Esquemas propios del profesor + plantillas globales
+        // Secciones disponibles para asignación
+        if ($esCoordinador) {
+            $secciones = Seccion::where('sec_status', true)
+                ->with(['trayecto', 'turno'])
+                ->orderBy('sec_codigo')
+                ->get();
+        } else {
+            $secciones = Seccion::whereIn('sec_id', $idsSecciones)
+                ->where('sec_status', true)
+                ->with(['trayecto', 'turno'])
+                ->orderBy('sec_codigo')
+                ->get();
+
+            // Si el profesor no tiene secciones asignadas aún en la tabla de asignaciones,
+            // cargamos las secciones activas institucionales para no bloquear su gestión
+            if ($secciones->isEmpty()) {
+                $secciones = Seccion::where('sec_status', true)
+                    ->with(['trayecto', 'turno'])
+                    ->orderBy('sec_codigo')
+                    ->get();
+            }
+        }
+
+        // Esquemas propios del profesor + plantillas globales (coordinador ve todos)
         $esquemas = EsquemaEvaluacion::where('esq_activo', true)
-            ->where(function ($q) use ($profesor) {
-                $q->where('esq_id_usu_creador', $profesor->usu_id)
-                  ->orWhere('esq_es_plantilla', true);
+            ->where(function ($q) use ($profesor, $esCoordinador) {
+                if ($esCoordinador) {
+                    // Coordinador ve todos los esquemas
+                } else {
+                    $q->where('esq_id_usu_creador', $profesor->usu_id)
+                      ->orWhere('esq_es_plantilla', true);
+                }
             })
-            ->with(['creador:usu_id,usu_primer_nombre,usu_primer_apellido'])
+            ->with([
+                'creador:usu_id,usu_primer_nombre,usu_primer_apellido',
+                'secciones' => function ($q) {
+                    $q->wherePivot('esq_sec_activo', true)
+                      ->with(['trayecto', 'turno']);
+                }
+            ])
+            ->orderBy('esq_es_plantilla', 'desc')
+            ->orderBy('esq_id', 'desc')
             ->get();
 
-        // Secciones del profesor para asignación
-        $secciones = Seccion::whereIn('sec_id', $idsSecciones)->get();
-
         return Inertia::render('Profesor/EsquemasEvaluacion', [
-            'esquemas'  => $esquemas,
-            'secciones' => $secciones,
+            'esquemas'      => $esquemas,
+            'secciones'     => $secciones,
+            'esCoordinador' => $esCoordinador,
+            'usuarioActual' => [
+                'usu_id' => $profesor->usu_id,
+                'nombre' => "{$profesor->usu_primer_nombre} {$profesor->usu_primer_apellido}",
+            ],
         ]);
     }
 
@@ -46,71 +88,121 @@ class EsquemaEvaluacionController extends Controller
      */
     public function store(Request $request)
     {
+        $profesor = Auth::user();
+        $esCoordinador = $profesor->roles()
+            ->whereIn('rol_nombre', ['coordinador', 'admin'])
+            ->exists();
+
         $request->validate([
-            'esq_nombre'      => 'required|string|max:200',
-            'esq_modo'        => 'required|in:cuantitativo,cualitativo_respaldado',
-            'esq_escala_min'  => 'required|numeric|min:0',
-            'esq_escala_max'  => 'required|numeric|gt:esq_escala_min',
-            'esq_criterios'   => 'nullable|array',
-            'esq_descripcion' => 'nullable|string',
+            'esq_nombre'           => 'required|string|max:200',
+            'esq_modo'             => 'required|in:cuantitativo,cualitativo_respaldado',
+            'esq_escala_min'       => 'required|numeric|min:0',
+            'esq_escala_max'       => 'required|numeric|gt:esq_escala_min',
+            'esq_criterios'        => 'nullable|array',
+            'esq_descripcion'      => 'nullable|string',
             'esq_nota_aprobatoria' => 'nullable|numeric|min:0',
             'esq_es_plantilla'     => 'nullable|boolean',
         ]);
 
+        $esPlantilla = $esCoordinador ? $request->boolean('esq_es_plantilla', false) : false;
+
         $esquema = EsquemaEvaluacion::create([
             'esq_nombre'          => $request->esq_nombre,
             'esq_descripcion'     => $request->esq_descripcion,
-            'esq_id_usu_creador'  => Auth::id(),
+            'esq_id_usu_creador'  => $profesor->usu_id,
             'esq_modo'            => $request->esq_modo,
             'esq_escala_min'      => $request->esq_escala_min,
             'esq_escala_max'      => $request->esq_escala_max,
             'esq_criterios'       => $request->esq_criterios,
             'esq_nota_aprobatoria'=> $request->input('esq_nota_aprobatoria', 16.00),
             'esq_activo'          => true,
-            'esq_es_plantilla'    => $request->boolean('esq_es_plantilla', false),
+            'esq_es_plantilla'    => $esPlantilla,
         ]);
 
         return back()->with('success', 'Esquema de evaluación creado exitosamente.');
     }
 
     /**
-     * Actualizar esquema (solo si es del profesor o coordinador).
+     * Actualizar esquema existente o generar una versión propia si es plantilla oficial.
      */
     public function update(Request $request, $id)
     {
         $esquema  = EsquemaEvaluacion::findOrFail($id);
         $profesor = Auth::user();
 
-        // Autorización: solo el creador puede editar (o coordinadores con otro rol)
         $esCoordinador = $profesor->roles()
             ->whereIn('rol_nombre', ['coordinador', 'admin'])
             ->exists();
 
-        if ((int) $esquema->esq_id_usu_creador !== (int) $profesor->usu_id && !$esCoordinador) {
-            abort(403, 'No tienes permiso para modificar este esquema.');
-        }
-
         $request->validate([
-            'esq_nombre'      => 'required|string|max:200',
-            'esq_modo'        => 'required|in:cuantitativo,cualitativo_respaldado',
-            'esq_escala_min'  => 'required|numeric|min:0',
-            'esq_escala_max'  => 'required|numeric|gt:esq_escala_min',
-            'esq_criterios'   => 'nullable|array',
-            'esq_descripcion' => 'nullable|string',
+            'esq_nombre'           => 'required|string|max:200',
+            'esq_modo'             => 'required|in:cuantitativo,cualitativo_respaldado',
+            'esq_escala_min'       => 'required|numeric|min:0',
+            'esq_escala_max'       => 'required|numeric|gt:esq_escala_min',
+            'esq_criterios'        => 'nullable|array',
+            'esq_descripcion'      => 'nullable|string',
             'esq_nota_aprobatoria' => 'nullable|numeric|min:0',
         ]);
 
-        $esquema->update($request->only([
-            'esq_nombre',
-            'esq_descripcion',
-            'esq_modo',
-            'esq_escala_min',
-            'esq_escala_max',
-            'esq_criterios',
-            'esq_nota_aprobatoria',
-        ]));
+        // Si el esquema es del profesor o el usuario es coordinador, se actualiza directamente
+        if ((int) $esquema->esq_id_usu_creador === (int) $profesor->usu_id || $esCoordinador) {
+            $esquema->update($request->only([
+                'esq_nombre',
+                'esq_descripcion',
+                'esq_modo',
+                'esq_escala_min',
+                'esq_escala_max',
+                'esq_criterios',
+                'esq_nota_aprobatoria',
+            ]));
 
-        return back()->with('success', 'Esquema actualizado correctamente.');
+            return back()->with('success', 'Esquema actualizado correctamente.');
+        }
+
+        // Si es una plantilla oficial y el profesor la quiere ajustar a su manera,
+        // creamos automáticamente su propia versión personalizada
+        if ($esquema->esq_es_plantilla) {
+            $nuevoEsquema = EsquemaEvaluacion::create([
+                'esq_nombre'          => $request->esq_nombre,
+                'esq_descripcion'     => $request->esq_descripcion,
+                'esq_id_usu_creador'  => $profesor->usu_id,
+                'esq_modo'            => $request->esq_modo,
+                'esq_escala_min'      => $request->esq_escala_min,
+                'esq_escala_max'      => $request->esq_escala_max,
+                'esq_criterios'       => $request->esq_criterios,
+                'esq_nota_aprobatoria'=> $request->input('esq_nota_aprobatoria', 16.00),
+                'esq_activo'          => true,
+                'esq_es_plantilla'    => false,
+            ]);
+
+            return back()->with('success', 'Se ha creado tu versión personalizada de este esquema para tus secciones.');
+        }
+
+        abort(403, 'No tienes permiso para modificar este esquema.');
+    }
+
+    /**
+     * Clonar un esquema (plantilla oficial o propio) para adaptarlo y modificarlo a la medida.
+     */
+    public function clonar(Request $request, $id)
+    {
+        $esquema  = EsquemaEvaluacion::findOrFail($id);
+        $profesor = Auth::user();
+
+        $copia = EsquemaEvaluacion::create([
+            'esq_nombre'          => $esquema->esq_nombre . ' (Personalizado)',
+            'esq_descripcion'     => $esquema->esq_descripcion ?: 'Esquema adaptado por el profesor.',
+            'esq_id_usu_creador'  => $profesor->usu_id,
+            'esq_modo'            => $esquema->esq_modo,
+            'esq_escala_min'      => $esquema->esq_escala_min,
+            'esq_escala_max'      => $esquema->esq_escala_max,
+            'esq_criterios'       => $esquema->esq_criterios,
+            'esq_nota_aprobatoria'=> $esquema->esq_nota_aprobatoria,
+            'esq_activo'          => true,
+            'esq_es_plantilla'    => false,
+        ]);
+
+        return back()->with('success', 'Esquema personalizado creado exitosamente. Ahora puedes adaptarlo a tu manera.');
     }
 
     /**
@@ -152,15 +244,14 @@ class EsquemaEvaluacionController extends Controller
                 [
                     'esq_sec_id_esq' => $request->esq_sec_id_esq,
                     'esq_sec_id_sec' => $request->esq_sec_id_sec,
-                    'esq_sec_lapso'  => $request->esq_sec_lapso,
+                    'esq_sec_lapso'  => $request->esq_sec_lapso ?: 'semestre_1',
                 ],
                 [
                     'esq_sec_activo'  => true,
-                    'created_at'      => now(),
                     'updated_at'      => now(),
                 ]
             );
-            $mensaje = 'Esquema asignado a la sección.';
+            $mensaje = 'Esquema asignado a la sección correctamente.';
         } else {
             \DB::table('esquema_seccion')
                 ->where('esq_sec_id_esq', $request->esq_sec_id_esq)

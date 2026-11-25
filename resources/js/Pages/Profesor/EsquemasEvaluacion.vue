@@ -3,8 +3,8 @@
         :data-theme="tema"
         style="
             min-height: 100vh;
-            background: var(--bg-body);
-            color: var(--text-main);
+            background: var(--bg-body, #f8f9fa);
+            color: var(--text-main, #212529);
         "
     >
         <SidebarProfesor
@@ -43,16 +43,20 @@
                     <i class="bi bi-check-circle-fill me-2"></i> {{ $page.props.flash.success }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
+                <div v-if="$page.props.flash?.error" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ $page.props.flash.error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
 
                 <!-- Info institucional -->
-                <div class="card border-0 shadow-sm mb-4">
+                <div class="card border-0 shadow-sm mb-4 card-themed">
                     <div class="card-body">
                         <div class="d-flex align-items-center gap-3">
                             <span class="fs-1 text-danger">⚖️</span>
                             <div>
                                 <h5 class="fw-bold mb-1">Flexibilidad y Rigor Metodológico</h5>
                                 <p class="text-muted small mb-0">
-                                    Configura esquemas cuantitativos o cualitativos respaldados por evidencias. Puedes asociar esquemas a tus secciones para evaluar con criterios claros y objetivos.
+                                    Configura esquemas cuantitativos o cualitativos respaldados por evidencias. Puedes asociar esquemas a tus secciones para evaluar con criterios claros y objetivos, o adaptar las plantillas institucionales a tu manera.
                                 </p>
                             </div>
                         </div>
@@ -62,8 +66,8 @@
                 <!-- Lista de Esquemas -->
                 <div class="row g-3">
                     <div v-for="esq in esquemas" :key="esq.esq_id" class="col-12 col-lg-6">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-header bg-white border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                        <div class="card border-0 shadow-sm h-100 card-themed">
+                            <div class="card-header border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center bg-transparent">
                                 <div class="d-flex align-items-center gap-2">
                                     <span v-if="esq.esq_es_plantilla" class="badge bg-primary">Plantilla UPTP</span>
                                     <span v-else class="badge bg-secondary">Docente</span>
@@ -71,7 +75,7 @@
                                         {{ esq.esq_modo === 'cuantitativo' ? 'Cuantitativo (1-20)' : 'Cualitativo Respaldado' }}
                                     </span>
                                 </div>
-                                <span class="badge bg-light text-dark border">
+                                <span class="badge border badge-themed">
                                     Mín: {{ esq.esq_escala_min }} / Máx: {{ esq.esq_escala_max }} (Aprueba: {{ esq.esq_nota_aprobatoria }})
                                 </span>
                             </div>
@@ -79,13 +83,14 @@
                                 <h5 class="fw-bold text-danger mb-1">{{ esq.esq_nombre }}</h5>
                                 <p class="text-muted small mb-3">{{ esq.esq_descripcion || 'Sin descripción adicional.' }}</p>
 
+                                <!-- Criterios -->
                                 <div v-if="esq.esq_criterios && esq.esq_criterios.length" class="mb-3">
                                     <div class="small fw-semibold text-muted mb-2">Criterios de evaluación y pesos:</div>
                                     <div class="d-flex flex-column gap-1">
                                         <div
                                             v-for="(crit, idx) in esq.esq_criterios"
                                             :key="idx"
-                                            class="d-flex justify-content-between align-items-center p-2 rounded bg-light small"
+                                            class="d-flex justify-content-between align-items-center p-2 rounded small criterio-item"
                                         >
                                             <span>{{ crit.nombre }}</span>
                                             <span class="badge bg-dark">{{ crit.peso }}%</span>
@@ -93,22 +98,75 @@
                                     </div>
                                 </div>
 
-                                <div class="small text-muted mb-3" v-if="esq.creador">
+                                <!-- Secciones actualmente asignadas -->
+                                <div v-if="esq.secciones && esq.secciones.length" class="mb-3">
+                                    <div class="small fw-semibold text-muted mb-1">
+                                        <i class="bi bi-diagram-3 me-1 text-primary"></i> Secciones asignadas:
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span
+                                            v-for="sec in esq.secciones"
+                                            :key="sec.sec_id"
+                                            class="badge border d-flex align-items-center gap-1 py-1 px-2 badge-seccion"
+                                        >
+                                            <i class="bi bi-check-circle-fill text-success" style="font-size: 0.75rem;"></i>
+                                            <span>{{ sec.sec_nombre || ('Sección ' + sec.sec_codigo) }}</span>
+                                            <span v-if="sec.pivot?.esq_sec_lapso" class="text-muted" style="font-size: 0.7rem;">
+                                                ({{ sec.pivot.esq_sec_lapso === 'semestre_1' ? 'Sem. 1' : (sec.pivot.esq_sec_lapso === 'semestre_2' ? 'Sem. 2' : 'Anual') }})
+                                            </span>
+                                            <button
+                                                type="button"
+                                                class="btn-close ms-1"
+                                                style="font-size: 0.5rem;"
+                                                title="Desasignar de esta sección"
+                                                @click.stop="desasignarSeccion(esq.esq_id, sec.sec_id, sec.pivot?.esq_sec_lapso)"
+                                            ></button>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div v-else class="small text-muted mb-3 fst-italic">
+                                    <i class="bi bi-info-circle me-1"></i> Sin secciones asignadas actualmente.
+                                </div>
+
+                                <div class="small text-muted mb-1" v-if="esq.creador">
                                     <i class="bi bi-person me-1"></i> Creado por: {{ esq.creador.usu_primer_nombre }} {{ esq.creador.usu_primer_apellido }}
                                 </div>
                             </div>
-                            <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
-                                <button
-                                    class="btn btn-outline-primary btn-sm rounded-pill"
-                                    @click="abrirModalAsignar(esq)"
-                                >
-                                    <i class="bi bi-link-45deg me-1"></i> Asignar a Sección
-                                </button>
-                                <div class="d-flex gap-1" v-if="!esq.esq_es_plantilla || esCoordinador">
-                                    <button class="btn btn-sm btn-outline-secondary" @click="abrirModalEditar(esq)">
+
+                            <div class="card-footer border-top d-flex justify-content-between align-items-center py-2 flex-wrap gap-2 bg-transparent">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button
+                                        class="btn btn-outline-primary btn-sm rounded-pill"
+                                        @click="abrirModalAsignar(esq)"
+                                    >
+                                        <i class="bi bi-link-45deg me-1"></i> Asignar a Sección
+                                    </button>
+
+                                    <!-- Personalizar plantilla institucional a su manera -->
+                                    <button
+                                        v-if="esq.esq_es_plantilla && !esCoordinador"
+                                        class="btn btn-outline-success btn-sm rounded-pill"
+                                        @click="personalizarPlantilla(esq)"
+                                        title="Crear una copia personalizada de este esquema para adaptarla a tus secciones"
+                                    >
+                                        <i class="bi bi-sliders me-1"></i> Adaptar a mi manera
+                                    </button>
+                                </div>
+
+                                <div class="d-flex gap-1" v-if="!esq.esq_es_plantilla || esCoordinador || esq.esq_id_usu_creador === usuarioActual?.usu_id">
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary"
+                                        @click="abrirModalEditar(esq)"
+                                        title="Modificar esquema"
+                                    >
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="eliminarEsquema(esq.esq_id)">
+                                    <button
+                                        class="btn btn-sm btn-outline-danger"
+                                        @click="eliminarEsquema(esq.esq_id)"
+                                        title="Desactivar esquema"
+                                        v-if="!esq.esq_es_plantilla || esCoordinador"
+                                    >
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -126,10 +184,10 @@
         <!-- MODAL CREAR / EDITAR ESQUEMA -->
         <div class="modal fade" id="modalEsquema" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
-                <div class="modal-content">
+                <div class="modal-content modal-themed">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold">
-                            {{ editando ? 'Editar Esquema de Evaluación' : 'Nuevo Esquema de Evaluación' }}
+                            {{ editando ? 'Editar Esquema de Evaluación' : 'Configurar Esquema de Evaluación' }}
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -197,7 +255,7 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-danger" :disabled="form.processing || totalPeso !== 100">
-                                {{ editando ? 'Actualizar Esquema' : 'Crear Esquema' }}
+                                {{ editando ? 'Actualizar Esquema' : 'Guardar Esquema' }}
                             </button>
                         </div>
                     </form>
@@ -208,7 +266,7 @@
         <!-- MODAL ASIGNAR A SECCIÓN -->
         <div class="modal fade" id="modalAsignar" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
-                <div class="modal-content">
+                <div class="modal-content modal-themed">
                     <div class="modal-header">
                         <h5 class="modal-title fw-bold">Asignar Esquema a Sección</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -223,9 +281,12 @@
                                 <select v-model="formAsignar.esq_sec_id_sec" class="form-select" required>
                                     <option value="" disabled>Seleccione una sección...</option>
                                     <option v-for="sec in secciones" :key="sec.sec_id" :value="sec.sec_id">
-                                        {{ sec.sec_nombre }}
+                                        {{ sec.sec_nombre || ('Sección ' + sec.sec_codigo + (sec.trayecto ? ' - ' + sec.trayecto.tra_nombre : '') + (sec.turno ? ' (' + sec.turno.tur_nombre + ')' : '')) }}
                                     </option>
                                 </select>
+                                <div v-if="secciones.length === 0" class="text-danger small mt-1">
+                                    <i class="bi bi-exclamation-triangle me-1"></i> No hay secciones disponibles para asignar.
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Lapso / Semestre</label>
@@ -238,7 +299,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="submit" class="btn btn-primary" :disabled="formAsignar.processing">
+                            <button type="submit" class="btn btn-primary" :disabled="formAsignar.processing || !formAsignar.esq_sec_id_sec">
                                 Confirmar Asignación
                             </button>
                         </div>
@@ -258,6 +319,8 @@ import SidebarProfesor from "@/Components/SidebarProfesor.vue"
 const props = defineProps({
     esquemas: { type: Array, default: () => [] },
     secciones: { type: Array, default: () => [] },
+    esCoordinador: { type: Boolean, default: false },
+    usuarioActual: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
@@ -271,6 +334,7 @@ const iniciales = computed(() => {
 })
 
 const esCoordinador = computed(() => {
+    if (props.esCoordinador) return true
     const roles = page.props.auth?.roles || []
     return roles.includes('coordinador') || roles.includes('admin')
 })
@@ -317,6 +381,16 @@ let modalEsquemaInstance = null
 let modalAsignarInstance = null
 
 onMounted(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    tema.value = savedTheme
+
+    const observer = new MutationObserver(() => {
+        const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 
+                             document.documentElement.getAttribute('data-theme') || 'light'
+        tema.value = currentTheme
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme', 'data-theme'] })
+
     const elEsq = document.getElementById('modalEsquema')
     if (elEsq) modalEsquemaInstance = new bootstrap.Modal(elEsq)
     const elAsig = document.getElementById('modalAsignar')
@@ -348,6 +422,19 @@ const abrirModalEditar = (esq) => {
     modalEsquemaInstance?.show()
 }
 
+const personalizarPlantilla = (esq) => {
+    editando.value = false
+    esquemaEditId.value = null
+    form.esq_nombre = `${esq.esq_nombre} (Mi Versión)`
+    form.esq_descripcion = esq.esq_descripcion ? `Adaptación de ${esq.esq_nombre}: ${esq.esq_descripcion}` : 'Esquema adaptado por el docente.'
+    form.esq_modo = esq.esq_modo
+    form.esq_escala_min = Number(esq.esq_escala_min)
+    form.esq_escala_max = Number(esq.esq_escala_max)
+    form.esq_nota_aprobatoria = Number(esq.esq_nota_aprobatoria)
+    form.esq_criterios = esq.esq_criterios ? JSON.parse(JSON.stringify(esq.esq_criterios)) : []
+    modalEsquemaInstance?.show()
+}
+
 const guardarEsquema = () => {
     if (editando.value) {
         form.put(`/profesor/esquemas-evaluacion/${esquemaEditId.value}`, {
@@ -370,6 +457,7 @@ const abrirModalAsignar = (esq) => {
     esquemaSeleccionado.value = esq
     formAsignar.esq_sec_id_esq = esq.esq_id
     formAsignar.esq_sec_id_sec = props.secciones?.[0]?.sec_id || ''
+    formAsignar.accion = 'asignar'
     modalAsignarInstance?.show()
 }
 
@@ -378,113 +466,31 @@ const guardarAsignacion = () => {
         onSuccess: () => modalAsignarInstance?.hide(),
     })
 }
+
+const desasignarSeccion = (esqId, secId, lapso) => {
+    if (confirm('¿Deseas desasignar esta sección del esquema?')) {
+        formAsignar.esq_sec_id_esq = esqId
+        formAsignar.esq_sec_id_sec = secId
+        formAsignar.esq_sec_lapso = lapso || 'semestre_1'
+        formAsignar.accion = 'desasignar'
+        formAsignar.post('/profesor/esquemas-evaluacion/asignar', {
+            onSuccess: () => {
+                formAsignar.accion = 'asignar'
+            }
+        })
+    }
+}
 </script>
 
 <style scoped>
-:root {
-    --bg-body: #f8f9fa;
-    --text-main: #212529;
-}
-.sb {
-    width: 250px;
-    height: 100vh;
-    background: #1e2229;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1040;
-    transition: transform 0.3s ease;
-    overflow-y: auto;
-}
-.sb-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1030;
-    display: none;
-}
-.sb-overlay.show {
-    display: block;
-}
-.sb-brand {
-    padding: 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-.sb-title {
-    font-weight: 700;
-    color: #fff;
-    font-size: 0.95rem;
-}
-.sb-sub {
-    font-size: 0.75rem;
-    color: #8c98a4;
-}
-.sb-user {
-    padding: 1rem 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-.sb-av {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #dc3545;
-    color: #fff;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.sb-name {
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-.sb-role {
-    color: #8c98a4;
-    font-size: 0.75rem;
-}
-.sb-nav {
-    padding: 1rem 0;
-}
-.sb-sec {
-    padding: 0.4rem 1.2rem;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    color: #6c757d;
-    font-weight: 700;
-}
-.sb-lnk {
-    display: flex;
-    align-items: center;
-    padding: 0.6rem 1.2rem;
-    color: #ced4da;
-    text-decoration: none;
-    font-size: 0.88rem;
-    transition: all 0.2s;
-}
-.sb-lnk:hover,
-.sb-lnk.active {
-    color: #fff;
-    background: rgba(220, 53, 69, 0.15);
-    border-left: 3px solid #dc3545;
-}
 .main {
     margin-left: 250px;
     min-height: 100vh;
 }
 .topbar {
     height: 65px;
-    background: #fff;
-    border-bottom: 1px solid #dee2e6;
+    background: var(--bg-topbar, #fff);
+    border-bottom: 1px solid var(--border, #dee2e6);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -496,15 +502,31 @@ const guardarAsignacion = () => {
 .tb-title {
     font-size: 1.15rem;
     font-weight: 700;
-    color: #343a40;
+    color: var(--text-main, #343a40);
+}
+.card-themed {
+    background: var(--bg-card, #ffffff);
+    color: var(--text-main, #212529);
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.08)) !important;
+}
+.badge-themed {
+    background: var(--bg-quick, #f8f9fa);
+    color: var(--text-main, #212529);
+}
+.criterio-item {
+    background: var(--bg-th, #f8f9fa);
+    color: var(--text-main, #212529);
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.05));
+}
+.badge-seccion {
+    background: var(--bg-quick, #f8f9fa);
+    color: var(--text-main, #212529);
+}
+.modal-themed {
+    background: var(--bg-card, #ffffff);
+    color: var(--text-main, #212529);
 }
 @media (max-width: 991.98px) {
-    .sb {
-        transform: translateX(-100%);
-    }
-    .sb.show {
-        transform: translateX(0);
-    }
     .main {
         margin-left: 0;
     }

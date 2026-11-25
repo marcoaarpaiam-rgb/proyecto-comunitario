@@ -166,6 +166,11 @@ class PuntoControlController extends Controller
 
         $this->autorizarEquipoId($request->puc_id_equ);
 
+        // Validación contra el rango de fechas del período académico activo
+        if ($errFecha = \App\Models\PeriodoAcademico::validarFechaEnRango($request->puc_fecha_limite)) {
+            return back()->withErrors(['puc_fecha_limite' => $errFecha]);
+        }
+
         // Obtener el trayecto del equipo automáticamente
         $equipo = \App\Models\Equipo::findOrFail($request->puc_id_equ);
 
@@ -192,18 +197,19 @@ class PuntoControlController extends Controller
         }
 
         $punto = PuntoControl::create([
-            'puc_id_equ'         => $request->puc_id_equ,
-            'puc_id_tra'         => $equipo->equ_id_tra,
-            'puc_nombre'         => $request->puc_nombre,
-            'puc_descripcion'    => $request->puc_descripcion,
-            'puc_semana'         => $request->puc_semana ?? ($ultimoOrden == 0 ? 6 : ($ultimoOrden == 1 ? 10 : 14)),
+            'puc_id_equ'          => $request->puc_id_equ,
+            'puc_id_tra'          => $equipo->equ_id_tra,
+            'puc_nombre'          => $request->puc_nombre,
+            'puc_descripcion'     => $request->puc_descripcion,
+            'puc_semana'          => $request->puc_semana ?? ($ultimoOrden == 0 ? 6 : ($ultimoOrden == 1 ? 10 : 14)),
             'puc_criterios_evaluacion' => $criteriosPrevios,
-            'puc_fecha_limite'   => $request->puc_fecha_limite,
-            'puc_orden'          => $ultimoOrden + 1,
-            'puc_dias_aviso'     => $request->puc_dias_aviso ?? 7,
-            'puc_es_entregable'  => $request->puc_es_entregable ?? false,
-            'puc_status'         => true,
-            'puc_id_usu_created' => auth()->id(),
+            'puc_fecha_limite'    => $request->puc_fecha_limite,
+            'puc_orden'           => $ultimoOrden + 1,
+            'puc_dias_aviso'      => $request->puc_dias_aviso ?? 7,
+            'puc_es_entregable'   => $request->puc_es_entregable ?? false,
+            'puc_es_ultimo_punto' => $request->boolean('puc_es_ultimo_punto'),
+            'puc_status'          => true,
+            'puc_id_usu_created'  => auth()->id(),
         ]);
 
         // Notificar al líder del equipo
@@ -232,21 +238,50 @@ class PuntoControlController extends Controller
 
     public function registrarSeguimiento(Request $request, $id)
     {
-        $request->validate([
+        $rules = [
             'seq_cumplido'                 => 'required|boolean',
-            'seq_observaciones'            => 'nullable|string',
+            'seq_observaciones'            => $request->seq_cumplido ? 'nullable|string' : 'required|string|min:4',
             'seq_cumplio_previo'           => 'nullable|boolean',
             'seq_obs_previas_verificacion' => 'nullable|string',
-            'seq_estado_semaforo'          => 'nullable|in:positivo,neutral,negativo',
+            'seq_estado_semaforo'          => 'nullable|in:conforme,observado,no_conforme,no_viable,positivo,neutral,negativo',
             'seq_valoracion_avance'        => 'nullable|integer|min:0|max:100',
             'seq_id_tipo_encuentro'        => 'nullable|exists:tipos_encuentro_puntual,tep_id',
             'acuerdos'                     => 'nullable|array',
             'asistencias'                  => 'nullable',
-        ]);
+            'desea_reprogramar'            => 'nullable|boolean',
+            'nueva_fecha'                  => 'nullable|date',
+            'nueva_semana'                 => 'nullable|integer|min:1|max:18',
+        ];
+
+        $messages = [
+            'seq_cumplido.required'      => 'Debe indicar si el equipo cumplió o no con este punto de control.',
+            'seq_observaciones.required' => 'Debe justificar el motivo por el cual no se cumplió el punto de control.',
+            'seq_observaciones.min'      => 'La justificación debe tener al menos 4 caracteres.',
+        ];
+
+        $request->validate($rules, $messages);
 
         $punto = PuntoControl::findOrFail($id);
 
         $this->autorizarEquipoId($punto->puc_id_equ);
+
+        // Si no cumplió y el profesor seleccionó reprogramar
+        if (!$request->seq_cumplido && $request->boolean('desea_reprogramar')) {
+            if (!$request->filled('nueva_fecha')) {
+                return back()->withErrors(['nueva_fecha' => 'Debe indicar la nueva fecha para reprogramar el punto de control.']);
+            }
+            $hoy = now()->toDateString();
+            $maxFechaReprog = now()->addMonth()->toDateString();
+            if ($request->nueva_fecha < $hoy) {
+                return back()->withErrors(['nueva_fecha' => 'La fecha de reprogramación no puede ser en el pasado (debe ser a partir de hoy).']);
+            }
+            if ($request->nueva_fecha > $maxFechaReprog) {
+                return back()->withErrors(['nueva_fecha' => 'La fecha de reprogramación no puede exceder el límite de un mes a partir de hoy.']);
+            }
+            if ($errFecha = \App\Models\PeriodoAcademico::validarFechaEnRango($request->nueva_fecha)) {
+                return back()->withErrors(['nueva_fecha' => $errFecha]);
+            }
+        }
 
         // Permitir registrar o actualizar el seguimiento del punto de control
         $seguimientoExistente = SeguimientoEquipo::where('seq_id_equ', $punto->puc_id_equ)
@@ -260,17 +295,37 @@ class PuntoControlController extends Controller
                 'seq_fecha_cumplimiento'       => $request->seq_cumplido ? now()->toDateString() : null,
                 'seq_cumplido_a_tiempo'        => $request->seq_cumplido
                     ? (now()->toDateString() <= $punto->puc_fecha_limite)
-                    : null,
-                'seq_cumplio_previo'           => $request->seq_cumplio_previo,
-                'seq_obs_previas_verificacion' => $request->seq_obs_previas_verificacion,
+                    : false,
+                'seq_cumplio_previo'           => $request->seq_cumplido ? $request->seq_cumplio_previo : false,
+                'seq_obs_previas_verificacion' => $request->seq_cumplido ? $request->seq_obs_previas_verificacion : null,
                 'seq_observaciones'            => $request->seq_observaciones,
-                'seq_estado_semaforo'          => $request->seq_estado_semaforo ?? ($request->seq_cumplido ? 'positivo' : 'negativo'),
-                'seq_valoracion_avance'        => $request->seq_valoracion_avance,
-                'seq_id_tipo_encuentro'        => $request->seq_id_tipo_encuentro,
+                'seq_estado_semaforo'          => $request->seq_cumplido ? ($request->seq_estado_semaforo ?? 'conforme') : ($request->seq_estado_semaforo ?? 'no_conforme'),
+                'seq_valoracion_avance'        => $request->seq_cumplido ? $request->seq_valoracion_avance : 0,
+                'seq_id_tipo_encuentro'        => $request->seq_cumplido ? $request->seq_id_tipo_encuentro : null,
                 'seq_fecha_registro'           => now()->toDateString(),
                 'seq_id_usu_updated'           => auth()->id(),
             ]
         );
+
+        // Si no cumplió y se marcó reprogramar, actualizar la reprogramación del punto de control
+        if (!$request->seq_cumplido && $request->boolean('desea_reprogramar')) {
+            $punto->update([
+                'puc_fecha_reprogramada'    => $request->nueva_fecha,
+                'puc_semana'                => $request->filled('nueva_semana') ? $request->nueva_semana : $punto->puc_semana,
+                'puc_motivo_reprogramacion' => $request->seq_observaciones ?: 'Reprogramado tras no cumplimiento en fecha original',
+                'puc_reprogramado'          => true,
+                'puc_id_usu_reprogramo'     => auth()->id(),
+                'puc_fecha_reprogramacion'  => now(),
+            ]);
+
+            $fechaFormateada = \Carbon\Carbon::parse($request->nueva_fecha)->format('d/m/Y');
+            return back()->with('success', "Punto de control marcado como no cumplido y reprogramado exitosamente para el {$fechaFormateada}.");
+        }
+
+        // Si no cumplió y no se reprogramó
+        if (!$request->seq_cumplido) {
+            return back()->with('success', 'Punto de control evaluado y registrado como no cumplido.');
+        }
 
         // Registro y actualización de acuerdos / compromisos del encuentro
         if ($request->has('acuerdos') && is_array($request->acuerdos)) {
@@ -352,24 +407,71 @@ class PuntoControlController extends Controller
             }
         }
 
-        return back()->with('success', 'Seguimiento y asistencia registrados correctamente.');
+        // Si este punto está marcado como último punto de control, propagar sus observaciones a la Pre-Socialización
+        if ($punto->puc_es_ultimo_punto || $request->boolean('es_ultimo_punto')) {
+            $punto->update(['puc_es_ultimo_punto' => true]);
+            $seq->update(['seq_es_previa_socializacion' => true]);
+
+            if (!empty($request->seq_observaciones)) {
+                $tipoPreSoc = \App\Models\TipoSocializacion::where('tso_orden', 1)->first()
+                    ?? \App\Models\TipoSocializacion::first();
+
+                if ($tipoPreSoc) {
+                    $preSoc = \App\Models\Socializacion::where('soc_id_equ', $punto->puc_id_equ)
+                        ->where('soc_id_tso', $tipoPreSoc->tso_id)
+                        ->first();
+
+                    $obsTexto = "Observaciones del Último Punto de Control ({$punto->puc_nombre}): " . $request->seq_observaciones;
+                    if ($preSoc) {
+                        if (empty($preSoc->soc_observaciones)) {
+                            $preSoc->update(['soc_observaciones' => $obsTexto]);
+                        } elseif (!str_contains($preSoc->soc_observaciones, $request->seq_observaciones)) {
+                            $preSoc->update(['soc_observaciones' => $preSoc->soc_observaciones . "\n\n" . $obsTexto]);
+                        }
+                    } else {
+                        \App\Models\Socializacion::create([
+                            'soc_id_equ'         => $punto->puc_id_equ,
+                            'soc_id_tra'         => $punto->puc_id_tra,
+                            'soc_id_tso'         => $tipoPreSoc->tso_id,
+                            'soc_fecha'          => now()->toDateString(),
+                            'soc_hora'           => '08:00',
+                            'soc_lugar'          => 'Aula de Clases / UPTP JJ Montilla',
+                            'soc_apto'           => null,
+                            'soc_observaciones'  => $obsTexto,
+                            'soc_status'         => true,
+                            'soc_id_usu_created' => auth()->id(),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        return back()->with('success', 'Seguimiento y asistencia registrados correctamente' . ($punto->puc_es_ultimo_punto ? ' y observaciones transferidas a la Pre-Socialización.' : '.'));
     }
 
     public function reprogramar(\Illuminate\Http\Request $request, $id)
     {
+        $maxFechaReprog = now()->addMonth()->toDateString();
+
         $request->validate([
-            'nueva_fecha'  => 'required|date|after_or_equal:today',
+            'nueva_fecha'  => "required|date|after_or_equal:today|before_or_equal:{$maxFechaReprog}",
             'nueva_semana' => 'nullable|integer|min:1|max:18',
             'motivo'       => 'required|string|max:300',
         ], [
-            'nueva_fecha.required'       => 'La nueva fecha es obligatoria.',
-            'nueva_fecha.after_or_equal' => 'La nueva fecha no puede ser anterior a la fecha de hoy.',
-            'nueva_semana.integer'       => 'La nueva semana debe ser un número entero válido (1 al 18).',
-            'nueva_semana.min'           => 'La nueva semana debe ser como mínimo 1.',
-            'nueva_semana.max'           => 'La nueva semana no puede ser mayor a 18.',
-            'motivo.required'            => 'El motivo de la reprogramación es obligatorio.',
-            'motivo.max'                 => 'El motivo de la reprogramación no puede exceder 300 caracteres.',
+            'nueva_fecha.required'        => 'La nueva fecha es obligatoria.',
+            'nueva_fecha.after_or_equal'  => 'La nueva fecha no puede ser en el pasado (debe ser a partir de hoy).',
+            'nueva_fecha.before_or_equal' => 'La fecha de reprogramación no puede exceder el límite de un mes a partir de hoy.',
+            'nueva_semana.integer'        => 'La nueva semana debe ser un número entero válido (1 al 18).',
+            'nueva_semana.min'            => 'La nueva semana debe ser como mínimo 1.',
+            'nueva_semana.max'            => 'La nueva semana no puede ser mayor a 18.',
+            'motivo.required'             => 'El motivo de la reprogramación es obligatorio.',
+            'motivo.max'                  => 'El motivo de la reprogramación no puede exceder 300 caracteres.',
         ]);
+
+        // Validación contra el período académico activo
+        if ($errFecha = \App\Models\PeriodoAcademico::validarFechaEnRango($request->nueva_fecha)) {
+            return back()->withErrors(['nueva_fecha' => $errFecha]);
+        }
 
         $punto = PuntoControl::findOrFail($id);
 

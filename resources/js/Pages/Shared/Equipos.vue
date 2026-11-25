@@ -132,9 +132,9 @@
                     </div>
                 </div>
 
-                <!-- Barra compacta de filtros de semáforo -->
+                <!-- Barra compacta de filtros de Enfoque de Gestión de Proyectos y Procesos -->
                 <div v-if="Object.keys(props.diagnosticosEquipos || {}).length > 0" class="mb-3 d-flex flex-wrap gap-2 align-items-center">
-                    <span class="small fw-bold text-muted me-1"><i class="bi bi-funnel"></i> Semáforo:</span>
+                    <span class="small fw-bold text-muted me-1"><i class="bi bi-funnel"></i> Enfoque de Gestión de Proyectos y Procesos:</span>
                     <button
                         class="btn btn-sm py-1 px-2"
                         :class="filtroSemaforo === '' ? 'btn-danger' : 'btn-outline-secondary'"
@@ -144,31 +144,35 @@
                     </button>
                     <button
                         class="btn btn-sm py-1 px-2"
-                        :class="filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
-                        @click="filtroSemaforo = filtroSemaforo === 'en_ruta' ? '' : 'en_ruta'; pagina = 1"
+                        :class="filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
+                        @click="filtroSemaforo = (filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta') ? '' : 'conforme'; pagina = 1"
+                        title="Conforme: Cumple con los estándares y metas."
                     >
-                        🟢 En ruta ({{ contarPorSemaforo('en_ruta') }})
+                        🟢 Conforme ({{ contarPorSemaforo('conforme') }})
                     </button>
                     <button
                         class="btn btn-sm py-1 px-2"
-                        :class="filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
-                        @click="filtroSemaforo = filtroSemaforo === 'acelerar' ? '' : 'acelerar'; pagina = 1"
+                        :class="filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
+                        @click="filtroSemaforo = (filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar') ? '' : 'observado'; pagina = 1"
+                        title="Observado: Tiene parametros menores que deben mejorarse."
                     >
-                        🟡 Acelerar ({{ contarPorSemaforo('acelerar') }})
+                        🟡 Observado ({{ contarPorSemaforo('observado') }})
                     </button>
                     <button
                         class="btn btn-sm py-1 px-2"
-                        :class="filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
-                        @click="filtroSemaforo = filtroSemaforo === 'riesgo_alto' ? '' : 'riesgo_alto'; pagina = 1"
+                        :class="filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
+                        @click="filtroSemaforo = (filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto') ? '' : 'no_conforme'; pagina = 1"
+                        title="No conforme: Incumplimiento grave de los parámetros del proyecto."
                     >
-                        🔴 Riesgo alto ({{ contarPorSemaforo('riesgo_alto') }})
+                        🔴 No conforme ({{ contarPorSemaforo('no_conforme') }})
                     </button>
                     <button
                         class="btn btn-sm py-1 px-2"
-                        :class="filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
-                        @click="filtroSemaforo = filtroSemaforo === 'inviable' ? '' : 'inviable'; pagina = 1"
+                        :class="filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
+                        @click="filtroSemaforo = (filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable') ? '' : 'no_viable'; pagina = 1"
+                        title="No viable: Cierre administrativo por falta de factibilidad."
                     >
-                        ⛔ Inviable ({{ contarPorSemaforo('inviable') }})
+                        ⚫ No viable ({{ contarPorSemaforo('no_viable') }})
                     </button>
                 </div>
 
@@ -207,7 +211,7 @@
                                 <tr>
                                     <th class="ps-4">Código</th>
                                     <th>Título</th>
-                                    <th>Semáforo</th>
+                                    <th>Enfoque de Gestión de Proyectos y Procesos</th>
                                     <th>Sección</th>
                                     <th>Trayecto</th>
                                     <th>Integrantes</th>
@@ -251,6 +255,8 @@
                                             v-if="props.diagnosticosEquipos?.[equ.equ_id]"
                                             class="badge"
                                             :class="getIconoSemaforo(props.diagnosticosEquipos[equ.equ_id]?.semaforo)?.class"
+                                            :title="getEtiquetaSemaforo(props.diagnosticosEquipos[equ.equ_id]?.semaforo) + ': ' + getSignificadoSemaforo(props.diagnosticosEquipos[equ.equ_id]?.semaforo)"
+                                            style="cursor: help;"
                                         >
                                             {{ getIconoSemaforo(props.diagnosticosEquipos[equ.equ_id]?.semaforo)?.icon }}
                                             {{ getEtiquetaSemaforo(props.diagnosticosEquipos[equ.equ_id]?.semaforo) }}
@@ -1214,7 +1220,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold"
-                                            >Tipo de Proyecto</label
+                                            >Línea de Investigación</label
                                         >
                                         <div
                                             class="d-flex gap-2 align-items-center w-100"
@@ -1228,7 +1234,7 @@
                                                 "
                                             >
                                                 <option value="">
-                                                    Seleccionar tipo...
+                                                    Seleccionar línea de investigación...
                                                 </option>
                                                 <option
                                                     v-for="t in tiposProyecto"
@@ -1245,7 +1251,7 @@
                                                 @click="
                                                     abrirModalNuevoTipo('crear')
                                                 "
-                                                title="Registrar nuevo tipo de proyecto"
+                                                title="Registrar nueva línea de investigación"
                                             >
                                                 <i
                                                     class="bi bi-plus-lg me-1"
@@ -1261,18 +1267,48 @@
                                         <select
                                             v-model="formProyecto.pco_id_mpr"
                                             class="form-select"
+                                            @change="verificarOtraModalidadEqu"
                                         >
                                             <option value="">
                                                 Seleccionar modalidad...
                                             </option>
                                             <option
-                                                v-for="m in modalidades"
+                                                v-for="m in listaModalidadesEqu"
                                                 :key="m.mpr_id"
                                                 :value="m.mpr_id"
                                             >
                                                 {{ m.mpr_nombre }}
                                             </option>
+                                            <option value="__OTRO__">➕ Otro (Crear nueva modalidad...)</option>
                                         </select>
+                                        <div v-if="creandoOtraModalidadEqu" class="mt-2 p-2 rounded border bg-light">
+                                            <label class="small fw-bold text-danger mb-1">Nombre de la nueva Modalidad:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input
+                                                    v-model="nuevaModalidadEquNombre"
+                                                    type="text"
+                                                    class="form-control"
+                                                    placeholder="Ej: Desarrollo Comunitario..."
+                                                    @keyup.enter.prevent="guardarNuevaModalidadEqu"
+                                                />
+                                                <button
+                                                    class="btn btn-danger fw-bold"
+                                                    type="button"
+                                                    :disabled="!nuevaModalidadEquNombre.trim() || guardandoModalidadEqu"
+                                                    @click="guardarNuevaModalidadEqu"
+                                                >
+                                                    <span v-if="guardandoModalidadEqu" class="spinner-border spinner-border-sm me-1"></span>
+                                                    <i v-else class="bi bi-check-lg me-1"></i>Crear
+                                                </button>
+                                                <button
+                                                    class="btn btn-outline-secondary"
+                                                    type="button"
+                                                    @click="creandoOtraModalidadEqu = false"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                     <!-- Buscador de proyectos anteriores si la modalidad lo requiere -->
                                     <div
@@ -1701,7 +1737,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label small fw-bold"
-                                    >Tipo de Proyecto</label
+                                    >Línea de Investigación</label
                                 >
                                 <div
                                     class="d-flex gap-2 align-items-center w-100"
@@ -1713,7 +1749,7 @@
                                         v-model="formEditar.pco_id_tpr"
                                     >
                                         <option value="">
-                                            Seleccionar tipo...
+                                            Seleccionar línea de investigación...
                                         </option>
                                         <option
                                             v-for="t in tiposProyecto"
@@ -1727,7 +1763,7 @@
                                         type="button"
                                         class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
                                         @click="abrirModalNuevoTipo('editar')"
-                                        title="Registrar nuevo tipo de proyecto"
+                                        title="Registrar nueva línea de investigación"
                                     >
                                         <i class="bi bi-plus-lg me-1"></i>Nuevo
                                     </button>
@@ -2537,7 +2573,7 @@
                                                 color: var(--text-muted);
                                                 font-size: 0.72rem;
                                             "
-                                            >Tipo de Proyecto</span
+                                            >Línea de Investigación</span
                                         >
                                         <span
                                             class="fw-bold"
@@ -3750,7 +3786,7 @@
             </div>
         </div>
 
-        <!-- Modal Nuevo Tipo de Proyecto (Submodal con diseño Rojo, Negro y Blanco) -->
+        <!-- Modal Nueva Línea de Investigación (Submodal con diseño Rojo, Negro y Blanco) -->
         <div
             class="modal fade"
             id="mModalNuevoTipo"
@@ -3784,7 +3820,7 @@
                             class="mb-0 fw-bold fs-6 text-white d-flex align-items-center"
                         >
                             <i class="bi bi-tag-fill text-danger me-2"></i
-                            >Registrar Nuevo Tipo de Proyecto
+                            >Registrar Nueva Línea de Investigación
                         </h5>
                         <button
                             type="button"
@@ -3810,13 +3846,13 @@
                                 <i
                                     class="bi bi-info-circle-fill me-1 text-danger"
                                 ></i>
-                                Ingresa el nombre del tipo de proyecto. Quedará
+                                Ingresa el nombre de la línea de investigación. Quedará
                                 seleccionado automáticamente en el formulario.
                             </div>
 
                             <div class="mb-2">
                                 <label class="form-label small fw-bold"
-                                    >Nombre del Tipo de Proyecto
+                                    >Nombre de la Línea de Investigación
                                     <span class="text-danger">*</span></label
                                 >
                                 <input
@@ -3918,6 +3954,41 @@ const tema = ref(
         localStorage.getItem("prof-theme") ||
         "light",
 );
+
+const listaModalidadesEqu = ref([...(props.modalidades || [])]);
+const creandoOtraModalidadEqu = ref(false);
+const nuevaModalidadEquNombre = ref("");
+const guardandoModalidadEqu = ref(false);
+
+const verificarOtraModalidadEqu = () => {
+    if (formProyecto.value.pco_id_mpr === "__OTRO__") {
+        creandoOtraModalidadEqu.value = true;
+        nuevaModalidadEquNombre.value = "";
+    } else {
+        creandoOtraModalidadEqu.value = false;
+    }
+};
+
+const guardarNuevaModalidadEqu = async () => {
+    if (!nuevaModalidadEquNombre.value.trim()) return;
+    guardandoModalidadEqu.value = true;
+    try {
+        const res = await axios.post("/catalogos/crear-opcion", {
+            catalogo: "modalidad",
+            nombre: nuevaModalidadEquNombre.value.trim(),
+        });
+        if (res.data.success) {
+            listaModalidadesEqu.value.push({ mpr_id: res.data.id, mpr_nombre: res.data.nombre });
+            formProyecto.value.pco_id_mpr = res.data.id;
+            creandoOtraModalidadEqu.value = false;
+            nuevaModalidadEquNombre.value = "";
+        }
+    } catch (e) {
+        console.error("Error al crear modalidad:", e);
+    } finally {
+        guardandoModalidadEqu.value = false;
+    }
+};
 const esProfesor = computed(() =>
     window.location.pathname.startsWith("/profesor"),
 );
@@ -4347,20 +4418,29 @@ const contarPorSemaforo = (tipo) => {
     if (!listaActual.value || !props.diagnosticosEquipos) return 0;
     return listaActual.value.filter((eq) => {
         const d = props.diagnosticosEquipos[eq.equ_id];
-        return d && d.semaforo === tipo;
+        if (!d) return false;
+        if (tipo === 'conforme' || tipo === 'en_ruta') return d.semaforo === 'conforme' || d.semaforo === 'en_ruta';
+        if (tipo === 'observado' || tipo === 'acelerar') return d.semaforo === 'observado' || d.semaforo === 'acelerar';
+        if (tipo === 'no_conforme' || tipo === 'riesgo_alto') return d.semaforo === 'no_conforme' || d.semaforo === 'riesgo_alto';
+        if (tipo === 'no_viable' || tipo === 'inviable') return d.semaforo === 'no_viable' || d.semaforo === 'inviable';
+        return d.semaforo === tipo;
     }).length;
 };
 
 const getIconoSemaforo = (tipo) => {
     switch (tipo) {
         case "en_ruta":
+        case "conforme":
             return { icon: "🟢", class: "bg-success text-white" };
         case "acelerar":
+        case "observado":
             return { icon: "🟡", class: "bg-warning text-dark" };
         case "riesgo_alto":
+        case "no_conforme":
             return { icon: "🔴", class: "bg-danger text-white" };
         case "inviable":
-            return { icon: "⛔", class: "bg-dark text-white" };
+        case "no_viable":
+            return { icon: "⚫", class: "bg-dark text-white" };
         default:
             return { icon: "⚪", class: "bg-secondary text-white" };
     }
@@ -4369,15 +4449,38 @@ const getIconoSemaforo = (tipo) => {
 const getEtiquetaSemaforo = (tipo) => {
     switch (tipo) {
         case "en_ruta":
-            return "En ruta";
+        case "conforme":
+            return "Conforme";
         case "acelerar":
-            return "Acelerar";
+        case "observado":
+            return "Observado";
         case "riesgo_alto":
-            return "Riesgo alto";
+        case "no_conforme":
+            return "No conforme";
         case "inviable":
-            return "Inviable";
+        case "no_viable":
+            return "No viable";
         default:
             return "Pendiente";
+    }
+};
+
+const getSignificadoSemaforo = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+        case "conforme":
+            return "Cumple con los estándares y metas.";
+        case "acelerar":
+        case "observado":
+            return "Tiene parametros menores que deben mejorarse.";
+        case "riesgo_alto":
+        case "no_conforme":
+            return "Incumplimiento grave de los parámetros del proyecto.";
+        case "inviable":
+        case "no_viable":
+            return "Cierre administrativo por falta de factibilidad.";
+        default:
+            return "Pendiente de evaluación.";
     }
 };
 
@@ -5256,7 +5359,7 @@ const guardarNuevoTipo = async () => {
             erroresNuevoTipo.value.tpr_nombre = error.response.data.message;
         } else {
             erroresNuevoTipo.value.tpr_nombre =
-                "Error al registrar el tipo de proyecto.";
+                "Error al registrar la línea de investigación.";
         }
     }
 };

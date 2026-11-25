@@ -341,16 +341,46 @@
                                     :class="{
                                         'is-invalid': errores.com_id_tor,
                                     }"
+                                    @change="verificarOtroTipoOrg"
                                 >
                                     <option value="">Seleccionar...</option>
                                     <option
-                                        v-for="tipo in tiposOrganizacion"
+                                        v-for="tipo in listaTiposOrg"
                                         :key="tipo.tor_id"
                                         :value="tipo.tor_id"
                                     >
                                         {{ tipo.tor_nombre }}
                                     </option>
+                                    <option value="__OTRO__">➕ Otro (Crear nueva opción...)</option>
                                 </select>
+                                <div v-if="creandoOtroTipoOrg" class="mt-2 p-2 rounded border bg-light">
+                                    <label class="small fw-bold text-danger mb-1">Nombre del nuevo Tipo de Organización:</label>
+                                    <div class="input-group input-group-sm">
+                                        <input
+                                            v-model="nuevoTipoOrgNombre"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Ej: Cooperativa, Consejo Comunal, etc."
+                                            @keyup.enter.prevent="guardarNuevoTipoOrg"
+                                        />
+                                        <button
+                                            class="btn btn-danger fw-bold"
+                                            type="button"
+                                            :disabled="!nuevoTipoOrgNombre.trim() || guardandoTipoOrg"
+                                            @click="guardarNuevoTipoOrg"
+                                        >
+                                            <span v-if="guardandoTipoOrg" class="spinner-border spinner-border-sm me-1"></span>
+                                            <i v-else class="bi bi-check-lg me-1"></i>Crear
+                                        </button>
+                                        <button
+                                            class="btn btn-outline-secondary"
+                                            type="button"
+                                            @click="creandoOtroTipoOrg = false"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
                                 <div
                                     v-if="errores.com_id_tor"
                                     class="invalid-feedback"
@@ -457,6 +487,41 @@ const errores = ref({});
 const loading = ref(false);
 const editando = ref(null);
 const itemAEliminar = ref(null);
+
+const listaTiposOrg = ref([...(props.tiposOrganizacion || [])]);
+const creandoOtroTipoOrg = ref(false);
+const nuevoTipoOrgNombre = ref("");
+const guardandoTipoOrg = ref(false);
+
+const verificarOtroTipoOrg = () => {
+    if (form.value.com_id_tor === "__OTRO__") {
+        creandoOtroTipoOrg.value = true;
+        nuevoTipoOrgNombre.value = "";
+    } else {
+        creandoOtroTipoOrg.value = false;
+    }
+};
+
+const guardarNuevoTipoOrg = async () => {
+    if (!nuevoTipoOrgNombre.value.trim()) return;
+    guardandoTipoOrg.value = true;
+    try {
+        const res = await axios.post("/catalogos/crear-opcion", {
+            catalogo: "tipo_organizacion",
+            nombre: nuevoTipoOrgNombre.value.trim(),
+        });
+        if (res.data.success) {
+            listaTiposOrg.value.push({ tor_id: res.data.id, tor_nombre: res.data.nombre });
+            form.value.com_id_tor = res.data.id;
+            creandoOtroTipoOrg.value = false;
+            nuevoTipoOrgNombre.value = "";
+        }
+    } catch (e) {
+        console.error("Error al crear tipo de organización:", e);
+    } finally {
+        guardandoTipoOrg.value = false;
+    }
+};
 let modal = null;
 let modalConf = null;
 const inputUbicacionRef = ref(null);

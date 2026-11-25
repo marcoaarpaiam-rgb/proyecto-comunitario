@@ -28,8 +28,31 @@ class SocializacionController extends Controller
 
         $equipos = Equipo::whereIn('equ_id_sec', $seccionesIds)
             ->where('equ_status', true)
-            ->with(['trayecto', 'seccion', 'integrantes.usuario'])
-            ->get();
+            ->with([
+                'trayecto',
+                'seccion',
+                'integrantes.usuario',
+                'socializaciones.tipoSocializacion',
+                'puntosControl.seguimientos',
+            ])
+            ->get()
+            ->map(function ($eq) {
+                // Verificar si tiene pre-socialización aprobada (Apto)
+                $preSoc = $eq->socializaciones->first(fn($s) => $s->tipoSocializacion?->tso_orden === 1 || $s->soc_id_tso == 1);
+                $eq->tiene_presoc = (bool) $preSoc;
+                $eq->tiene_presoc_aprobada = $preSoc && (bool) $preSoc->soc_apto;
+                $eq->presoc_estado = $preSoc ? ($preSoc->soc_apto === true ? 'Apto' : ($preSoc->soc_apto === false ? 'No Apto' : 'Pendiente')) : 'Sin registrar';
+                $eq->fecha_presoc = $preSoc?->soc_fecha;
+
+                // Obtener observaciones del último punto de control
+                $ultimoPuc = $eq->puntosControl->where('puc_es_ultimo_punto', true)->first()
+                    ?? $eq->puntosControl->sortByDesc('puc_orden')->first();
+                $seqUltimo = $ultimoPuc?->seguimientos?->first();
+                $eq->ultimo_punto_nombre = $ultimoPuc?->puc_nombre;
+                $eq->ultimo_punto_observaciones = $seqUltimo?->seq_observaciones;
+
+                return $eq;
+            });
 
         return Inertia::render('Profesor/Socializaciones', [
             'socializaciones' => Socializacion::whereIn('soc_id_equ', $equipos->pluck('equ_id'))
@@ -73,6 +96,11 @@ class SocializacionController extends Controller
         
         $this->autorizarEquipoId($request->soc_id_equ);
 
+        // Validación contra el período académico activo
+        if ($errFecha = \App\Models\PeriodoAcademico::validarFechaEnRango($request->soc_fecha)) {
+            return back()->withErrors(['soc_fecha' => $errFecha]);
+        }
+
         // Obtener trayecto del equipo
         $equipo = Equipo::findOrFail($request->soc_id_equ);
         
@@ -98,7 +126,7 @@ class SocializacionController extends Controller
 
             if (!$preSocAprobada) {
                 return back()->withErrors([
-                    'soc_id_tso' => 'No se puede registrar la Socialización Final sin una Pre-Socialización marcada como apta.'
+                    'soc_id_tso' => 'Bloqueado: No se puede ingresar la Socialización Final sin haber aprobado previamente la Pre-Socialización (condición requerida: Apto).'
                 ]);
             }
 
@@ -177,6 +205,40 @@ class SocializacionController extends Controller
 
         $this->autorizarEquipoId($request->id_equipo);
         $equipo = Equipo::with('proyectoComunidad')->findOrFail($request->id_equipo);
+
+        // Validación de fecha en rango de período académico activo
+        if ($errFecha = \App\Models\PeriodoAcademico::validarFechaEnRango($request->fecha)) {
+            return back()->withErrors(['fecha' => $errFecha]);
+        }
+
+        // Semestre impar: cualitativo, NO cuenta con Socialización Final
+        $seccion = $equipo->seccion;
+        $numSemestre = $seccion ? $seccion->getSemestreNumero() : $equipo->getSemestreNumero();
+        if ($numSemestre % 2 !== 0) {
+            return back()->withErrors([
+                'fecha' => "El semestre impar (Semestre {$numSemestre}) es cualitativo y no cuenta con Socialización Final de defensa. La Socialización Final corresponde al semestre par."
+            ]);
+        }
+
+        // Es socialización final — verificar estrictamente que existe Pre-Socialización aprobada (Apto)
+        $preSocAprobada = Socializacion::where('soc_id_equ', $equipo->equ_id)
+            ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 1))
+            ->where('soc_apto', true)
+            ->latest('soc_fecha')
+            ->first();
+
+        if (!$preSocAprobada) {
+            return back()->withErrors([
+                'fecha' => 'Bloqueado: No se puede programar la Socialización Final sin haber aprobado previamente la Pre-Socialización (condición académica requerida: Apto).'
+            ]);
+        }
+
+        if ($request->fecha && $preSocAprobada->soc_fecha && $request->fecha < $preSocAprobada->soc_fecha) {
+            $fPre = \Carbon\Carbon::parse($preSocAprobada->soc_fecha)->format('d/m/Y');
+            return back()->withErrors([
+                'fecha' => "La fecha de la Socialización Final no puede ser anterior a la Pre-Socialización aprobada ({$fPre})."
+            ]);
+        }
 
         $tipoSocFinal = TipoSocializacion::where('tso_orden', 2)->first()
             ?? TipoSocializacion::where('tso_nombre', 'like', '%Final%')->first();

@@ -332,7 +332,7 @@
                                     >
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">Tipo</span
+                                    <span class="info-label">Línea de Investigación</span
                                     ><span>{{
                                         equipo.proyecto_comunidad.tipo_proyecto
                                             ?.tpr_nombre
@@ -754,7 +754,7 @@
                                         <tr>
                                             <th class="ps-4">Punto</th>
                                             <th>Fecha Límite</th>
-                                            <th>Estado / Semáforo</th>
+                                            <th>Estado / Enfoque de Gestión de Proyectos y Procesos</th>
                                             <th>Avance</th>
                                             <th>Asistencias</th>
                                             <th>Acuerdos</th>
@@ -824,13 +824,15 @@
                                                     <span
                                                         class="badge"
                                                         :class="{
-                                                            'bg-success': obtenerSeguimiento(puc).seq_estado_semaforo === 'positivo',
-                                                            'bg-warning text-dark': obtenerSeguimiento(puc).seq_estado_semaforo === 'neutral',
-                                                            'bg-danger': obtenerSeguimiento(puc).seq_estado_semaforo === 'negativo',
+                                                            'bg-success': ['positivo', 'conforme', 'en_ruta'].includes(obtenerSeguimiento(puc).seq_estado_semaforo),
+                                                            'bg-warning text-dark': ['neutral', 'observado', 'acelerar'].includes(obtenerSeguimiento(puc).seq_estado_semaforo),
+                                                            'bg-danger': ['negativo', 'no_conforme', 'riesgo_alto'].includes(obtenerSeguimiento(puc).seq_estado_semaforo),
+                                                            'bg-dark': ['inviable', 'no_viable'].includes(obtenerSeguimiento(puc).seq_estado_semaforo),
                                                         }"
-                                                        style="font-size: 0.68rem;"
+                                                        :title="getSignificadoSemaforo(obtenerSeguimiento(puc).seq_estado_semaforo)"
+                                                        style="font-size: 0.68rem; cursor: help;"
                                                     >
-                                                        Semáforo: {{ obtenerSeguimiento(puc).seq_estado_semaforo }}
+                                                        {{ getEtiquetaSemaforo(obtenerSeguimiento(puc).seq_estado_semaforo) }}
                                                     </span>
                                                 </div>
                                             </td>
@@ -1341,6 +1343,50 @@ const iconEvt = (n) => {
     if (n === "Transición Semestral") return "bi-arrow-right-circle-fill";
     if (n === "Envío a Repositorio") return "bi-archive-fill";
     return "bi-circle";
+};
+
+const getEtiquetaSemaforo = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+        case "conforme":
+        case "positivo":
+            return "🟢 Conforme";
+        case "acelerar":
+        case "observado":
+        case "neutral":
+            return "🟡 Observado";
+        case "riesgo_alto":
+        case "no_conforme":
+        case "negativo":
+            return "🔴 No conforme";
+        case "inviable":
+        case "no_viable":
+            return "⚫ No viable";
+        default:
+            return tipo;
+    }
+};
+
+const getSignificadoSemaforo = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+        case "conforme":
+        case "positivo":
+            return "Cumple con los estándares y metas.";
+        case "acelerar":
+        case "observado":
+        case "neutral":
+            return "Tiene parametros menores que deben mejorarse.";
+        case "riesgo_alto":
+        case "no_conforme":
+        case "negativo":
+            return "Incumplimiento grave de los parámetros del proyecto.";
+        case "inviable":
+        case "no_viable":
+            return "Cierre administrativo por falta de factibilidad.";
+        default:
+            return "Enfoque de Gestión de Proyectos y Procesos";
+    }
 };
 </script>
 <style scoped>

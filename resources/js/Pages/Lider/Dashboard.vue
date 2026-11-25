@@ -265,7 +265,7 @@
                                     }}</span>
                                 </div>
                                 <div class="info-row">
-                                    <span class="info-label">Tipo</span
+                                    <span class="info-label">Línea de Investigación</span
                                     ><span>{{
                                         equipo.proyecto_comunidad.tipo_proyecto
                                             ?.tpr_nombre

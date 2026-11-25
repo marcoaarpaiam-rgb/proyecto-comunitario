@@ -23,10 +23,14 @@ const syncGlobalTheme = () => {
             themeKey = "prof-theme";
         } else if (window.location.pathname.startsWith("/lider")) {
             themeKey = "lid-theme";
+        } else if (window.location.pathname === "/login") {
+            themeKey = "login-theme";
+        } else if (window.location.pathname === "/home" || window.location.pathname === "/") {
+            themeKey = "home-theme";
         } else {
-            themeKey = localStorage.getItem("coord-theme") ? "coord-theme" : (localStorage.getItem("prof-theme") ? "prof-theme" : (localStorage.getItem("lid-theme") ? "lid-theme" : "theme"));
+            themeKey = "theme";
         }
-        const currentTheme = localStorage.getItem(themeKey) || localStorage.getItem("modo") || localStorage.getItem("theme") || "light";
+        const currentTheme = localStorage.getItem(themeKey) || (themeKey === "login-theme" || themeKey === "home-theme" ? "light" : (localStorage.getItem("modo") || localStorage.getItem("theme") || "light"));
         document.documentElement.setAttribute("data-theme", currentTheme);
         document.documentElement.setAttribute("data-bs-theme", currentTheme);
         if (document.body) {

@@ -25,7 +25,7 @@
                         <i
                             class="bi bi-tag me-2 text-danger d-none d-sm-inline"
                         ></i
-                        >Tipos de Proyecto
+                        >Líneas de Investigación
                     </div>
                 </div>
                 <button class="tb-btn" @click="toggleTema">
@@ -56,7 +56,7 @@
                                 margin: 0;
                             "
                         >
-                            Tipos de Proyecto
+                            Líneas de Investigación
                         </h4>
                         <p
                             style="
@@ -65,14 +65,14 @@
                                 margin-top: 2px;
                             "
                         >
-                            Catálogo de tipos disponibles
+                            Catálogo de líneas de investigación disponibles
                         </p>
                     </div>
                     <button
                         class="btn btn-danger fw-bold rounded-pill px-4"
                         @click="abrirModal()"
                     >
-                        <i class="bi bi-plus-lg me-2"></i>Nuevo Tipo
+                        <i class="bi bi-plus-lg me-2"></i>Nueva Línea
                     </button>
                 </div>
 
@@ -225,8 +225,8 @@
                         <h5>
                             {{
                                 editando
-                                    ? "Editar Tipo"
-                                    : "Nuevo Tipo de Proyecto"
+                                    ? "Editar Línea de Investigación"
+                                    : "Nueva Línea de Investigación"
                             }}
                         </h5>
                         <button

@@ -551,6 +551,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('esquemas.update');
     Route::delete('esquemas-evaluacion/{id}', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'destroy'])
         ->name('esquemas.destroy');
+    Route::post('esquemas-evaluacion/{id}/clonar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'clonar'])
+        ->name('esquemas.clonar');
     Route::post('esquemas-evaluacion/asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'asignarSeccion'])
         ->name('esquemas.asignar');
     // Equipos — Redirección al módulo de Mis Secciones para el rol profesor
@@ -659,6 +661,9 @@ Route::middleware(['auth', 'rol:lider'])
 // =========================================================================
 Route::middleware(['auth'])->get('/api/comunidades/{id}/radar-proyectos', [ComunidadController::class, 'radarProyectos'])
     ->name('api.comunidades.radar');
+
+Route::middleware(['auth'])->post('/catalogos/crear-opcion', [MaestraController::class, 'crearOpcionRapida'])
+    ->name('catalogos.crear-opcion');
 
 Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->group(function () {
     Route::get('/', [EvaluacionTrayectoController::class, 'index'])->name('index');

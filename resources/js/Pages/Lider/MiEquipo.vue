@@ -117,108 +117,171 @@
                             </div>
                         </div>
 
-                        <!-- BLOQUE DE TRANSPARENCIA GRUPAL: Asistencias, Participaciones y Traza de Auditoría -->
-                        <div class="card border-0 shadow-sm mb-3">
-                            <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <!-- SECCIÓN DE DETALLES POR PUNTO DE CONTROL -->
+                        <div class="card border-0 shadow-sm mb-4" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
+                            <div class="card-header py-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--bg-card); border-bottom: 1px solid var(--border);">
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                                        <i class="bi bi-shield-check text-success fs-5"></i>
-                                        <span>Transparencia Grupal del Equipo</span>
+                                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2" style="color: var(--text-main);">
+                                        <i class="bi bi-geo-alt-fill text-danger fs-5"></i>
+                                        <span>Detalle de Puntos de Control y Evaluación</span>
                                     </h6>
-                                    <small class="text-muted">
-                                        Supervisión de asistencias, participación activa y traza de modificaciones docentes de todos los integrantes.
+                                    <small style="color: var(--text-muted);">
+                                        Selecciona un punto de control para consultar sus detalles, retroalimentación docente y tabla de asistencia.
                                     </small>
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <label class="small text-muted fw-semibold mb-0 d-none d-sm-inline">Filtrar:</label>
-                                    <select v-model="filtroIntegrante" class="form-select form-select-sm" style="min-width: 190px;">
-                                        <option value="todos">Todos los integrantes ({{ resumenIntegrantes.length }})</option>
-                                        <option v-for="int in resumenIntegrantes" :key="int.usu_id" :value="int.usu_id">
-                                            {{ int.nombre }} {{ int.es_lider ? '(Líder)' : '' }}
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm fw-bold"
+                                            :class="tabPuntosLider === 'activos' ? 'btn-danger text-white' : 'btn-outline-secondary'"
+                                            @click="cambiarTabPuntos('activos')"
+                                        >
+                                            <i class="bi bi-clock-history me-1"></i>En Curso / Próximos ({{ puntosActivos.length }})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm fw-bold"
+                                            :class="tabPuntosLider === 'historial' ? 'btn-danger text-white' : 'btn-outline-secondary'"
+                                            @click="cambiarTabPuntos('historial')"
+                                        >
+                                            <i class="bi bi-check-circle me-1"></i>Historial Cumplido ({{ puntosCumplidos.length }})
+                                        </button>
+                                    </div>
+                                    <select
+                                        v-model="puntoControlSeleccionado"
+                                        class="form-select form-select-sm fw-semibold"
+                                        style="min-width: 250px; background: var(--bg-card); color: var(--text-main); border-color: var(--border);"
+                                    >
+                                        <option v-if="!puntosVisibles || puntosVisibles.length === 0" value="">
+                                            {{ tabPuntosLider === 'activos' ? 'Sin puntos pendientes en curso' : 'Sin puntos cumplidos en historial' }}
+                                        </option>
+                                        <option v-for="puc in puntosVisibles" :key="puc.puc_id" :value="puc.puc_id">
+                                            {{ puc.puc_nombre }} (Semana {{ puc.puc_semana }})
                                         </option>
                                     </select>
                                 </div>
                             </div>
 
-                            <!-- Tarjetas resumen por integrante -->
-                            <div v-if="resumenIntegrantes && resumenIntegrantes.length > 0" class="card-body bg-light border-bottom p-3">
-                                <div class="row g-2">
-                                    <div v-for="int in resumenIntegrantes" :key="int.usu_id" class="col-md-4 col-sm-6">
-                                        <div class="bg-white p-2 rounded border shadow-sm h-100">
-                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                <div>
-                                                    <span class="fw-bold text-dark small d-block text-truncate" style="max-width: 140px;">{{ int.nombre }}</span>
-                                                    <span class="text-muted" style="font-size: 0.72rem;">C.I. {{ int.cedula }}</span>
-                                                </div>
-                                                <span v-if="int.es_lider" class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle" style="font-size: 0.65rem;">Líder</span>
-                                                <span v-else class="badge bg-light text-muted border" style="font-size: 0.65rem;">Integrante</span>
-                                            </div>
-                                            <div class="d-flex align-items-center justify-content-between mt-2 pt-1 border-top" style="font-size: 0.75rem;">
-                                                <span>Asistencia:</span>
-                                                <span :class="int.porcentaje_asistencia >= 85 ? 'fw-bold text-success' : (int.porcentaje_asistencia >= 75 ? 'fw-bold text-warning' : 'fw-bold text-danger')">
-                                                    {{ int.porcentaje_asistencia }}% ({{ int.asistencias + int.justificados }}/{{ int.total_encuentros }})
+                            <!-- Estado cuando no hay puntos en la pestaña activa -->
+                            <div v-if="tabPuntosLider === 'activos' && puntosActivos.length === 0" class="p-4 text-center text-muted small">
+                                <i class="bi bi-patch-check-fill text-success fs-2 d-block mb-2"></i>
+                                <div class="fw-bold fs-6 text-success">¡Excelente trabajo! Todos los puntos de control asignados han sido cumplidos y evaluados.</div>
+                                <div class="mt-1">Para revisar retroalimentaciones, observaciones y asistencias de encuentros anteriores, pulsa en el botón <strong>Historial Cumplido</strong> arriba.</div>
+                            </div>
+
+                            <!-- Si no hay puntos de control en absoluto -->
+                            <div v-else-if="!puntoActual" class="p-4 text-center text-muted small">
+                                <i class="bi bi-geo-alt fs-3 d-block mb-2"></i>
+                                No hay puntos de control registrados para este equipo en este lapso.
+                            </div>
+
+                            <div v-else>
+                                <!-- Ficha Resumen del Punto de Control Seleccionado -->
+                                <div class="p-3 border-bottom" style="background: rgba(220, 53, 69, 0.03); border-color: var(--border) !important;">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                        <div>
+                                            <h6 class="fw-bold mb-0" style="color: var(--text-main);">
+                                                {{ puntoActual.puc_nombre }}
+                                            </h6>
+                                            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                                <span class="badge bg-secondary-subtle text-secondary">
+                                                    <i class="bi bi-calendar3 me-1"></i>Semana {{ puntoActual.puc_semana }}
+                                                </span>
+                                                <span class="badge bg-light text-muted border">
+                                                    <i class="bi bi-clock me-1"></i>Límite: {{ puntoActual.puc_fecha_limite }}
+                                                </span>
+                                                <span v-if="puntoActual.puc_fecha_reprogramada" class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                    <i class="bi bi-arrow-repeat me-1"></i>Reprogramado: {{ puntoActual.puc_fecha_reprogramada }}
                                                 </span>
                                             </div>
-                                            <div class="d-flex align-items-center justify-content-between text-muted" style="font-size: 0.72rem;">
-                                                <span>Participaciones:</span>
-                                                <span class="fw-semibold text-primary">{{ int.participaciones }} activa(s)</span>
-                                            </div>
+                                        </div>
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <!-- Estado de cumplimiento -->
+                                            <span v-if="puntoActual.seguimiento?.seq_cumplido" class="badge bg-success py-1 px-2">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Cumplido {{ puntoActual.seguimiento.seq_cumplido_a_tiempo ? '(A tiempo)' : '(Con retraso)' }}
+                                            </span>
+                                            <span v-else class="badge bg-warning text-dark py-1 px-2">
+                                                <i class="bi bi-hourglass-split me-1"></i>Pendiente de evaluación
+                                            </span>
+
+                                            <!-- Enfoque de Gestión de Proyectos y Procesos -->
+                                            <span
+                                                v-if="puntoActual.seguimiento?.seq_estado_semaforo"
+                                                :class="[
+                                                    'badge py-1 px-2',
+                                                    ['positivo', 'conforme', 'en_ruta'].includes(puntoActual.seguimiento.seq_estado_semaforo) ? 'bg-success' :
+                                                    ['alerta', 'neutral', 'observado', 'acelerar'].includes(puntoActual.seguimiento.seq_estado_semaforo) ? 'bg-warning text-dark' :
+                                                    ['no_viable', 'inviable'].includes(puntoActual.seguimiento.seq_estado_semaforo) ? 'bg-dark' : 'bg-danger'
+                                                ]"
+                                                :title="getSignificadoEstado(puntoActual.seguimiento.seq_estado_semaforo)"
+                                                style="cursor: help;"
+                                            >
+                                                <i class="bi bi-circle-fill me-1" style="font-size: 0.6rem;"></i>
+                                                Enfoque de Gestión de Proyectos y Procesos: {{ getEtiquetaEstado(puntoActual.seguimiento.seq_estado_semaforo) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Descripción del punto de control -->
+                                    <div v-if="puntoActual.puc_descripcion" class="small mb-2" style="color: var(--text-muted);">
+                                        {{ puntoActual.puc_descripcion }}
+                                    </div>
+
+                                    <!-- Observaciones del docente -->
+                                    <div v-if="puntoActual.seguimiento?.seq_observaciones" class="p-2 rounded mt-2" style="background: rgba(13, 110, 253, 0.08); border-left: 3px solid #0d6efd;">
+                                        <div class="small fw-bold text-primary mb-1 d-flex align-items-center gap-1">
+                                            <i class="bi bi-chat-left-dots-fill"></i>
+                                            <span>Observaciones y Retroalimentación Docente:</span>
+                                        </div>
+                                        <div class="small" style="color: var(--text-main);">
+                                            {{ puntoActual.seguimiento.seq_observaciones }}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Tabla detallada de asistencias y traza de modificaciones -->
-                            <div class="card-body p-0">
-                                <div v-if="listaAsistencias.length === 0" class="p-4 text-center text-muted small">
-                                    <i class="bi bi-calendar-x fs-4 d-block mb-2"></i>
-                                    No se registran encuentros de control de asistencia para los criterios seleccionados.
-                                </div>
-                                <div v-else class="table-responsive">
-                                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.82rem">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="ps-3">Integrante</th>
-                                                <th>Punto de Control</th>
-                                                <th>Fecha</th>
-                                                <th>Asistencia</th>
-                                                <th>Participación</th>
-                                                <th class="pe-3" style="min-width: 200px;">Traza de Auditoría / Edición</th>
+                                <!-- Tabla detallada de asistencias y participación del punto de control -->
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0" style="font-size: 0.83rem; --bs-table-bg: transparent; --bs-table-color: var(--text-main);">
+                                        <thead>
+                                            <tr style="background: var(--bg-th); color: var(--text-main);">
+                                                <th class="ps-3" style="color: var(--text-muted); font-size: 0.78rem;">Integrante</th>
+                                                <th style="color: var(--text-muted); font-size: 0.78rem;">Rol</th>
+                                                <th style="color: var(--text-muted); font-size: 0.78rem;">Asistencia al Encuentro</th>
+                                                <th style="color: var(--text-muted); font-size: 0.78rem;">Participación Activa</th>
+                                                <th class="pe-3" style="min-width: 220px; color: var(--text-muted); font-size: 0.78rem;">Traza de Auditoría / Modificación</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="asist in listaAsistencias" :key="asist.apc_id">
+                                            <tr v-for="asist in detallesAsistenciaPunto" :key="asist.id" style="border-bottom: 1px solid var(--border);">
                                                 <td class="ps-3">
-                                                    <div class="fw-bold text-dark">{{ asist.estudiante || 'Estudiante' }}</div>
-                                                    <small class="text-muted" style="font-size: 0.72rem;">C.I. {{ asist.cedula }}</small>
+                                                    <div style="font-weight: 700; color: var(--text-main);">{{ asist.nombre }}</div>
+                                                    <small style="color: var(--text-muted); font-size: 0.72rem;">C.I. {{ asist.cedula }}</small>
                                                 </td>
                                                 <td>
-                                                    <div class="fw-semibold">{{ asist.punto_control }}</div>
-                                                    <small v-if="asist.semana" class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.65rem;">
-                                                        Semana {{ asist.semana }}
-                                                    </small>
-                                                </td>
-                                                <td class="text-muted text-nowrap">
-                                                    {{ asist.fecha }}
+                                                    <span v-if="asist.es_lider" class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.68rem;">Líder</span>
+                                                    <span v-else class="badge bg-light text-muted border" style="font-size: 0.68rem;">Integrante</span>
                                                 </td>
                                                 <td>
-                                                    <span v-if="asist.asistio" class="badge bg-success">
-                                                        <i class="bi bi-check-lg me-1"></i> Presente
+                                                    <span v-if="!asist.tiene_registro" class="badge bg-secondary-subtle text-secondary">
+                                                        <i class="bi bi-hourglass me-1"></i>Pendiente de encuentro
+                                                    </span>
+                                                    <span v-else-if="asist.asistio" class="badge bg-success">
+                                                        <i class="bi bi-check-lg me-1"></i>Presente
                                                     </span>
                                                     <span v-else-if="asist.justificado" class="badge bg-warning text-dark">
-                                                        <i class="bi bi-file-earmark-medical me-1"></i> Justificado
+                                                        <i class="bi bi-file-earmark-medical me-1"></i>Justificado
                                                     </span>
                                                     <span v-else class="badge bg-danger">
-                                                        <i class="bi bi-x-lg me-1"></i> Ausente
+                                                        <i class="bi bi-x-lg me-1"></i>Ausente
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <span v-if="asist.participo" class="badge bg-primary" title="Participación activa verificada por el docente">
-                                                        <i class="bi bi-hand-thumbs-up-fill me-1"></i> Participó
+                                                    <span v-if="!asist.tiene_registro" class="text-muted small">—</span>
+                                                    <span v-else-if="asist.participo" class="badge bg-primary">
+                                                        <i class="bi bi-hand-thumbs-up-fill me-1"></i>Participó
                                                     </span>
-                                                    <span v-else class="text-muted small">
-                                                        —
-                                                    </span>
+                                                    <span v-else class="text-muted small">—</span>
                                                 </td>
                                                 <td class="pe-3">
                                                     <div v-if="asist.updated_at || asist.motivo_edicion" class="p-1 px-2 rounded bg-warning bg-opacity-10 border border-warning-subtle text-dark" style="font-size: 0.72rem;">
@@ -226,20 +289,75 @@
                                                             <i class="bi bi-pencil-square"></i>
                                                             <span>Modificada el {{ asist.updated_at }}</span>
                                                         </div>
-                                                        <div v-if="asist.editado_por" class="text-muted mt-0" style="font-size: 0.7rem;">
-                                                            Por: {{ asist.editado_por }}
-                                                        </div>
                                                         <div v-if="asist.motivo_edicion" class="mt-1 small fst-italic">
-                                                            "{{ asist.motivo_edicion }}"
+                                                            {{ asist.motivo_edicion }}
                                                         </div>
                                                     </div>
-                                                    <span v-else class="text-muted small" style="font-size: 0.72rem;">
+                                                    <span v-else-if="asist.tiene_registro" class="text-muted small" style="font-size: 0.72rem;">
                                                         <i class="bi bi-check2 text-success me-1"></i>Registro original sin cambios
+                                                    </span>
+                                                    <span v-else class="text-muted small" style="font-size: 0.72rem;">
+                                                        Sin modificaciones
                                                     </span>
                                                 </td>
                                             </tr>
                                         </tbody>
                                     </table>
+                                </div>
+
+                                <!-- Acuerdos específicos de este punto de control -->
+                                <div v-if="puntoActual.seguimiento?.acuerdos?.length > 0" class="p-3 border-top" style="border-color: var(--border) !important;">
+                                    <h6 class="small fw-bold mb-2 d-flex align-items-center gap-1" style="color: var(--text-main);">
+                                        <i class="bi bi-list-check text-warning"></i> Compromisos y Acuerdos de este Encuentro ({{ puntoActual.seguimiento.acuerdos.length }})
+                                    </h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li v-for="ac in puntoActual.seguimiento.acuerdos" :key="ac.acue_id" class="list-group-item px-2 py-2 d-flex justify-content-between align-items-center" style="background: transparent; border-color: var(--border);">
+                                            <div>
+                                                <div class="small fw-semibold" style="color: var(--text-main);">{{ ac.acue_descripcion }}</div>
+                                                <small v-if="ac.acue_fecha_limite" style="color: var(--text-muted);">
+                                                    <i class="bi bi-clock me-1"></i> Límite: {{ ac.acue_fecha_limite }}
+                                                </small>
+                                            </div>
+                                            <span :class="ac.acue_estado === 'cumplido' ? 'badge bg-success' : (ac.acue_estado === 'en_proceso' ? 'badge bg-info text-dark' : 'badge bg-warning text-dark')">
+                                                {{ ac.acue_estado === 'cumplido' ? 'Cumplido' : (ac.acue_estado === 'en_proceso' ? 'En proceso' : 'Pendiente') }}
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen Acumulado de Asistencias del Equipo -->
+                        <div v-if="resumenIntegrantes && resumenIntegrantes.length > 0" class="card border-0 shadow-sm mb-4" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
+                            <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between" style="background: var(--bg-card); border-bottom: 1px solid var(--border);">
+                                <span class="small fw-bold" style="color: var(--text-main);">
+                                    <i class="bi bi-pie-chart-fill text-danger me-1"></i> Asistencia Acumulada por Integrante
+                                </span>
+                            </div>
+                            <div class="card-body p-3" style="background: var(--bg-th);">
+                                <div class="row g-2">
+                                    <div v-for="int in resumenIntegrantes" :key="int.usu_id" class="col-md-4 col-sm-6">
+                                        <div class="p-2 rounded border shadow-sm h-100" style="background: var(--bg-card); border-color: var(--border) !important;">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <div>
+                                                    <span class="fw-bold small d-block text-truncate" style="max-width: 140px; color: var(--text-main);">{{ int.nombre }}</span>
+                                                    <span style="font-size: 0.72rem; color: var(--text-muted);">C.I. {{ int.cedula }}</span>
+                                                </div>
+                                                <span v-if="int.es_lider" class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle" style="font-size: 0.65rem;">Líder</span>
+                                                <span v-else class="badge bg-light text-muted border" style="font-size: 0.65rem;">Integrante</span>
+                                            </div>
+                                            <div class="d-flex align-items-center justify-content-between mt-2 pt-1 border-top" style="font-size: 0.75rem; border-color: var(--border) !important;">
+                                                <span style="color: var(--text-muted);">Asistencia:</span>
+                                                <span :class="int.porcentaje_asistencia >= 85 ? 'fw-bold text-success' : (int.porcentaje_asistencia >= 75 ? 'fw-bold text-warning' : 'fw-bold text-danger')">
+                                                    {{ int.porcentaje_asistencia }}% ({{ int.asistencias + int.justificados }}/{{ int.total_encuentros }})
+                                                </span>
+                                            </div>
+                                            <div class="d-flex align-items-center justify-content-between" style="font-size: 0.72rem; color: var(--text-muted);">
+                                                <span>Participaciones:</span>
+                                                <span class="fw-semibold text-primary">{{ int.participaciones }} activa(s)</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -566,6 +684,7 @@ import SidebarLider from "@/Components/SidebarLider.vue";
 
 const props = defineProps({
     equipo: Object,
+    puntosControl: { type: Array, default: () => [] },
     tutor: Object,
     profesoresDisponibles: Array,
     diagnostico: { type: Object, default: null },
@@ -582,15 +701,76 @@ const toggleTema = () => {
     localStorage.setItem("lid-theme", tema.value);
 };
 
-const filtroIntegrante = ref("todos");
-const listaAsistencias = computed(() => {
-    const list = props.asistenciasGrupo && props.asistenciasGrupo.length > 0
-        ? props.asistenciasGrupo
-        : props.misAsistencias;
-    if (filtroIntegrante.value === "todos") {
-        return list;
-    }
-    return list.filter((a) => String(a.usu_id) === String(filtroIntegrante.value));
+const tabPuntosLider = ref("activos"); // "activos" | "historial"
+
+const puntosCumplidos = computed(() => {
+    return (props.puntosControl || []).filter(
+        (p) => p.seguimiento?.seq_cumplido === true
+    );
+});
+
+const puntosActivos = computed(() => {
+    return (props.puntosControl || []).filter(
+        (p) => p.seguimiento?.seq_cumplido !== true
+    );
+});
+
+const puntosVisibles = computed(() => {
+    return tabPuntosLider.value === "activos"
+        ? puntosActivos.value
+        : puntosCumplidos.value;
+});
+
+const puntoControlSeleccionado = ref(
+    props.puntosControl && props.puntosControl.length > 0
+        ? (props.puntosControl.find((p) => p.seguimiento?.seq_cumplido !== true)?.puc_id || props.puntosControl[0].puc_id)
+        : ""
+);
+
+const cambiarTabPuntos = (tab) => {
+    tabPuntosLider.value = tab;
+    const lista = tab === "activos" ? puntosActivos.value : puntosCumplidos.value;
+    puntoControlSeleccionado.value = lista.length > 0 ? lista[0].puc_id : "";
+};
+
+const puntoActual = computed(() => {
+    if (!props.puntosControl || props.puntosControl.length === 0) return null;
+    return (
+        props.puntosControl.find(
+            (p) => String(p.puc_id) === String(puntoControlSeleccionado.value)
+        ) || (puntosVisibles.value.length > 0 ? puntosVisibles.value[0] : null)
+    );
+});
+
+const detallesAsistenciaPunto = computed(() => {
+    if (!puntoActual.value) return [];
+
+    const seq = puntoActual.value.seguimiento;
+    const asistenciasSeq = seq?.asistencias || [];
+
+    const integrantes = (props.equipo?.integrantes || []).filter(
+        (i) => i.ein_status !== false
+    );
+
+    return integrantes.map((int) => {
+        const registro = asistenciasSeq.find(
+            (a) => a.apc_id_usu === int.ein_id_usu
+        );
+        const u = int.usuario;
+        return {
+            id: registro?.apc_id || `int-${int.ein_id}`,
+            usu_id: int.ein_id_usu,
+            nombre: u ? `${u.usu_primer_nombre} ${u.usu_primer_apellido}` : "Estudiante",
+            cedula: u?.usu_cedula || "S/C",
+            es_lider: Boolean(int.ein_es_lider),
+            tiene_registro: Boolean(registro),
+            asistio: registro ? Boolean(registro.apc_asistio) : null,
+            justificado: registro ? Boolean(registro.apc_justificado) : null,
+            participo: registro ? Boolean(registro.apc_participo) : null,
+            motivo_edicion: registro?.apc_motivo_edicion || null,
+            updated_at: registro?.apc_updated_at || null,
+        };
+    });
 });
 
 const modalLogout = ref(null);
@@ -617,6 +797,52 @@ const guardarTutor = () => {
         },
     });
 };
+const getEtiquetaEstado = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+        case "conforme":
+        case "positivo":
+            return "Conforme";
+        case "acelerar":
+        case "observado":
+        case "neutral":
+        case "alerta":
+            return "Observado";
+        case "riesgo_alto":
+        case "no_conforme":
+        case "negativo":
+            return "No conforme";
+        case "inviable":
+        case "no_viable":
+            return "No viable";
+        default:
+            return tipo;
+    }
+};
+
+const getSignificadoEstado = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+        case "conforme":
+        case "positivo":
+            return "Cumple con los estándares y metas.";
+        case "acelerar":
+        case "observado":
+        case "neutral":
+        case "alerta":
+            return "Tiene parametros menores que deben mejorarse.";
+        case "riesgo_alto":
+        case "no_conforme":
+        case "negativo":
+            return "Incumplimiento grave de los parámetros del proyecto.";
+        case "inviable":
+        case "no_viable":
+            return "Cierre administrativo por falta de factibilidad.";
+        default:
+            return "Enfoque de Gestión de Proyectos y Procesos";
+    }
+};
+
 const notifNoLeidas = ref(0);
 onMounted(() => {
     fetch("/notificaciones/lista")

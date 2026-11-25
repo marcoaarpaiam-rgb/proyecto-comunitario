@@ -68,12 +68,7 @@
                             Gestión de proyectos por equipo
                         </p>
                     </div>
-                    <button
-                        class="btn btn-danger fw-bold rounded-pill px-4"
-                        @click="abrirModal()"
-                    >
-                        <i class="bi bi-plus-lg me-2"></i>Nuevo Proyecto
-                    </button>
+
                 </div>
 
                 <div class="sc">
@@ -410,7 +405,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold"
-                                        >Tipo de Proyecto
+                                        >Línea de Investigación
                                         <span class="text-danger"
                                             >*</span
                                         ></label
@@ -421,16 +416,46 @@
                                         :class="{
                                             'is-invalid': errores.pco_id_tpr,
                                         }"
+                                        @change="verificarOtroTipoInv"
                                     >
                                         <option value="">Seleccionar...</option>
                                         <option
-                                            v-for="t in tipos"
+                                            v-for="t in listaTiposInvestigacion"
                                             :key="t.tpr_id"
                                             :value="t.tpr_id"
                                         >
                                             {{ t.tpr_nombre }}
                                         </option>
+                                        <option value="__OTRO__">➕ Otro (Crear nueva Línea de Investigación...)</option>
                                     </select>
+                                    <div v-if="creandoOtroTipoInv" class="mt-2 p-2 rounded border bg-light">
+                                        <label class="small fw-bold text-danger mb-1">Nombre de la nueva Línea de Investigación:</label>
+                                        <div class="input-group input-group-sm">
+                                            <input
+                                                v-model="nuevoTipoInvNombre"
+                                                type="text"
+                                                class="form-control"
+                                                placeholder="Ej: Redes Comunitarias, Ciberseguridad Popular..."
+                                                @keyup.enter.prevent="guardarNuevoTipoInv"
+                                            />
+                                            <button
+                                                class="btn btn-danger fw-bold"
+                                                type="button"
+                                                :disabled="!nuevoTipoInvNombre.trim() || guardandoTipoInv"
+                                                @click="guardarNuevoTipoInv"
+                                            >
+                                                <span v-if="guardandoTipoInv" class="spinner-border spinner-border-sm me-1"></span>
+                                                <i v-else class="bi bi-check-lg me-1"></i>Crear
+                                            </button>
+                                            <button
+                                                class="btn btn-outline-secondary"
+                                                type="button"
+                                                @click="creandoOtroTipoInv = false"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div
                                         v-if="errores.pco_id_tpr"
                                         class="invalid-feedback"
@@ -451,16 +476,46 @@
                                         :class="{
                                             'is-invalid': errores.pco_id_mpr,
                                         }"
+                                        @change="verificarOtraModalidad"
                                     >
                                         <option value="">Seleccionar...</option>
                                         <option
-                                            v-for="m in modalidades"
+                                            v-for="m in listaModalidades"
                                             :key="m.mpr_id"
                                             :value="m.mpr_id"
                                         >
                                             {{ m.mpr_nombre }}
                                         </option>
+                                        <option value="__OTRO__">➕ Otro (Crear nueva Modalidad...)</option>
                                     </select>
+                                    <div v-if="creandoOtraModalidad" class="mt-2 p-2 rounded border bg-light">
+                                        <label class="small fw-bold text-danger mb-1">Nombre de la nueva Modalidad:</label>
+                                        <div class="input-group input-group-sm">
+                                            <input
+                                                v-model="nuevaModalidadNombre"
+                                                type="text"
+                                                class="form-control"
+                                                placeholder="Ej: Desarrollo de Software, Soporte Técnico..."
+                                                @keyup.enter.prevent="guardarNuevaModalidad"
+                                            />
+                                            <button
+                                                class="btn btn-danger fw-bold"
+                                                type="button"
+                                                :disabled="!nuevaModalidadNombre.trim() || guardandoModalidad"
+                                                @click="guardarNuevaModalidad"
+                                            >
+                                                <span v-if="guardandoModalidad" class="spinner-border spinner-border-sm me-1"></span>
+                                                <i v-else class="bi bi-check-lg me-1"></i>Crear
+                                            </button>
+                                            <button
+                                                class="btn btn-outline-secondary"
+                                                type="button"
+                                                @click="creandoOtraModalidad = false"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div
                                         v-if="errores.pco_id_mpr"
                                         class="invalid-feedback"
@@ -783,6 +838,76 @@ const loading = ref(false);
 const itemSeleccionado = ref(null);
 const radarData = ref(null);
 const loadingRadar = ref(false);
+
+const listaTiposInvestigacion = ref([...(props.tipos || [])]);
+const creandoOtroTipoInv = ref(false);
+const nuevoTipoInvNombre = ref("");
+const guardandoTipoInv = ref(false);
+
+const verificarOtroTipoInv = () => {
+    if (form.value.pco_id_tpr === "__OTRO__") {
+        creandoOtroTipoInv.value = true;
+        nuevoTipoInvNombre.value = "";
+    } else {
+        creandoOtroTipoInv.value = false;
+    }
+};
+
+const guardarNuevoTipoInv = async () => {
+    if (!nuevoTipoInvNombre.value.trim()) return;
+    guardandoTipoInv.value = true;
+    try {
+        const res = await axios.post("/catalogos/crear-opcion", {
+            catalogo: "linea_investigacion",
+            nombre: nuevoTipoInvNombre.value.trim(),
+        });
+        if (res.data.success) {
+            listaTiposInvestigacion.value.push({ tpr_id: res.data.id, tpr_nombre: res.data.nombre });
+            form.value.pco_id_tpr = res.data.id;
+            creandoOtroTipoInv.value = false;
+            nuevoTipoInvNombre.value = "";
+        }
+    } catch (e) {
+        console.error("Error al crear línea de investigación:", e);
+    } finally {
+        guardandoTipoInv.value = false;
+    }
+};
+
+const listaModalidades = ref([...(props.modalidades || [])]);
+const creandoOtraModalidad = ref(false);
+const nuevaModalidadNombre = ref("");
+const guardandoModalidad = ref(false);
+
+const verificarOtraModalidad = () => {
+    if (form.value.pco_id_mpr === "__OTRO__") {
+        creandoOtraModalidad.value = true;
+        nuevaModalidadNombre.value = "";
+    } else {
+        creandoOtraModalidad.value = false;
+    }
+};
+
+const guardarNuevaModalidad = async () => {
+    if (!nuevaModalidadNombre.value.trim()) return;
+    guardandoModalidad.value = true;
+    try {
+        const res = await axios.post("/catalogos/crear-opcion", {
+            catalogo: "modalidad",
+            nombre: nuevaModalidadNombre.value.trim(),
+        });
+        if (res.data.success) {
+            listaModalidades.value.push({ mpr_id: res.data.id, mpr_nombre: res.data.nombre });
+            form.value.pco_id_mpr = res.data.id;
+            creandoOtraModalidad.value = false;
+            nuevaModalidadNombre.value = "";
+        }
+    } catch (e) {
+        console.error("Error al crear modalidad:", e);
+    } finally {
+        guardandoModalidad.value = false;
+    }
+};
 
 const consultarRadarComunidad = async () => {
     const comId = form.value.pco_id_com;

@@ -137,13 +137,13 @@
                     </div>
                 </div>
 
-                <!-- Diagnóstico y Estado Semáforo de Equipos (Filtros Compactos) -->
+                <!-- Diagnóstico y Enfoque de Gestión de Proyectos y Procesos de Equipos (Filtros Compactos) -->
                 <div v-if="diagnosticosEquipos && Object.keys(diagnosticosEquipos).length > 0" class="card border-0 shadow-sm p-3 mb-3 bg-white">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                         <div class="d-flex align-items-center gap-2">
                             <span class="fs-5">🧭</span>
                             <div>
-                                <h6 class="fw-bold mb-0 text-dark">Ruta Crítica y Semáforo de Equipos</h6>
+                                <h6 class="fw-bold mb-0 text-dark">Ruta Crítica y Enfoque de Gestión de Proyectos y Procesos</h6>
                                 <small class="text-muted" style="font-size: 0.75rem">Semana {{ semanaActual }} &bull; Haz clic en los filtros para filtrar equipos</small>
                             </div>
                         </div>
@@ -158,31 +158,35 @@
                         </button>
                         <button
                             class="btn btn-sm"
-                            :class="filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
-                            @click="filtroSemaforo = filtroSemaforo === 'en_ruta' ? '' : 'en_ruta'"
+                            :class="filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
+                            @click="filtroSemaforo = (filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta') ? '' : 'conforme'"
+                            title="Conforme: Cumple con los estándares y metas."
                         >
-                            🟢 En ruta ({{ contarPorSemaforo('en_ruta') }})
+                            🟢 Conforme ({{ contarPorSemaforo('conforme') }})
                         </button>
                         <button
                             class="btn btn-sm"
-                            :class="filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
-                            @click="filtroSemaforo = filtroSemaforo === 'acelerar' ? '' : 'acelerar'"
+                            :class="filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
+                            @click="filtroSemaforo = (filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar') ? '' : 'observado'"
+                            title="Observado: Tiene parametros menores que deben mejorarse."
                         >
-                            🟡 Acelerar ({{ contarPorSemaforo('acelerar') }})
+                            🟡 Observado ({{ contarPorSemaforo('observado') }})
                         </button>
                         <button
                             class="btn btn-sm"
-                            :class="filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
-                            @click="filtroSemaforo = filtroSemaforo === 'riesgo_alto' ? '' : 'riesgo_alto'"
+                            :class="filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
+                            @click="filtroSemaforo = (filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto') ? '' : 'no_conforme'"
+                            title="No conforme: Incumplimiento grave de los parámetros del proyecto."
                         >
-                            🔴 Riesgo alto ({{ contarPorSemaforo('riesgo_alto') }})
+                            🔴 No conforme ({{ contarPorSemaforo('no_conforme') }})
                         </button>
                         <button
                             class="btn btn-sm"
-                            :class="filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
-                            @click="filtroSemaforo = filtroSemaforo === 'inviable' ? '' : 'inviable'"
+                            :class="filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
+                            @click="filtroSemaforo = (filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable') ? '' : 'no_viable'"
+                            title="No viable: Cierre administrativo por falta de factibilidad."
                         >
-                            ⛔ Inviable ({{ contarPorSemaforo('inviable') }})
+                            ⚫ No viable ({{ contarPorSemaforo('no_viable') }})
                         </button>
                     </div>
                 </div>
@@ -194,7 +198,7 @@
                         style="color: var(--text-muted)"
                     >
                         <i class="bi bi-people fs-1 d-block mb-3"></i>No hay
-                        equipos {{ filtroSemaforo ? 'con el estado de semáforo seleccionado' : 'en esta sección' }}
+                        equipos {{ filtroSemaforo ? 'con el Enfoque de Gestión seleccionado' : 'en esta sección' }}
                     </div>
                 </div>
 
@@ -345,20 +349,29 @@ const contarPorSemaforo = (tipo) => {
     if (!props.equipos || !props.diagnosticosEquipos) return 0;
     return props.equipos.filter((eq) => {
         const d = props.diagnosticosEquipos[eq.equ_id];
-        return d && d.semaforo === tipo;
+        if (!d) return false;
+        if (tipo === 'conforme' || tipo === 'en_ruta') return d.semaforo === 'conforme' || d.semaforo === 'en_ruta';
+        if (tipo === 'observado' || tipo === 'acelerar') return d.semaforo === 'observado' || d.semaforo === 'acelerar';
+        if (tipo === 'no_conforme' || tipo === 'riesgo_alto') return d.semaforo === 'no_conforme' || d.semaforo === 'riesgo_alto';
+        if (tipo === 'no_viable' || tipo === 'inviable') return d.semaforo === 'no_viable' || d.semaforo === 'inviable';
+        return d.semaforo === tipo;
     }).length;
 };
 
 const getIconoSemaforo = (tipo) => {
     switch (tipo) {
         case "en_ruta":
+        case "conforme":
             return { icon: "🟢", class: "bg-success text-white" };
         case "acelerar":
+        case "observado":
             return { icon: "🟡", class: "bg-warning text-dark" };
         case "riesgo_alto":
+        case "no_conforme":
             return { icon: "🔴", class: "bg-danger text-white" };
         case "inviable":
-            return { icon: "⛔", class: "bg-dark text-white" };
+        case "no_viable":
+            return { icon: "⚫", class: "bg-dark text-white" };
         default:
             return { icon: "⚪", class: "bg-secondary text-white" };
     }
@@ -367,15 +380,38 @@ const getIconoSemaforo = (tipo) => {
 const getEtiquetaSemaforo = (tipo) => {
     switch (tipo) {
         case "en_ruta":
-            return "En ruta";
+        case "conforme":
+            return "Conforme";
         case "acelerar":
-            return "Acelerar";
+        case "observado":
+            return "Observado";
         case "riesgo_alto":
-            return "Riesgo alto";
+        case "no_conforme":
+            return "No conforme";
         case "inviable":
-            return "Inviable";
+        case "no_viable":
+            return "No viable";
         default:
             return "Pendiente";
+    }
+};
+
+const getSignificadoSemaforo = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+        case "conforme":
+            return "Cumple con los estándares y metas.";
+        case "acelerar":
+        case "observado":
+            return "Tiene parametros menores que deben mejorarse.";
+        case "riesgo_alto":
+        case "no_conforme":
+            return "Incumplimiento grave de los parámetros del proyecto.";
+        case "inviable":
+        case "no_viable":
+            return "Cierre administrativo por falta de factibilidad.";
+        default:
+            return "Pendiente de evaluación.";
     }
 };
 

@@ -481,7 +481,7 @@ const menuCoordinador = [
         icon: "bi bi-table",
         children: [
             {
-                label: "Tipos de Proyecto",
+                label: "Líneas de Investigación",
                 svg: svgs.tag,
                 icon: "bi bi-tag",
                 href: "/coordinador/tipos-proyecto",
@@ -656,12 +656,6 @@ const menuLider = [
         svg: svgs.upload,
         icon: "bi bi-cloud-upload-fill",
         href: "/lider/entregables",
-    },
-    {
-        label: "Autoevaluación PST (10%)",
-        svg: svgs.autoevaluacion,
-        icon: "bi bi-check-circle",
-        href: "/evaluaciones",
     },
     {
         label: "Carta de Presentación",

@@ -24,12 +24,6 @@
             <!-- TOPBAR -->
             <div class="topbar">
                 <div class="d-flex align-items-center gap-3">
-                    <button
-                        class="btn btn-outline-danger btn-sm toggle-btn px-2"
-                        @click="sidebarOpen = true"
-                    >
-                        <i class="bi bi-list fs-4"></i>
-                    </button>
                     <div class="tb-title">
                         <i class="bi bi-arrow-left-right me-2 text-danger"></i>
                         Gestión Académica de Secciones: Transición Semestral y Cierre

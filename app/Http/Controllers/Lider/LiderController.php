@@ -85,27 +85,44 @@ class LiderController extends Controller
         $equipo = $this->getEquipo();
         if (!$equipo) return redirect()->route('lider.dashboard');
 
+        $semestreActivo = app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion((int) ($equipo->equ_id_sec ?? 0));
+        $semestreNumero = str_contains($semestreActivo, '2') ? '2' : '1';
+
+        $catalogoPnfi = \App\Models\CatalogoEntregablePnfi::where('cep_id_trayecto', $equipo->equ_id_tra)
+            ->where('cep_activo', true)
+            ->where(function ($q) use ($semestreActivo, $semestreNumero) {
+                $q->where('cep_semestre', $semestreActivo)
+                  ->orWhere('cep_semestre', $semestreNumero)
+                  ->orWhere('cep_semestre', "Semestre {$semestreNumero}");
+            })
+            ->orderBy('cep_orden')
+            ->get();
+
+        $catalogoIds = $catalogoPnfi->pluck('cep_id');
+
+        $entregables = Entregable::where('entr_id_equ', $equipo->equ_id)
+            ->where(function ($q) use ($catalogoIds) {
+                $q->whereIn('entr_id_cep', $catalogoIds)
+                  ->orWhereNull('entr_id_cep');
+            })
+            ->with(['tipoEntregable', 'catalogoPnfi'])
+            ->orderBy('entr_fecha_subida', 'desc')
+            ->get();
+
         return Inertia::render('Lider/Entregables', [
             'equipo'      => $equipo,
-            'entregables' => Entregable::where('entr_id_equ', $equipo->equ_id)
-                ->with(['tipoEntregable', 'catalogoPnfi'])
-                ->orderBy('entr_fecha_subida', 'desc')
-                ->get(),
+            'entregables' => $entregables,
             'tiposEntregable' => TipoEntregableTrayecto::where(
                 'tet_trayecto_numero',
                 $equipo->trayecto->tra_numero
             )->where('tet_status', true)->get(),
-            'catalogoPnfi' => \App\Models\CatalogoEntregablePnfi::where('cep_id_trayecto', $equipo->equ_id_tra)
-                ->where('cep_activo', true)
-                ->orderBy('cep_semestre')
-                ->orderBy('cep_orden')
-                ->get(),
+            'catalogoPnfi' => $catalogoPnfi,
             'cartaAprobada' => $equipo && $equipo->proyectoComunidad
                 ? \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad->pco_id)
                     ->whereNotNull('cpr_fecha_aprobacion')
                     ->exists()
                 : false,
-            'semestreActivo' => app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion((int) ($equipo->equ_id_sec ?? 0)),
+            'semestreActivo' => $semestreActivo,
         ]);
     }
 
@@ -128,6 +145,25 @@ class LiderController extends Controller
 
         $equipo = $this->getEquipo();
         if (!$equipo) return back()->withErrors(['equipo' => 'No tienes equipo asignado.']);
+
+        if (!empty($request->entr_id_cep)) {
+            $semestreActivo = app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion((int) ($equipo->equ_id_sec ?? 0));
+            $semestreNumero = str_contains($semestreActivo, '2') ? '2' : '1';
+
+            $cepValido = \App\Models\CatalogoEntregablePnfi::where('cep_id', $request->entr_id_cep)
+                ->where('cep_id_trayecto', $equipo->equ_id_tra)
+                ->where('cep_activo', true)
+                ->where(function ($q) use ($semestreActivo, $semestreNumero) {
+                    $q->where('cep_semestre', $semestreActivo)
+                      ->orWhere('cep_semestre', $semestreNumero)
+                      ->orWhere('cep_semestre', "Semestre {$semestreNumero}");
+                })
+                ->exists();
+
+            if (!$cepValido) {
+                return back()->withErrors(['entr_id_cep' => 'El entregable seleccionado no corresponde al semestre actual de tu sección.']);
+            }
+        }
         
         // Si no viene entr_id_tet pero viene entr_id_cep, mapear un default para compatibilidad con esquemas viejos
         $idTet = $request->entr_id_tet;
@@ -248,6 +284,19 @@ class LiderController extends Controller
                 ->get()
             : collect([]);
 
+        // Puntos de control del equipo con seguimiento, acuerdos, asistencias y entregables
+        $puntosControl = PuntoControl::where('puc_id_equ', $equipo->equ_id)
+            ->where('puc_status', true)
+            ->with([
+                'seguimiento.tipoEncuentro',
+                'seguimiento.acuerdos',
+                'seguimiento.asistencias.usuario',
+                'entregables.tipoEntregable',
+            ])
+            ->orderBy('puc_orden')
+            ->orderBy('puc_semana')
+            ->get();
+
         // Registro completo de asistencias y participaciones de todo el equipo (Transparencia Grupal)
         $asistenciasGrupo = \Illuminate\Support\Facades\DB::table('asistencia_punto_control as apc')
             ->join('seguimiento_equipo as seq', 'apc.apc_id_seq', '=', 'seq.seq_id')
@@ -258,6 +307,7 @@ class LiderController extends Controller
             ->select(
                 'apc.apc_id',
                 'apc.apc_id_usu as usu_id',
+                'puc.puc_id as puc_id',
                 'usu.usu_cedula as cedula',
                 \Illuminate\Support\Facades\DB::raw("CONCAT(usu.usu_primer_nombre, ' ', usu.usu_primer_apellido) as estudiante"),
                 'puc.puc_nombre as punto_control',
@@ -298,6 +348,7 @@ class LiderController extends Controller
 
         return Inertia::render('Lider/MiEquipo', [
             'equipo' => $equipo,
+            'puntosControl' => $puntosControl,
             'diagnostico' => $diagnostico,
             'acuerdosPendientes' => $acuerdosPendientes,
             'misAsistencias' => $misAsistencias,

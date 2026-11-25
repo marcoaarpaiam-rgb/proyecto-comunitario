@@ -23,6 +23,15 @@ class Seccion extends Model
         'sec_id_usu_updated',
     ];
 
+    protected $appends = ['sec_nombre'];
+
+    public function getSecNombreAttribute(): string
+    {
+        $tra = $this->trayecto?->tra_nombre ? " - {$this->trayecto->tra_nombre}" : '';
+        $tur = $this->turno?->tur_nombre ? " ({$this->turno->tur_nombre})" : '';
+        return "Sección {$this->sec_codigo}{$tra}{$tur}";
+    }
+
     public function trayecto()
     {
         return $this->belongsTo(Trayecto::class, 'sec_id_tra', 'tra_id');

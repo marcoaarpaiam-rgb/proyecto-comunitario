@@ -115,9 +115,9 @@
                 <div v-if="diagnosticosEquipos && Object.keys(diagnosticosEquipos).length > 0" class="mb-4">
                     <div class="card border-0 shadow-sm p-3">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            <!-- Filtros rápidos por estado de semáforo -->
+                            <!-- Filtros rápidos por Enfoque de Gestión de Proyectos y Procesos -->
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <span class="fw-bold small text-muted">Semáforo Semana {{ semanaActual }}:</span>
+                                <span class="fw-bold small text-muted">Enfoque de Gestión de Proyectos y Procesos (Semana {{ semanaActual }}):</span>
                                 <button
                                     type="button"
                                     class="btn btn-sm rounded-pill py-0 px-2"
@@ -130,38 +130,42 @@
                                 <button
                                     type="button"
                                     class="btn btn-sm rounded-pill py-0 px-2"
-                                    :class="filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
+                                    :class="filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
                                     style="font-size: 0.78rem;"
-                                    @click="filtroSemaforo = filtroSemaforo === 'en_ruta' ? '' : 'en_ruta'"
+                                    @click="filtroSemaforo = (filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta') ? '' : 'conforme'"
+                                    title="Conforme: Cumple con los estándares y metas."
                                 >
-                                    🟢 En ruta ({{ contarPorSemaforo('en_ruta') }})
+                                    🟢 Conforme ({{ contarPorSemaforo('conforme') }})
                                 </button>
                                 <button
                                     type="button"
                                     class="btn btn-sm rounded-pill py-0 px-2"
-                                    :class="filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
+                                    :class="filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
                                     style="font-size: 0.78rem;"
-                                    @click="filtroSemaforo = filtroSemaforo === 'acelerar' ? '' : 'acelerar'"
+                                    @click="filtroSemaforo = (filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar') ? '' : 'observado'"
+                                    title="Observado: Tiene parametros menores que deben mejorarse."
                                 >
-                                    🟡 Acelerar ({{ contarPorSemaforo('acelerar') }})
+                                    🟡 Observado ({{ contarPorSemaforo('observado') }})
                                 </button>
                                 <button
                                     type="button"
                                     class="btn btn-sm rounded-pill py-0 px-2"
-                                    :class="filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
+                                    :class="filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
                                     style="font-size: 0.78rem;"
-                                    @click="filtroSemaforo = filtroSemaforo === 'riesgo_alto' ? '' : 'riesgo_alto'"
+                                    @click="filtroSemaforo = (filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto') ? '' : 'no_conforme'"
+                                    title="No conforme: Incumplimiento grave de los parámetros del proyecto."
                                 >
-                                    🔴 Riesgo alto ({{ contarPorSemaforo('riesgo_alto') }})
+                                    🔴 No conforme ({{ contarPorSemaforo('no_conforme') }})
                                 </button>
                                 <button
                                     type="button"
                                     class="btn btn-sm rounded-pill py-0 px-2"
-                                    :class="filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
+                                    :class="filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
                                     style="font-size: 0.78rem;"
-                                    @click="filtroSemaforo = filtroSemaforo === 'inviable' ? '' : 'inviable'"
+                                    @click="filtroSemaforo = (filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable') ? '' : 'no_viable'"
+                                    title="No viable: Cierre administrativo por falta de factibilidad."
                                 >
-                                    ⛔ Inviable ({{ contarPorSemaforo('inviable') }})
+                                    ⚫ No viable ({{ contarPorSemaforo('no_viable') }})
                                 </button>
                             </div>
 
@@ -387,7 +391,7 @@
                                                 class="badge border-0 cursor-pointer"
                                                 :class="'bg-' + (diagnosticosEquipos[puc.puc_id_equ].color || 'secondary')"
                                                 style="font-size: 0.72rem; cursor: pointer;"
-                                                title="Ver Diagnóstico y Ruta Crítica del Equipo"
+                                                :title="getEtiquetaSemaforo(diagnosticosEquipos[puc.puc_id_equ].semaforo) + ': ' + getSignificadoSemaforo(diagnosticosEquipos[puc.puc_id_equ].semaforo)"
                                                 @click="equipoSeleccionadoDiag = puc.puc_id_equ"
                                             >
                                                 {{ getEtiquetaSemaforo(diagnosticosEquipos[puc.puc_id_equ].semaforo) }}
@@ -643,13 +647,17 @@
                                     <input
                                         v-model="form.puc_fecha_limite"
                                         type="date"
-                                        :min="fechaHoy"
+                                        :min="$page.props.periodoActivo?.fecha_inicio || fechaHoy"
+                                        :max="$page.props.periodoActivo?.fecha_fin"
                                         class="form-control"
                                         :class="{
                                             'is-invalid':
                                                 errores.puc_fecha_limite,
                                         }"
                                     />
+                                    <small v-if="$page.props.periodoActivo?.lapso_academico" class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                        Lapso activo: {{ $page.props.periodoActivo.fecha_inicio_formato }} - {{ $page.props.periodoActivo.fecha_fin_formato }}
+                                    </small>
                                     <div
                                         v-if="errores.puc_fecha_limite"
                                         class="invalid-feedback"
@@ -685,6 +693,26 @@
                                     class="form-control"
                                     rows="2"
                                 ></textarea>
+                            </div>
+
+                            <!-- Interruptor: Último Punto de Control del Semestre -->
+                            <div class="mt-3">
+                                <div class="form-check form-switch p-3 rounded" style="background: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2);">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        id="checkPucUltimoPunto"
+                                        v-model="form.puc_es_ultimo_punto"
+                                        style="cursor: pointer;"
+                                    />
+                                    <label class="form-check-label fw-bold ms-2" for="checkPucUltimoPunto" style="cursor: pointer; color: var(--text-main);">
+                                        <i class="bi bi-flag-fill text-danger me-1"></i>
+                                        ¿Es el último punto de control del semestre?
+                                    </label>
+                                    <div class="small text-muted mt-1 ps-4">
+                                        Al marcar esta opción, este punto representará el cierre del lapso y sus observaciones se transferirán automáticamente como antecedentes para la <strong>Pre-Socialización</strong> del equipo.
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer border-0">
@@ -814,6 +842,157 @@
                                 </table>
                             </div>
 
+                            <!-- PREGUNTA PRINCIPAL: ¿Se cumplió el punto de control? -->
+                            <div class="card border p-3 mb-3" style="background: var(--bg-card); border-color: var(--border) !important;">
+                                <label class="form-label fw-bold d-flex align-items-center gap-2 mb-2" style="font-size: 0.95rem; color: var(--text-main);">
+                                    <i class="bi bi-question-circle-fill text-danger fs-5"></i>
+                                    <span>¿Se cumplió el punto de control?</span>
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex gap-4">
+                                    <div class="form-check">
+                                        <input
+                                            type="radio"
+                                            class="form-check-input"
+                                            v-model="formSeg.seq_cumplido"
+                                            :value="true"
+                                            :disabled="modoSoloLecturaSeg"
+                                            :id="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
+                                        />
+                                        <label
+                                            class="form-check-label fw-bold"
+                                            :for="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
+                                            style="color: #198754; cursor: pointer;"
+                                        >
+                                            <i class="bi bi-check-circle-fill me-1"></i>Sí
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input
+                                            type="radio"
+                                            class="form-check-input"
+                                            v-model="formSeg.seq_cumplido"
+                                            :value="false"
+                                            :disabled="modoSoloLecturaSeg"
+                                            :id="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
+                                        />
+                                        <label
+                                            class="form-check-label fw-bold"
+                                            :for="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
+                                            style="color: #dc3545; cursor: pointer;"
+                                        >
+                                            <i class="bi bi-x-circle-fill me-1"></i>No
+                                        </label>
+                                    </div>
+                                </div>
+                                <div v-if="erroresSeg.seq_cumplido" class="text-danger small mt-1">
+                                    {{ erroresSeg.seq_cumplido }}
+                                </div>
+                            </div>
+
+                            <!-- Mensaje orientador si aún no ha seleccionado Sí o No -->
+                            <div v-if="formSeg.seq_cumplido === null && !modoSoloLecturaSeg" class="alert alert-light border py-4 px-3 text-center text-muted small mb-3">
+                                <i class="bi bi-hand-index-thumb fs-3 d-block mb-2 text-danger"></i>
+                                <span class="fw-semibold">Indique si el equipo cumplió o no con el punto de control para desplegar las opciones correspondientes.</span>
+                            </div>
+
+                            <!-- SI MARCA NO: SOLO JUSTIFICACIÓN Y REPROGRAMACIÓN (SIN CONTENIDO DE EVALUACIÓN) -->
+                            <div v-if="formSeg.seq_cumplido === false">
+                                <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                    <div>
+                                        <strong>Punto No Cumplido:</strong> El punto de control fue marcado como no alcanzado por el equipo. Justifique el motivo a continuación.
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold" style="color: var(--text-main);">
+                                        Justificación del No Cumplimiento <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea
+                                        v-model="formSeg.seq_observaciones"
+                                        :disabled="modoSoloLecturaSeg"
+                                        class="form-control"
+                                        :class="{ 'is-invalid': erroresSeg.seq_observaciones }"
+                                        rows="3"
+                                        placeholder="Explique detalladamente los motivos por los cuales el equipo no cumplió con las metas o requerimientos de este punto de control..."
+                                        required
+                                    ></textarea>
+                                    <div v-if="erroresSeg.seq_observaciones" class="invalid-feedback">
+                                        {{ erroresSeg.seq_observaciones }}
+                                    </div>
+                                </div>
+
+                                <!-- Pregunta de Reprogramación -->
+                                <div class="card border p-3 mb-3 rounded" style="background: rgba(220, 53, 69, 0.04); border: 1px solid rgba(220, 53, 69, 0.25) !important;">
+                                    <div class="form-check form-switch">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="checkDeseaReprogramar"
+                                            v-model="formSeg.desea_reprogramar"
+                                            :disabled="modoSoloLecturaSeg"
+                                            style="cursor: pointer;"
+                                        />
+                                        <label class="form-check-label fw-bold ms-2" for="checkDeseaReprogramar" style="cursor: pointer; color: var(--text-main);">
+                                            <i class="bi bi-calendar-plus text-danger me-1"></i>
+                                            ¿Desea reprogramar el punto de control?
+                                        </label>
+                                        <div class="small text-muted mt-1 ps-4">
+                                            Si activa esta opción, podrá asignar una nueva fecha y semana para que el equipo vuelva a presentar este punto de control.
+                                        </div>
+                                    </div>
+
+                                    <!-- Campos de reprogramación si marcó Sí -->
+                                    <div v-if="formSeg.desea_reprogramar" class="mt-3 pt-3 border-top">
+                                        <div class="row g-3">
+                                            <div class="col-md-7">
+                                                <label class="form-label fw-semibold small">
+                                                    Nueva Fecha de Encuentro <span class="text-danger">*</span>
+                                                </label>
+                                                <input
+                                                    v-model="formSeg.nueva_fecha"
+                                                    type="date"
+                                                    :min="fechaMinimaReprog"
+                                                    :max="fechaMaximaReprog"
+                                                    class="form-control form-control-sm"
+                                                    :class="{ 'is-invalid': erroresSeg.nueva_fecha }"
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    required
+                                                />
+                                                <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">
+                                                    Límite permitido: desde hoy hasta un mes máximo ({{ fechaMinimaReprog }} al {{ fechaMaximaReprog }}).
+                                                </small>
+                                                <small v-if="$page.props.periodoActivo?.lapso_academico" class="text-muted d-block mt-1" style="font-size: 0.7rem;">
+                                                    Lapso activo: {{ $page.props.periodoActivo.fecha_inicio_formato }} - {{ $page.props.periodoActivo.fecha_fin_formato }}
+                                                </small>
+                                                <div v-if="erroresSeg.nueva_fecha" class="invalid-feedback">
+                                                    {{ erroresSeg.nueva_fecha }}
+                                                </div>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <label class="form-label fw-semibold small">Nueva Semana (1 a 18)</label>
+                                                <input
+                                                    v-model.number="formSeg.nueva_semana"
+                                                    type="number"
+                                                    min="1"
+                                                    max="18"
+                                                    class="form-control form-control-sm"
+                                                    placeholder="Semana..."
+                                                    :disabled="modoSoloLecturaSeg"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div class="alert alert-info py-2 px-3 small mt-3 mb-0">
+                                            <i class="bi bi-info-circle-fill me-1"></i>
+                                            El punto de control se reprogramará con la nueva fecha y se mantendrá en curso para su evaluación posterior.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SI MARCA SI: APARECE TODO EL CONTENIDO PARA EVALUAR EN EL MODAL -->
+                            <div v-if="formSeg.seq_cumplido === true">
                             <!-- Búsqueda / Verificación encadenada de observaciones previas -->
                             <div
                                 v-if="puntoActual?.punto_previo_observaciones"
@@ -885,47 +1064,6 @@
                                 />
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >¿El equipo cumplió este punto?</label
-                                >
-                                <div class="d-flex gap-3">
-                                    <div class="form-check">
-                                        <input
-                                            type="radio"
-                                            class="form-check-input"
-                                            v-model="formSeg.seq_cumplido"
-                                            :value="true"
-                                            :disabled="modoSoloLecturaSeg"
-                                            :id="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
-                                        /><label
-                                            class="form-check-label fw-semibold"
-                                            :for="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
-                                            style="color: #198754"
-                                            >Sí, cumplido</label
-                                        >
-                                    </div>
-                                    <div class="form-check">
-                                        <input
-                                            type="radio"
-                                            class="form-check-input"
-                                            v-model="formSeg.seq_cumplido"
-                                            :value="false"
-                                            :disabled="modoSoloLecturaSeg"
-                                            :id="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
-                                        /><label
-                                            class="form-check-label fw-semibold"
-                                            :for="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
-                                            style="color: #dc3545"
-                                            >No cumplido</label
-                                        >
-                                    </div>
-                                </div>
-                                <div v-if="erroresSeg.seq_cumplido" class="text-danger small mt-1">
-                                    {{ erroresSeg.seq_cumplido }}
-                                </div>
-                            </div>
-
                             <!-- Tipo de Encuentro -->
                             <div class="card border p-3 mb-3 bg-light bg-opacity-50">
                                 <label class="form-label fw-bold d-flex align-items-center gap-1 mb-1">
@@ -938,12 +1076,42 @@
                                     v-model="formSeg.seq_id_tipo_encuentro"
                                     class="form-select form-select-sm"
                                     :disabled="modoSoloLecturaSeg"
+                                    @change="verificarOtroTipoEncuentro"
                                 >
                                     <option :value="null">Seleccione tipo de encuentro...</option>
-                                    <option v-for="te in props.tiposEncuentro" :key="te.tep_id" :value="te.tep_id">
+                                    <option v-for="te in listaTiposEncuentro" :key="te.tep_id" :value="te.tep_id">
                                         {{ te.tep_nombre }}
                                     </option>
+                                    <option value="__OTRO__">➕ Otro (Crear nuevo tipo de encuentro...)</option>
                                 </select>
+                                <div v-if="creandoOtroTipoEncuentro" class="mt-2 p-2 rounded border bg-white">
+                                    <label class="small fw-bold text-danger mb-1">Nombre del nuevo Tipo de Encuentro:</label>
+                                    <div class="input-group input-group-sm">
+                                        <input
+                                            v-model="nuevoTipoEncuentroNombre"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Ej: Acompañamiento en Sitio, Taller..."
+                                            @keyup.enter.prevent="guardarNuevoTipoEncuentro"
+                                        />
+                                        <button
+                                            class="btn btn-danger fw-bold"
+                                            type="button"
+                                            :disabled="!nuevoTipoEncuentroNombre.trim() || guardandoTipoEncuentro"
+                                            @click="guardarNuevoTipoEncuentro"
+                                        >
+                                            <span v-if="guardandoTipoEncuentro" class="spinner-border spinner-border-sm me-1"></span>
+                                            <i v-else class="bi bi-check-lg me-1"></i>Crear
+                                        </button>
+                                        <button
+                                            class="btn btn-outline-secondary"
+                                            type="button"
+                                            @click="creandoOtroTipoEncuentro = false"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Dos Campos Visualmente Separados: Nivel de Avance Técnico y Semáforo del Encuentro -->
@@ -980,51 +1148,67 @@
                                     </div>
                                 </div>
 
-                                <!-- CAMPO 2: Valoración / Semáforo del Encuentro -->
+                                <!-- CAMPO 2: Enfoque de Gestión de Proyectos y Procesos -->
                                 <div class="col-md-6">
                                     <div class="card h-100 border p-3 bg-light bg-opacity-50">
-                                        <label class="form-label fw-bold mb-1">Valoración / Semáforo del Encuentro</label>
+                                        <label class="form-label fw-bold mb-1 d-flex align-items-center gap-1">
+                                            <i class="bi bi-diagram-3-fill text-danger"></i>
+                                            Enfoque de Gestión de Proyectos y Procesos
+                                        </label>
                                         <small class="text-muted mb-2 d-block" style="font-size: 0.72rem">
-                                            Cualificación del desempeño en la sesión
+                                            Pase el cursor sobre cada estado para consultar su significado
                                         </small>
                                         <div class="d-flex flex-column gap-2">
-                                            <div class="form-check">
+                                            <div class="form-check" title="Cumple con los estándares y metas.">
                                                 <input
                                                     type="radio"
                                                     class="form-check-input"
                                                     v-model="formSeg.seq_estado_semaforo"
-                                                    value="positivo"
+                                                    value="conforme"
                                                     :disabled="modoSoloLecturaSeg"
-                                                    id="sem_pos"
+                                                    id="sem_conforme"
                                                 />
-                                                <label class="form-check-label text-success fw-bold small" for="sem_pos">
-                                                    🟢 Positivo (Avance adecuado)
+                                                <label class="form-check-label text-success fw-bold small" for="sem_conforme" style="cursor: pointer;" title="Cumple con los estándares y metas.">
+                                                    🟢 Conforme <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Cumple con los estándares y metas)</span>
                                                 </label>
                                             </div>
-                                            <div class="form-check">
+                                            <div class="form-check" title="Tiene parametros menores que deben mejorarse.">
                                                 <input
                                                     type="radio"
                                                     class="form-check-input"
                                                     v-model="formSeg.seq_estado_semaforo"
-                                                    value="neutral"
+                                                    value="observado"
                                                     :disabled="modoSoloLecturaSeg"
-                                                    id="sem_neu"
+                                                    id="sem_observado"
                                                 />
-                                                <label class="form-check-label text-warning fw-bold small" for="sem_neu">
-                                                    🟡 Neutral (Parcial con observaciones)
+                                                <label class="form-check-label text-warning fw-bold small" for="sem_observado" style="cursor: pointer;" title="Tiene parametros menores que deben mejorarse.">
+                                                    🟡 Observado <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Tiene parametros menores que deben mejorarse)</span>
                                                 </label>
                                             </div>
-                                            <div class="form-check">
+                                            <div class="form-check" title="Incumplimiento grave de los parámetros del proyecto.">
                                                 <input
                                                     type="radio"
                                                     class="form-check-input"
                                                     v-model="formSeg.seq_estado_semaforo"
-                                                    value="negativo"
+                                                    value="no_conforme"
                                                     :disabled="modoSoloLecturaSeg"
-                                                    id="sem_neg"
+                                                    id="sem_no_conforme"
                                                 />
-                                                <label class="form-check-label text-danger fw-bold small" for="sem_neg">
-                                                    🔴 Negativo (Riesgo o incumplimiento)
+                                                <label class="form-check-label text-danger fw-bold small" for="sem_no_conforme" style="cursor: pointer;" title="Incumplimiento grave de los parámetros del proyecto.">
+                                                    🔴 No conforme <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Incumplimiento grave de los parámetros del proyecto)</span>
+                                                </label>
+                                            </div>
+                                            <div class="form-check" title="Cierre administrativo por falta de factibilidad.">
+                                                <input
+                                                    type="radio"
+                                                    class="form-check-input"
+                                                    v-model="formSeg.seq_estado_semaforo"
+                                                    value="no_viable"
+                                                    :disabled="modoSoloLecturaSeg"
+                                                    id="sem_no_viable"
+                                                />
+                                                <label class="form-check-label text-dark fw-bold small" for="sem_no_viable" style="cursor: pointer;" title="Cierre administrativo por falta de factibilidad.">
+                                                    ⚫ No viable <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Cierre administrativo por falta de factibilidad)</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -1105,6 +1289,27 @@
                                     rows="3"
                                     placeholder="Indique las observaciones y correcciones que el equipo debe atender para el próximo corte..."
                                 ></textarea>
+                            </div>
+
+                            <!-- Interruptor: Transferir a Pre-Socialización -->
+                            <div class="mb-3">
+                                <div class="form-check form-switch p-3 rounded" style="background: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2);">
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        id="checkSegEsUltimoPunto"
+                                        v-model="formSeg.es_ultimo_punto"
+                                        :disabled="modoSoloLecturaSeg"
+                                        style="cursor: pointer;"
+                                    />
+                                    <label class="form-check-label fw-bold ms-2" for="checkSegEsUltimoPunto" style="cursor: pointer; color: var(--text-main);">
+                                        <i class="bi bi-arrow-right-circle-fill text-danger me-1"></i>
+                                        Transferir observaciones a la Pre-Socialización
+                                    </label>
+                                    <div class="small text-muted mt-1 ps-4">
+                                        Vinculará estas observaciones y recomendaciones directamente a la <strong>Pre-Socialización</strong> del equipo como antecedentes para la defensa.
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Control Individual de Asistencia y Participación -->
@@ -1281,6 +1486,7 @@
                                     </template>
                                 </div>
                             </div>
+                            </div>
                         </div>
                         <div class="modal-footer border-0">
                             <button
@@ -1406,13 +1612,20 @@
                                 <input
                                     v-model="formReprog.nueva_fecha"
                                     type="date"
-                                    :min="fechaHoy"
+                                    :min="fechaMinimaReprog"
+                                    :max="fechaMaximaReprog"
                                     class="form-control"
                                     :class="{
                                         'is-invalid': erroresReprog.nueva_fecha,
                                     }"
                                     required
                                 />
+                                <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                    Límite permitido: desde hoy hasta un mes máximo ({{ fechaMinimaReprog }} al {{ fechaMaximaReprog }}).
+                                </small>
+                                <small v-if="$page.props.periodoActivo?.lapso_academico" class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                    Lapso activo: {{ $page.props.periodoActivo.fecha_inicio_formato }} - {{ $page.props.periodoActivo.fecha_fin_formato }}
+                                </small>
                                 <div
                                     v-if="erroresReprog.nueva_fecha"
                                     class="invalid-feedback"
@@ -1619,37 +1832,69 @@ const contarPorSemaforo = (tipo) => {
     if (!props.equipos || !props.diagnosticosEquipos) return 0;
     return props.equipos.filter((eq) => {
         const d = props.diagnosticosEquipos[eq.equ_id];
-        return d && d.semaforo === tipo;
+        if (!d) return false;
+        if (tipo === 'conforme' || tipo === 'en_ruta') return d.semaforo === 'conforme' || d.semaforo === 'en_ruta';
+        if (tipo === 'observado' || tipo === 'acelerar') return d.semaforo === 'observado' || d.semaforo === 'acelerar';
+        if (tipo === 'no_conforme' || tipo === 'riesgo_alto') return d.semaforo === 'no_conforme' || d.semaforo === 'riesgo_alto';
+        if (tipo === 'no_viable' || tipo === 'inviable') return d.semaforo === 'no_viable' || d.semaforo === 'inviable';
+        return d.semaforo === tipo;
     }).length;
 };
 
 const getIconoSemaforo = (tipo) => {
     switch (tipo) {
         case "en_ruta":
-            return { icon: "🟢", class: "bg-success text-white" };
+        case "conforme":
+            return { icon: "🟢", class: "bg-success text-white", title: "Conforme: Cumple con los estándares y metas." };
         case "acelerar":
-            return { icon: "🟡", class: "bg-warning text-dark" };
+        case "observado":
+            return { icon: "🟡", class: "bg-warning text-dark", title: "Observado: Tiene parametros menores que deben mejorarse." };
         case "riesgo_alto":
-            return { icon: "🔴", class: "bg-danger text-white" };
+        case "no_conforme":
+            return { icon: "🔴", class: "bg-danger text-white", title: "No conforme: Incumplimiento grave de los parámetros del proyecto." };
         case "inviable":
-            return { icon: "⛔", class: "bg-dark text-white" };
+        case "no_viable":
+            return { icon: "⚫", class: "bg-dark text-white", title: "No viable: Cierre administrativo por falta de factibilidad." };
         default:
-            return { icon: "⚪", class: "bg-secondary text-white" };
+            return { icon: "⚪", class: "bg-secondary text-white", title: "Pendiente" };
     }
 };
 
 const getEtiquetaSemaforo = (tipo) => {
     switch (tipo) {
         case "en_ruta":
-            return "En ruta";
+        case "conforme":
+            return "Conforme";
         case "acelerar":
-            return "Acelerar";
+        case "observado":
+            return "Observado";
         case "riesgo_alto":
-            return "Riesgo alto";
+        case "no_conforme":
+            return "No conforme";
         case "inviable":
-            return "Inviable";
+        case "no_viable":
+            return "No viable";
         default:
             return "Pendiente";
+    }
+};
+
+const getSignificadoSemaforo = (tipo) => {
+    switch (tipo) {
+        case "en_ruta":
+        case "conforme":
+            return "Cumple con los estándares y metas.";
+        case "acelerar":
+        case "observado":
+            return "Tiene parametros menores que deben mejorarse.";
+        case "riesgo_alto":
+        case "no_conforme":
+            return "Incumplimiento grave de los parámetros del proyecto.";
+        case "inviable":
+        case "no_viable":
+            return "Cierre administrativo por falta de factibilidad.";
+        default:
+            return "Pendiente de evaluación.";
     }
 };
 
@@ -1667,6 +1912,22 @@ const fechaManana = computed(() => {
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+});
+
+const fechaMinimaReprog = computed(() => {
+    const periMin = page.props.periodoActivo?.fecha_inicio;
+    return periMin && periMin > fechaHoy.value ? periMin : fechaHoy.value;
+});
+
+const fechaMaximaReprog = computed(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const unMes = `${y}-${m}-${day}`;
+    const periMax = page.props.periodoActivo?.fecha_fin;
+    return periMax && periMax < unMes ? periMax : unMes;
 });
 
 const onSeccionModalChange = () => {
@@ -1696,6 +1957,7 @@ const form = ref({
     puc_fecha_limite: "",
     puc_dias_aviso: 3,
     puc_descripcion: "",
+    puc_es_ultimo_punto: false,
 });
 const errores = ref({});
 const erroresSeg = ref({});
@@ -1706,11 +1968,50 @@ const formSeg = ref({
     seq_obs_previas_verificacion: "",
     seq_observaciones: "",
     seq_id_tipo_encuentro: null,
-    seq_estado_semaforo: "positivo",
+    seq_estado_semaforo: "conforme",
     seq_valoracion_avance: 50,
+    es_ultimo_punto: false,
+    desea_reprogramar: false,
+    nueva_fecha: "",
+    nueva_semana: "",
     acuerdos: [],
     asistencias: {},
 });
+
+const listaTiposEncuentro = ref([...(props.tiposEncuentro || [])]);
+const creandoOtroTipoEncuentro = ref(false);
+const nuevoTipoEncuentroNombre = ref("");
+const guardandoTipoEncuentro = ref(false);
+
+const verificarOtroTipoEncuentro = () => {
+    if (formSeg.value.seq_id_tipo_encuentro === "__OTRO__") {
+        creandoOtroTipoEncuentro.value = true;
+        nuevoTipoEncuentroNombre.value = "";
+    } else {
+        creandoOtroTipoEncuentro.value = false;
+    }
+};
+
+const guardarNuevoTipoEncuentro = async () => {
+    if (!nuevoTipoEncuentroNombre.value.trim()) return;
+    guardandoTipoEncuentro.value = true;
+    try {
+        const res = await axios.post("/catalogos/crear-opcion", {
+            catalogo: "tipo_encuentro",
+            nombre: nuevoTipoEncuentroNombre.value.trim(),
+        });
+        if (res.data.success) {
+            listaTiposEncuentro.value.push({ tep_id: res.data.id, tep_nombre: res.data.nombre });
+            formSeg.value.seq_id_tipo_encuentro = res.data.id;
+            creandoOtroTipoEncuentro.value = false;
+            nuevoTipoEncuentroNombre.value = "";
+        }
+    } catch (e) {
+        console.error("Error al crear tipo de encuentro:", e);
+    } finally {
+        guardandoTipoEncuentro.value = false;
+    }
+};
 const loadingSeg = ref(false);
 const puntoActual = ref(null);
 const puntoReprog = ref(null);
@@ -1824,6 +2125,7 @@ const abrirModal = () => {
         puc_fecha_limite: "",
         puc_dias_aviso: 3,
         puc_descripcion: "",
+        puc_es_ultimo_punto: false,
     };
     errores.value = {};
     mPunto = mPunto || new Modal(document.getElementById("mPunto"));
@@ -1914,11 +2216,20 @@ const abrirSeguimiento = (puc, soloLectura = false) => {
         seq_id_tipo_encuentro:
             prevSeg?.seq_id_tipo_encuentro || (props.tiposEncuentro?.[0]?.tep_id || null),
         seq_estado_semaforo:
-            prevSeg?.seq_estado_semaforo || "positivo",
+            prevSeg?.seq_estado_semaforo
+                ? (['positivo', 'conforme'].includes(prevSeg.seq_estado_semaforo) ? 'conforme' :
+                   ['neutral', 'observado'].includes(prevSeg.seq_estado_semaforo) ? 'observado' :
+                   ['negativo', 'no_conforme'].includes(prevSeg.seq_estado_semaforo) ? 'no_conforme' :
+                   ['inviable', 'no_viable'].includes(prevSeg.seq_estado_semaforo) ? 'no_viable' : prevSeg.seq_estado_semaforo)
+                : "conforme",
         seq_valoracion_avance:
             prevSeg?.seq_valoracion_avance !== undefined && prevSeg?.seq_valoracion_avance !== null
                 ? Number(prevSeg.seq_valoracion_avance)
                 : 50,
+        es_ultimo_punto: Boolean(puc.puc_es_ultimo_punto),
+        desea_reprogramar: false,
+        nueva_fecha: puc.puc_fecha_reprogramada || "",
+        nueva_semana: puc.puc_semana || "",
         acuerdos: prevSeg?.acuerdos?.length
             ? prevSeg.acuerdos.map((a) => ({
                   acue_id: a.acue_id,
@@ -1948,12 +2259,35 @@ const guardarSeguimiento = () => {
         erroresSeg.value = { seq_cumplido: "Debe indicar si el equipo cumplió o no con este punto de control." };
         return;
     }
+
+    if (formSeg.value.seq_cumplido === false) {
+        if (!formSeg.value.seq_observaciones || formSeg.value.seq_observaciones.trim().length < 4) {
+            erroresSeg.value = { seq_observaciones: "Debe justificar el motivo por el cual no se cumplió el punto de control." };
+            return;
+        }
+        if (formSeg.value.desea_reprogramar) {
+            if (!formSeg.value.nueva_fecha) {
+                erroresSeg.value = { nueva_fecha: "Debe seleccionar la nueva fecha para reprogramar el punto de control." };
+                return;
+            }
+            if (formSeg.value.nueva_fecha < fechaHoy.value) {
+                erroresSeg.value = { nueva_fecha: "La fecha de reprogramación no puede ser en el pasado (debe ser a partir de hoy)." };
+                return;
+            }
+            if (formSeg.value.nueva_fecha > fechaMaximaReprog.value) {
+                erroresSeg.value = { nueva_fecha: "La fecha de reprogramación no puede exceder el límite de un mes a partir de hoy." };
+                return;
+            }
+        }
+    }
+
     loadingSeg.value = true;
     const idPunto = puntoActual.value?.puc_id;
     const idEquipo = puntoActual.value?.puc_id_equ;
     const codEquipo = puntoActual.value?.equipo?.equ_codigo || `Equipo #${idEquipo}`;
     const nomPunto = puntoActual.value?.puc_nombre || "Punto de control";
     const esConfirmadoGuardado = Boolean(formSeg.value.seq_cumplido);
+    const fueReprogramado = Boolean(!esConfirmadoGuardado && formSeg.value.desea_reprogramar);
 
     router.post(
         `/profesor/puntos-control/${idPunto}/seguimiento`,
@@ -1970,6 +2304,10 @@ const guardarSeguimiento = () => {
                         codigo_equipo: codEquipo,
                         nombre_punto: nomPunto,
                     };
+                } else if (!fueReprogramado) {
+                    tabPuntos.value = "archivados";
+                } else {
+                    tabPuntos.value = "pendientes";
                 }
             },
             onError: (e) => {
@@ -1997,6 +2335,22 @@ const abrirReprogramar = (puc) => {
 const guardarReprogramar = () => {
     if (!puntoReprog.value) return;
     if (!validarSemanaReprogInput()) {
+        return;
+    }
+    if (!formReprog.value.nueva_fecha) {
+        erroresReprog.value = { nueva_fecha: "Debe indicar la nueva fecha de encuentro." };
+        return;
+    }
+    if (formReprog.value.nueva_fecha < fechaHoy.value) {
+        erroresReprog.value = { nueva_fecha: "La fecha de reprogramación no puede ser en el pasado (debe ser a partir de hoy)." };
+        return;
+    }
+    if (formReprog.value.nueva_fecha > fechaMaximaReprog.value) {
+        erroresReprog.value = { nueva_fecha: "La fecha de reprogramación no puede exceder el límite de un mes a partir de hoy." };
+        return;
+    }
+    if (!formReprog.value.motivo || formReprog.value.motivo.trim().length < 4) {
+        erroresReprog.value = { motivo: "El motivo de la reprogramación es obligatorio (mínimo 4 caracteres)." };
         return;
     }
     loadingReprog.value = true;

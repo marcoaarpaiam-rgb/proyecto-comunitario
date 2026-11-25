@@ -23,6 +23,7 @@ class PuntoControl extends Model
         'puc_orden',
         'puc_dias_aviso',
         'puc_es_entregable',
+        'puc_es_ultimo_punto',
         'puc_status',
         'puc_id_usu_created',
         'puc_id_usu_updated',
@@ -30,6 +31,9 @@ class PuntoControl extends Model
 
     protected $casts = [
         'puc_criterios_evaluacion' => 'array',
+        'puc_es_ultimo_punto'      => 'boolean',
+        'puc_es_entregable'        => 'boolean',
+        'puc_status'               => 'boolean',
     ];
 
     public function trayecto()

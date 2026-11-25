@@ -138,7 +138,7 @@
                         class="sb-lnk"
                         :class="{ active: currentPath === '/coordinador/tipos-proyecto' }"
                     >
-                        <i class="bi bi-tag"></i> Tipos de Proyecto
+                        <i class="bi bi-tag"></i> Líneas de Investigación
                     </Link>
                     <Link
                         href="/coordinador/maestras/modalidades"

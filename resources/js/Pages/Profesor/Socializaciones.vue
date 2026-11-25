@@ -77,6 +77,46 @@
                         </p>
                     </div>
                 </div>
+                <!-- MÓDULOS SEPARADOS: 1. PRE-SOCIALIZACIÓN VS 2. SOCIALIZACIÓN FINAL -->
+                <div class="card border-0 shadow-sm p-2 mb-3 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
+                    <ul class="nav nav-pills gap-2 flex-wrap" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-4 py-2"
+                                :class="moduloActivo === 'pre_socializacion' ? 'active bg-danger text-white shadow-sm' : 'text-body'"
+                                type="button"
+                                @click="moduloActivo = 'pre_socializacion'"
+                            >
+                                <i class="bi bi-person-check-fill fs-5"></i>
+                                <span>1. Módulo Pre-Socialización (Pase a Defensa)</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="moduloActivo === 'pre_socializacion' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalPreSoc }}
+                                </span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-4 py-2"
+                                :class="moduloActivo === 'socializacion_final' ? 'active bg-danger text-white shadow-sm' : 'text-body'"
+                                type="button"
+                                @click="moduloActivo = 'socializacion_final'"
+                            >
+                                <i class="bi bi-mortarboard-fill fs-5"></i>
+                                <span>2. Módulo Socialización Final (Defensa con Jurados)</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="moduloActivo === 'socializacion_final' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalSocFinal }}
+                                </span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
                 <!-- TABS DE NAVEGACIÓN: EN CURSO / PENDIENTES VS FINALIZADAS / ARCHIVADAS -->
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                     <ul class="nav nav-pills gap-2" role="tablist">
@@ -395,6 +435,26 @@
                                 <strong>Semestre Impar (Semestre {{ obtenerSemestreSeccion(equipoSeleccionado?.seccion) }} - Evaluación Cualitativa):</strong> La sección de este equipo cursa semestre impar. Solo corresponde <strong>Pre-Socialización</strong>. La Socialización Final con jurados se evalúa en el semestre par.
                             </div>
 
+                            <!-- Alerta de Bloqueo si no tiene Pre-Socialización aprobada -->
+                            <div v-if="moduloActivo === 'socializacion_final' && equipoSeleccionado && !equipoSeleccionado.tiene_presoc_aprobada" class="alert alert-danger py-2 px-3 small mb-3">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                                <strong>Bloqueado:</strong> Este equipo no cuenta con la <strong>Pre-Socialización aprobada (Apto)</strong>. Es requisito obligatorio aprobar la Pre-Socialización antes de poder registrar o programar la Socialización Final.
+                            </div>
+
+                            <!-- Retroalimentación del Último Punto de Control para Pre-Socialización -->
+                            <div v-if="moduloActivo === 'pre_socializacion' && equipoSeleccionado?.ultimo_punto_observaciones" class="alert alert-info py-2 px-3 small mb-3">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <strong class="d-flex align-items-center gap-1">
+                                        <i class="bi bi-chat-left-text-fill text-primary"></i>
+                                        Observaciones del Último Punto de Control:
+                                    </strong>
+                                    <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" @click="copiarObservacionesUltimoPunto">
+                                        <i class="bi bi-clipboard-plus me-1"></i>Copiar a observaciones
+                                    </button>
+                                </div>
+                                <div class="text-secondary fst-italic">"{{ equipoSeleccionado.ultimo_punto_observaciones }}"</div>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Tipo
@@ -436,11 +496,15 @@
                                         v-model="form.soc_fecha"
                                         type="date"
                                         :min="fechaMinima"
+                                        :max="$page.props.periodoActivo?.fecha_fin"
                                         class="form-control"
                                         :class="{
                                             'is-invalid': errores.soc_fecha,
                                         }"
                                     />
+                                    <small v-if="$page.props.periodoActivo?.lapso_academico" class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                        Lapso activo: {{ $page.props.periodoActivo.fecha_inicio_formato }} - {{ $page.props.periodoActivo.fecha_fin_formato }}
+                                    </small>
                                     <div
                                         v-if="errores.soc_fecha"
                                         class="invalid-feedback"
@@ -492,7 +556,7 @@
                             <button
                                 type="submit"
                                 class="btn btn-danger fw-bold"
-                                :disabled="loading"
+                                :disabled="loading || (moduloActivo === 'socializacion_final' && equipoSeleccionado && !equipoSeleccionado.tiene_presoc_aprobada)"
                             >
                                 <span
                                     v-if="loading"
@@ -1113,9 +1177,26 @@ const iniciales = computed(() => {
     );
 });
 const seccionSeleccionadaModal = ref("");
+const moduloActivo = ref("pre_socializacion"); // "pre_socializacion" | "socializacion_final"
+
+const totalPreSoc = computed(() =>
+    (props.socializaciones || []).filter(
+        (s) => s.tipo_socializacion?.tso_orden === 1 || s.soc_id_tso == 1
+    ).length
+);
+const totalSocFinal = computed(() =>
+    (props.socializaciones || []).filter(
+        (s) => s.tipo_socializacion?.tso_orden === 2 || s.soc_id_tso == 2
+    ).length
+);
 
 const fechaHoy = computed(() => new Date().toISOString().split("T")[0]);
 const fechaMinima = computed(() => {
+    const periMin = page.props.periodoActivo?.fecha_inicio;
+    let base = fechaHoy.value;
+    if (periMin && periMin > base) {
+        base = periMin;
+    }
     const tipo = props.tiposSocializacion?.find(
         (t) => t.tso_id == form.value.soc_id_tso
     );
@@ -1123,16 +1204,14 @@ const fechaMinima = computed(() => {
         const preSoc = props.socializaciones?.find(
             (s) =>
                 s.soc_id_equ == form.value.soc_id_equ &&
-                s.tipo_socializacion?.tso_orden === 1 &&
+                (s.tipo_socializacion?.tso_orden === 1 || s.soc_id_tso == 1) &&
                 s.soc_apto
         );
-        if (preSoc && preSoc.soc_fecha) {
-            return preSoc.soc_fecha > fechaHoy.value
-                ? preSoc.soc_fecha
-                : fechaHoy.value;
+        if (preSoc && preSoc.soc_fecha && preSoc.soc_fecha > base) {
+            return preSoc.soc_fecha;
         }
     }
-    return fechaHoy.value;
+    return base;
 });
 
 const onSeccionModalChange = () => {
@@ -1170,11 +1249,16 @@ const formRes = ref({
 const socActual = ref(null);
 let mSoc = null;
 let mRes = null;
+
 const abrirModal = () => {
     seccionSeleccionadaModal.value = "";
+    const tsoId = moduloActivo.value === "pre_socializacion"
+        ? (props.tiposSocializacion?.find(t => t.tso_orden === 1)?.tso_id || 1)
+        : (props.tiposSocializacion?.find(t => t.tso_orden === 2)?.tso_id || 2);
+
     form.value = {
         soc_id_equ: "",
-        soc_id_tso: "",
+        soc_id_tso: tsoId,
         soc_fecha: "",
         soc_hora: "",
         soc_lugar: "",
@@ -1184,7 +1268,21 @@ const abrirModal = () => {
     mSoc = mSoc || new Modal(document.getElementById("mSoc"));
     mSoc.show();
 };
+
+const copiarObservacionesUltimoPunto = () => {
+    if (equipoSeleccionado.value?.ultimo_punto_observaciones) {
+        const obs = "Obs. del último punto de control: " + equipoSeleccionado.value.ultimo_punto_observaciones;
+        form.value.soc_observaciones = form.value.soc_observaciones
+            ? form.value.soc_observaciones + "\n" + obs
+            : obs;
+    }
+};
+
 const guardar = () => {
+    if (moduloActivo.value === "socializacion_final" && equipoSeleccionado.value && !equipoSeleccionado.value.tiene_presoc_aprobada) {
+        errores.value = { soc_id_equ: "Bloqueado: El equipo debe tener aprobada la Pre-Socialización (Apto) para programar la Socialización Final." };
+        return;
+    }
     loading.value = true;
     router.post("/profesor/socializaciones", form.value, {
         onError: (e) => {
@@ -1202,22 +1300,31 @@ const tabSocializaciones = ref("pendientes"); // "pendientes" | "archivadas"
 
 const estaEvaluada = (soc) => {
     if (!soc) return false;
-    if (soc.tipo_socializacion?.tso_orden === 1) {
+    if (soc.tipo_socializacion?.tso_orden === 1 || soc.soc_id_tso == 1) {
         return soc.soc_apto !== null && soc.soc_apto !== undefined;
     }
     return soc.soc_aprobado !== null && soc.soc_aprobado !== undefined;
 };
 
+const listaPorModulo = computed(() => {
+    let list = props.socializaciones || [];
+    if (moduloActivo.value === "pre_socializacion") {
+        return list.filter((s) => s.tipo_socializacion?.tso_orden === 1 || s.soc_id_tso == 1);
+    } else {
+        return list.filter((s) => s.tipo_socializacion?.tso_orden === 2 || s.soc_id_tso == 2);
+    }
+});
+
 const totalPendientes = computed(
-    () => (props.socializaciones || []).filter((s) => !estaEvaluada(s)).length,
+    () => listaPorModulo.value.filter((s) => !estaEvaluada(s)).length,
 );
 
 const totalArchivadas = computed(
-    () => (props.socializaciones || []).filter((s) => estaEvaluada(s)).length,
+    () => listaPorModulo.value.filter((s) => estaEvaluada(s)).length,
 );
 
 const socializacionesFiltradas = computed(() => {
-    let list = props.socializaciones || [];
+    let list = listaPorModulo.value;
     if (tabSocializaciones.value === "pendientes") {
         list = list.filter((s) => !estaEvaluada(s));
     } else {

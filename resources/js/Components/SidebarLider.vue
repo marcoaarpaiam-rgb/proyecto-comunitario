@@ -72,20 +72,13 @@
                     <i class="bi bi-building"></i> Mi Comunidad
                 </Link>
 
-                <div class="sb-sec">Acciones y Evaluación</div>
+                <div class="sb-sec">Acciones y Documentos</div>
                 <Link
                     href="/lider/entregables"
                     class="sb-lnk"
                     :class="{ active: currentPath.startsWith('/lider/entregables') }"
                 >
                     <i class="bi bi-cloud-upload"></i> Entregables
-                </Link>
-                <Link
-                    href="/evaluaciones"
-                    class="sb-lnk"
-                    :class="{ active: currentPath.startsWith('/evaluaciones') }"
-                >
-                    <i class="bi bi-check-circle"></i> Autoevaluación PST
                 </Link>
                 <Link
                     href="/lider/carta"

@@ -151,7 +151,7 @@
                                     </span>
                                     <span>
                                         <i class="bi bi-tag me-1 text-danger"></i>
-                                        <strong>Tipo:</strong> {{ equipo.proyecto_comunidad?.tipo_proyecto?.tpr_nombre || 'No definido' }}
+                                        <strong>Línea de Inv.:</strong> {{ equipo.proyecto_comunidad?.tipo_proyecto?.tpr_nombre || 'No definido' }}
                                     </span>
                                 </div>
                             </div>

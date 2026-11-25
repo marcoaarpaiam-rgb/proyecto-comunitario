@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class InventarioPstExcelController extends Controller
 {
@@ -624,8 +627,64 @@ class InventarioPstExcelController extends Controller
         $spreadsheet->getProperties()->setTitle("Planilla de Vinculación - Lapso {$lapsoActivo}");
         $spreadsheet->getProperties()->setSubject("Lapso Académico {$lapsoActivo}");
 
-        // Limpiar filas de ejemplo (filas 2 a 10)
-        for ($r = 2; $r <= 10; $r++) {
+        // Anchos de columna óptimos para máxima legibilidad idénticos al formato oficial
+        $columnWidths = [
+            'A' => 18, // SEDE
+            'B' => 22, // PNF
+            'C' => 13, // TRAYECTO
+            'D' => 13, // SEMESTRE
+            'E' => 40, // TÍTULO DE PROYECTO
+            'F' => 46, // RESUMEN O PRESENTACIÓN
+            'G' => 26, // LÍNEA DE INVESTIGACIÓN
+            'H' => 26, // DOCENTE DE PROYECTO
+            'I' => 26, // TUTOR ACADEMICO
+            'J' => 26, // REPRESENTANTE INSTITUCIONAL
+            'K' => 28, // INTEGRANTE Nº 1
+            'L' => 28, // INTEGRANTE Nº 2
+            'M' => 28, // INTEGRANTE Nº 3
+            'N' => 28, // INTEGRANTE Nº 4
+            'O' => 28, // INTEGRANTE Nº 5
+            'P' => 28, // INTEGRANTE Nº 6
+            'Q' => 28, // INTEGRANTE Nº 7
+            'R' => 28, // INTEGRANTE Nº 7 (slot 8)
+            'S' => 28, // INTEGRANTE Nº 8 (slot 9)
+            'T' => 28, // INTEGRANTE Nº 9 (slot 10)
+            'U' => 28, // INTEGRANTE Nº 10 (slot 11)
+            'V' => 28, // LOCALIDAD GEOGRAFICA
+            'W' => 30, // COMUNIDAD BENEFICIADA
+            'X' => 22, // RESULTADO DE LA SOCIALIZACIÓN
+        ];
+        foreach ($columnWidths as $col => $w) {
+            $sheet->getColumnDimension($col)->setWidth($w);
+        }
+
+        // Configuración y estilo de encabezados (Fila 1)
+        $sheet->getRowDimension(1)->setRowHeight(124.5);
+        $sheet->getStyle('A1:X1')->applyFromArray([
+            'font' => [
+                'name' => 'Times New Roman',
+                'size' => 12,
+                'bold' => true,
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FFF2F2F2'],
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ]);
+
+        // Limpiar filas de ejemplo (filas 2 a 20)
+        for ($r = 2; $r <= 20; $r++) {
             for ($col = 'A'; $col <= 'X'; $col++) {
                 $sheet->setCellValue("{$col}{$r}", null);
             }
@@ -643,12 +702,16 @@ class InventarioPstExcelController extends Controller
         $sheet->setCellValue('I2', $tutorNombre);
         $sheet->setCellValue('J2', $repNombre);
 
-        // Integrantes 1 a 10 (Columnas K a U)
+        // Integrantes 1 a 11 (Columnas K a U)
         $columnasIntegrantes = ['K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];
-        foreach ($estudiantes->take(10)->values() as $idx => $est) {
-            $col = $columnasIntegrantes[$idx] ?? null;
-            if ($col) {
-                $sheet->setCellValue("{$col}2", "{$est->usu_primer_nombre} {$est->usu_primer_apellido}     {$est->usu_cedula}");
+        foreach ($columnasIntegrantes as $idx => $col) {
+            $est = $estudiantes[$idx] ?? null;
+            if ($est) {
+                $nom = mb_strtoupper(trim("{$est->usu_primer_nombre} {$est->usu_primer_apellido}"), 'UTF-8');
+                $ced = $est->usu_cedula ? (str_starts_with($est->usu_cedula, 'V-') ? $est->usu_cedula : "V-{$est->usu_cedula}") : 'V-00.000.000';
+                $sheet->setCellValue("{$col}2", "{$nom}     {$ced}");
+            } else {
+                $sheet->setCellValue("{$col}2", '');
             }
         }
 
@@ -656,6 +719,30 @@ class InventarioPstExcelController extends Controller
         $sheet->setCellValue('V2', $proyecto->pco_localidad ?: ($proyecto->com_ubicacion ?: 'ACARIGUA'));
         $sheet->setCellValue('W2', $proyecto->com_nombre ?: 'Comunidad Beneficiada');
         $sheet->setCellValue('X2', $proyecto->calificacion_definitiva_cualitativa ?: 'En Desarrollo');
+
+        // Altura dinámica para que el texto completo sea visible en la celda
+        $maxLen = max(strlen((string)($proyecto->pco_resumen ?? '')), strlen((string)($proyecto->equ_titulo ?? '')));
+        $dynamicHeight = max(180, min(260, ceil($maxLen / 35) * 16));
+        $sheet->getRowDimension(2)->setRowHeight($dynamicHeight);
+
+        // Estilos de la fila de datos: Times New Roman 12pt, Centrado, WrapText, Bordes Finos
+        $sheet->getStyle('A2:X2')->applyFromArray([
+            'font' => [
+                'name' => 'Times New Roman',
+                'size' => 12,
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ]);
 
         $lapsoSafe = preg_replace('/[^A-Za-z0-9_\-]/', '_', $lapsoActivo);
         $safeCodigo = preg_replace('/[^A-Za-z0-9_\-]/', '_', $proyecto->equ_codigo ?? 'EQUIPO');

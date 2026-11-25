@@ -325,7 +325,7 @@
                             </div>
                             <div class="col-md-4 col-6">
                                 <label class="form-label small fw-bold"
-                                    >Tipo de Proyecto</label
+                                    >Línea de Investigación</label
                                 >
                                 <select
                                     v-model="filtros.tpr_id"
@@ -456,7 +456,7 @@
                                             <th>Sección</th>
                                             <th>Trayecto</th>
                                             <th>Comunidad</th>
-                                            <th>Tipo Proyecto</th>
+                                            <th>Línea de Inv.</th>
                                             <th>Fecha Límite</th>
                                             <th class="text-center">Estado</th>
                                         </tr>
@@ -1015,7 +1015,7 @@
                                                 <div class="fw-bold">{{ equipoDetalle.profesor }}</div>
                                             </div>
                                             <div class="small mb-1">
-                                                <span class="text-muted">Tipo de Proyecto:</span>
+                                                <span class="text-muted">Línea de Investigación:</span>
                                                 <div class="fw-semibold">{{ equipoDetalle.tipo_proyecto }}</div>
                                             </div>
                                             <div class="small mb-1">

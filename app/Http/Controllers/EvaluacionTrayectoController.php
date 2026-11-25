@@ -172,6 +172,11 @@ class EvaluacionTrayectoController extends Controller
             'lugar.required' => 'El lugar del acto de defensa es obligatorio.',
         ]);
 
+        // Validación de fecha en rango de período académico activo
+        if ($errFecha = \App\Models\PeriodoAcademico::validarFechaEnRango($request->fecha)) {
+            return redirect()->back()->withErrors(['fecha' => $errFecha]);
+        }
+
         $proyecto = DB::table('proyecto_comunidad')->where('pco_id', $id_proyecto)->first();
         if (!$proyecto) {
             return redirect()->back()->with('error', 'Proyecto no encontrado.');
@@ -179,6 +184,20 @@ class EvaluacionTrayectoController extends Controller
 
         $idEquipo = $proyecto->pco_id_equ;
         $equipo = DB::table('equipo')->where('equ_id', $idEquipo)->first();
+
+        // Verificar que el equipo tenga Pre-Socialización aprobada (Apto)
+        $preSocAprobada = DB::table('socializacion as s')
+            ->join('tipo_socializacion as ts', 'ts.tso_id', '=', 's.soc_id_tso')
+            ->where('s.soc_id_equ', $idEquipo)
+            ->where('ts.tso_orden', 1)
+            ->where('s.soc_apto', 1)
+            ->first();
+
+        if (!$preSocAprobada) {
+            return redirect()->back()->withErrors([
+                'fecha' => 'Bloqueado: No se puede programar la Socialización Final sin haber aprobado previamente la Pre-Socialización (condición académica requerida: Apto).'
+            ]);
+        }
 
         $tipoSocFinal = DB::table('tipo_socializacion')->where('tso_orden', 2)->first()
             ?? DB::table('tipo_socializacion')->where('tso_nombre', 'like', '%Final%')->first();

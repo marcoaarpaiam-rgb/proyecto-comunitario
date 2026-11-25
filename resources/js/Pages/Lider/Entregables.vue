@@ -92,11 +92,12 @@
                 <div v-if="catalogoPnfi && catalogoPnfi.length" class="sc mb-4 p-3" style="border-left: 4px solid #dc3545;">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div>
-                            <h6 class="fw-bold mb-0 text-danger">
-                                <i class="bi bi-card-checklist me-2"></i>Ruta Oficial de Entregables PNFI
+                            <h6 class="fw-bold mb-0 text-danger d-flex align-items-center gap-2">
+                                <i class="bi bi-card-checklist"></i>Ruta Oficial de Entregables PNFI
+                                <span class="badge bg-danger-subtle text-danger" style="font-size: 0.75rem;">{{ semestreActivo }}</span>
                             </h6>
                             <p class="text-muted small mb-0">
-                                Guía de entregables normativos requeridos para la aprobación de tu proyecto socio-tecnológico.
+                                Guía de entregables normativos requeridos para la aprobación de tu proyecto socio-tecnológico en el {{ semestreActivo }}.
                             </p>
                         </div>
                         <button
@@ -109,30 +110,30 @@
                     </div>
 
                     <div v-if="mostrarChecklist" class="table-responsive mt-3">
-                        <table class="table table-sm align-middle mb-0" style="font-size: 0.84rem;">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Semestre</th>
-                                    <th>Entregable Normativo</th>
-                                    <th>Semanas Sugeridas</th>
-                                    <th>Tipo</th>
-                                    <th class="text-center">Estado del Equipo</th>
+                        <table class="table table-sm align-middle mb-0" style="font-size: 0.84rem; --bs-table-bg: transparent; --bs-table-color: var(--text-main);">
+                            <thead>
+                                <tr style="background: var(--bg-th); color: var(--text-main);">
+                                    <th style="color: var(--text-muted); font-size: 0.78rem;">Semestre</th>
+                                    <th style="color: var(--text-muted); font-size: 0.78rem;">Entregable Normativo</th>
+                                    <th style="color: var(--text-muted); font-size: 0.78rem;">Semanas Sugeridas</th>
+                                    <th style="color: var(--text-muted); font-size: 0.78rem;">Tipo</th>
+                                    <th class="text-center" style="color: var(--text-muted); font-size: 0.78rem;">Estado del Equipo</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="cep in catalogoPnfi" :key="cep.cep_id">
+                                <tr v-for="cep in catalogoPnfi" :key="cep.cep_id" style="border-bottom: 1px solid var(--border);">
                                     <td>
-                                        <span class="badge bg-secondary-subtle text-secondary">Semestre {{ cep.cep_semestre }}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary">{{ cep.cep_semestre }}</span>
                                     </td>
                                     <td>
-                                        <div class="fw-bold text-dark">{{ cep.cep_nombre }}</div>
-                                        <div v-if="cep.cep_descripcion" class="text-muted small">{{ cep.cep_descripcion }}</div>
+                                        <div style="font-weight: 700; color: var(--text-main);">{{ cep.cep_nombre }}</div>
+                                        <div v-if="cep.cep_descripcion" style="color: var(--text-muted); font-size: 0.8rem;">{{ cep.cep_descripcion }}</div>
                                     </td>
-                                    <td>
+                                    <td style="color: var(--text-main);">
                                         <span v-if="cep.cep_semana_inicio_sugerida && cep.cep_semana_limite_sugerida">
                                             Sem. {{ cep.cep_semana_inicio_sugerida }} a {{ cep.cep_semana_limite_sugerida }}
                                         </span>
-                                        <span v-else class="text-muted">-</span>
+                                        <span v-else style="color: var(--text-muted);">-</span>
                                     </td>
                                     <td>
                                         <span v-if="cep.cep_es_obligatorio" class="badge bg-danger-subtle text-danger">Obligatorio</span>
@@ -319,7 +320,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">
-                                    Vincular a Catálogo Oficial PNFI <span class="text-muted fw-normal small">(opcional)</span>
+                                    Vincular a Catálogo Oficial PNFI <span class="text-muted fw-normal small">({{ semestreActivo }})</span>
                                 </label>
                                 <select
                                     v-model="form.entr_id_cep"
@@ -331,11 +332,11 @@
                                         :key="cep.cep_id"
                                         :value="cep.cep_id"
                                     >
-                                        Sem. {{ cep.cep_semestre }}: {{ cep.cep_nombre }} {{ cep.cep_es_obligatorio ? '★ (Obligatorio)' : '' }}
+                                        {{ cep.cep_nombre }} {{ cep.cep_es_obligatorio ? '★ (Obligatorio)' : '' }}
                                     </option>
                                 </select>
                                 <div class="form-text small" style="color: var(--text-muted)">
-                                    Vincular al catálogo oficial actualiza la ruta crítica y el semáforo institucional del proyecto.
+                                    Vincular al catálogo oficial actualiza la ruta crítica y el Enfoque de Gestión de Proyectos y Procesos del proyecto.
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -440,6 +441,7 @@ const props = defineProps({
     tiposEntregable: { type: Array, default: () => [] },
     catalogoPnfi: { type: Array, default: () => [] },
     cartaAprobada: { type: Boolean, default: false },
+    semestreActivo: { type: String, default: "Semestre 1" },
 });
 const page = usePage();
 const sidebarOpen = ref(false);

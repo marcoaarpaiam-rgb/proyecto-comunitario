@@ -77,6 +77,47 @@
                         />
                     </div>
                 </div>
+
+                <!-- MÓDULOS SEPARADOS: 1. PRE-SOCIALIZACIÓN VS 2. SOCIALIZACIÓN FINAL -->
+                <div class="card border-0 shadow-sm p-2 mb-3 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
+                    <ul class="nav nav-pills gap-2 flex-wrap" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-4 py-2"
+                                :class="moduloActivo === 'pre_socializacion' ? 'active bg-danger text-white shadow-sm' : 'text-body'"
+                                type="button"
+                                @click="moduloActivo = 'pre_socializacion'"
+                            >
+                                <i class="bi bi-person-check-fill fs-5"></i>
+                                <span>1. Módulo Pre-Socialización</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="moduloActivo === 'pre_socializacion' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalPreSoc }}
+                                </span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-4 py-2"
+                                :class="moduloActivo === 'socializacion_final' ? 'active bg-danger text-white shadow-sm' : 'text-body'"
+                                type="button"
+                                @click="moduloActivo = 'socializacion_final'"
+                            >
+                                <i class="bi bi-mortarboard-fill fs-5"></i>
+                                <span>2. Módulo Socialización Final</span>
+                                <span
+                                    class="badge rounded-pill"
+                                    :class="moduloActivo === 'socializacion_final' ? 'bg-white text-danger' : 'bg-secondary text-white'"
+                                >
+                                    {{ totalSocFinal }}
+                                </span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
                 <div class="sc">
                     <div class="table-responsive">
                         <table class="ct">
@@ -492,14 +533,35 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
+const moduloActivo = ref("pre_socializacion"); // "pre_socializacion" | "socializacion_final"
+
+const totalPreSoc = computed(() =>
+    (props.socializaciones || []).filter(
+        (s) => s.tipo_socializacion?.tso_orden === 1 || s.soc_id_tso == 1
+    ).length
+);
+
+const totalSocFinal = computed(() =>
+    (props.socializaciones || []).filter(
+        (s) => s.tipo_socializacion?.tso_orden === 2 || s.soc_id_tso == 2
+    ).length
+);
+
 const busqueda = ref("");
 const filtradas = computed(() => {
-    if (!busqueda.value.trim()) return props.socializaciones;
+    let list = props.socializaciones || [];
+    if (moduloActivo.value === "pre_socializacion") {
+        list = list.filter((s) => s.tipo_socializacion?.tso_orden === 1 || s.soc_id_tso == 1);
+    } else {
+        list = list.filter((s) => s.tipo_socializacion?.tso_orden === 2 || s.soc_id_tso == 2);
+    }
+    if (!busqueda.value.trim()) return list;
     const q = busqueda.value.toLowerCase();
-    return props.socializaciones.filter(
+    return list.filter(
         (s) =>
             s.equipo?.equ_codigo?.toLowerCase().includes(q) ||
-            s.tipo_socializacion?.tso_nombre?.toLowerCase().includes(q),
+            s.tipo_socializacion?.tso_nombre?.toLowerCase().includes(q) ||
+            s.equipo?.equ_titulo?.toLowerCase().includes(q),
     );
 });
 
