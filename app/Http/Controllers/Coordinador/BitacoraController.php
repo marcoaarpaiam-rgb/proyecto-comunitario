@@ -37,7 +37,7 @@ class BitacoraController extends Controller
         }
 
         return Inertia::render('Coordinador/Bitacora', [
-            'registros' => $query->paginate(25)->withQueryString(),
+            'registros' => $query->paginate(3)->withQueryString(),
             'entidades' => Entidad::where('ent_status', true)->get(),
             'usuarios'  => Usuario::where('usu_tiene_acceso', true)
                 ->where('usu_status', true)->get([

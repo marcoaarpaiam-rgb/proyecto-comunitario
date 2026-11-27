@@ -1197,22 +1197,62 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div v-if="radarCrear && radarCrear.total_historico > 0" class="row g-2">
-                                                <div class="col-md-6" v-if="radarCrear.proyectos_activos?.length">
-                                                    <div class="fw-bold text-danger mb-1">Proyectos en desarrollo:</div>
-                                                    <ul class="list-unstyled mb-0">
-                                                        <li v-for="pa in radarCrear.proyectos_activos" :key="pa.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
-                                                            <strong>{{ pa.equ_codigo }}</strong>: {{ pa.equ_titulo }}
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                                <div class="col-md-6" v-if="radarCrear.proyectos_culminados?.length">
-                                                    <div class="fw-bold text-success mb-1">Culminados previamente:</div>
-                                                    <ul class="list-unstyled mb-0">
-                                                        <li v-for="pc in radarCrear.proyectos_culminados" :key="pc.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
-                                                            <strong>{{ pc.equ_codigo }}</strong>: {{ pc.equ_titulo }}
-                                                        </li>
-                                                    </ul>
+                                            <div v-if="radarCrear && radarCrear.total_historico > 0" class="mt-2">
+                                                <div class="card border border-light-subtle shadow-sm">
+                                                    <div
+                                                        class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#collapseHistorialCrear"
+                                                        style="cursor: pointer;"
+                                                    >
+                                                        <span class="fw-bold text-dark small">
+                                                            <i class="bi bi-clock-history text-primary me-1"></i>
+                                                            Historial de Proyectos en esta Comunidad ({{ radarCrear.total_historico }})
+                                                        </span>
+                                                        <span class="badge bg-light text-dark border">
+                                                            Ver detalle <i class="bi bi-chevron-down ms-1"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div id="collapseHistorialCrear" class="collapse show">
+                                                        <div class="card-body p-2 bg-light">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm table-hover align-middle mb-0 bg-white rounded border">
+                                                                    <thead class="table-light small">
+                                                                        <tr>
+                                                                            <th>Código / Título</th>
+                                                                            <th>Año / Lapso</th>
+                                                                            <th>Trayecto</th>
+                                                                            <th>Modalidad</th>
+                                                                            <th class="text-center">Estatus</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody class="small">
+                                                                        <tr v-for="proj in [...(radarCrear.proyectos_activos || []), ...(radarCrear.proyectos_culminados || [])]" :key="proj.pco_id">
+                                                                            <td>
+                                                                                <div class="fw-bold text-dark">{{ proj.equ_titulo }}</div>
+                                                                                <div class="text-muted font-monospace" style="font-size: 0.75rem;">{{ proj.equ_codigo }}</div>
+                                                                            </td>
+                                                                            <td>
+                                                                                <span class="badge bg-secondary">{{ proj.anio_lapso || '—' }}</span>
+                                                                            </td>
+                                                                            <td>{{ proj.trayecto || '—' }}</td>
+                                                                            <td>
+                                                                                <span class="badge bg-light text-dark border">{{ proj.modalidad || 'General' }}</span>
+                                                                            </td>
+                                                                            <td class="text-center">
+                                                                                <span v-if="proj.es_culminado" class="badge bg-success">
+                                                                                    <i class="bi bi-check-circle me-1"></i>Culminado
+                                                                                </span>
+                                                                                <span v-else class="badge bg-primary">
+                                                                                    <i class="bi bi-gear-wide-connected me-1"></i>Activo
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div v-else-if="radarCrear && !loadingRadarCrear" class="text-success fw-semibold">
@@ -1222,35 +1262,23 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold"
-                                            >Línea de Investigación</label
+                                            >Línea de Investigación (Institucional PNFI)</label
                                         >
-                                        <div
-                                            class="d-flex gap-2 align-items-center w-100"
-                                            style="min-width: 0"
-                                        >
-                                            <div class="flex-grow-1" style="min-width: 0">
-                                                <SelectBuscable
-                                                    v-model="formProyecto.pco_id_tpr"
-                                                    :options="opcionesTiposProyEqu"
-                                                    size="sm"
-                                                    placeholder="Seleccionar línea de investigación..."
-                                                />
-                                            </div>
-                                            <button
-                                                type="button"
-                                                class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
-                                                style="white-space: nowrap"
-                                                @click="
-                                                    abrirModalNuevoTipo('crear')
-                                                "
-                                                title="Registrar nueva línea de investigación"
-                                            >
-                                                <i
-                                                    class="bi bi-plus-lg me-1"
-                                                ></i
-                                                >Nuevo
-                                            </button>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light text-danger fw-bold">
+                                                <i class="bi bi-shield-check me-1"></i> Trayecto {{ trayectoNumeroCrear }}
+                                            </span>
+                                            <input
+                                                type="text"
+                                                class="form-control bg-light fw-bold text-dark"
+                                                :value="lineaAutomaticaCrear"
+                                                readonly
+                                                disabled
+                                            />
                                         </div>
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.73rem;">
+                                            Asignada automáticamente: Trayecto I = Alfabetización Tecnológica; Trayectos II, III y IV = Desarrollo de Software.
+                                        </small>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold"
@@ -1660,22 +1688,62 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div v-if="radarEditar && radarEditar.total_historico > 0" class="row g-2">
-                                        <div class="col-md-6" v-if="radarEditar.proyectos_activos?.length">
-                                            <div class="fw-bold text-danger mb-1">Proyectos en desarrollo:</div>
-                                            <ul class="list-unstyled mb-0">
-                                                <li v-for="pa in radarEditar.proyectos_activos" :key="pa.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
-                                                    <strong>{{ pa.equ_codigo }}</strong>: {{ pa.equ_titulo }}
-                                                </li>
-                                            </ul>
-                                        </div>
-                                        <div class="col-md-6" v-if="radarEditar.proyectos_culminados?.length">
-                                            <div class="fw-bold text-success mb-1">Culminados previamente:</div>
-                                            <ul class="list-unstyled mb-0">
-                                                <li v-for="pc in radarEditar.proyectos_culminados" :key="pc.pco_id" class="mb-1 p-1 px-2 bg-white border rounded">
-                                                    <strong>{{ pc.equ_codigo }}</strong>: {{ pc.equ_titulo }}
-                                                </li>
-                                            </ul>
+                                    <div v-if="radarEditar && radarEditar.total_historico > 0" class="mt-2">
+                                        <div class="card border border-light-subtle shadow-sm">
+                                            <div
+                                                class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#collapseHistorialEditar"
+                                                style="cursor: pointer;"
+                                            >
+                                                <span class="fw-bold text-dark small">
+                                                    <i class="bi bi-clock-history text-primary me-1"></i>
+                                                    Historial de Proyectos en esta Comunidad ({{ radarEditar.total_historico }})
+                                                </span>
+                                                <span class="badge bg-light text-dark border">
+                                                    Ver detalle <i class="bi bi-chevron-down ms-1"></i>
+                                                </span>
+                                            </div>
+                                            <div id="collapseHistorialEditar" class="collapse show">
+                                                <div class="card-body p-2 bg-light">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-hover align-middle mb-0 bg-white rounded border">
+                                                            <thead class="table-light small">
+                                                                <tr>
+                                                                    <th>Código / Título</th>
+                                                                    <th>Año / Lapso</th>
+                                                                    <th>Trayecto</th>
+                                                                    <th>Modalidad</th>
+                                                                    <th class="text-center">Estatus</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody class="small">
+                                                                <tr v-for="proj in [...(radarEditar.proyectos_activos || []), ...(radarEditar.proyectos_culminados || [])]" :key="proj.pco_id">
+                                                                    <td>
+                                                                        <div class="fw-bold text-dark">{{ proj.equ_titulo }}</div>
+                                                                        <div class="text-muted font-monospace" style="font-size: 0.75rem;">{{ proj.equ_codigo }}</div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-secondary">{{ proj.anio_lapso || '—' }}</span>
+                                                                    </td>
+                                                                    <td>{{ proj.trayecto || '—' }}</td>
+                                                                    <td>
+                                                                        <span class="badge bg-light text-dark border">{{ proj.modalidad || 'General' }}</span>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <span v-if="proj.es_culminado" class="badge bg-success">
+                                                                            <i class="bi bi-check-circle me-1"></i>Culminado
+                                                                        </span>
+                                                                        <span v-else class="badge bg-primary">
+                                                                            <i class="bi bi-gear-wide-connected me-1"></i>Activo
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div v-else-if="radarEditar && !loadingRadarEditar" class="text-success fw-semibold">
@@ -1686,29 +1754,23 @@
 
                             <div class="mb-3">
                                 <label class="form-label small fw-bold"
-                                    >Línea de Investigación</label
+                                    >Línea de Investigación (Institucional PNFI)</label
                                 >
-                                <div
-                                    class="d-flex gap-2 align-items-center w-100"
-                                    style="min-width: 0"
-                                >
-                                    <div class="flex-grow-1" style="min-width: 0">
-                                        <SelectBuscable
-                                            v-model="formEditar.pco_id_tpr"
-                                            :options="opcionesTiposProyEqu"
-                                            size="sm"
-                                            placeholder="Seleccionar línea de investigación..."
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-outline-danger flex-shrink-0 fw-semibold d-inline-flex align-items-center"
-                                        @click="abrirModalNuevoTipo('editar')"
-                                        title="Registrar nueva línea de investigación"
-                                    >
-                                        <i class="bi bi-plus-lg me-1"></i>Nuevo
-                                    </button>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light text-danger fw-bold">
+                                        <i class="bi bi-shield-check me-1"></i> Trayecto {{ trayectoNumeroEditar }}
+                                    </span>
+                                    <input
+                                        type="text"
+                                        class="form-control bg-light fw-bold text-dark"
+                                        :value="lineaAutomaticaEditar"
+                                        readonly
+                                        disabled
+                                    />
                                 </div>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.73rem;">
+                                    Asignada automáticamente: Trayecto I = Alfabetización Tecnológica; Trayectos II, III y IV = Desarrollo de Software.
+                                </small>
                             </div>
 
                             <div class="mb-2">
@@ -3844,6 +3906,38 @@ const opcionesSeccionesEqu = computed(() => [
         label: `${sec.sec_codigo} — ${sec.trayecto?.tra_nombre || ""} (${sec.turno?.tur_nombre || ""})`,
     })),
 ]);
+const trayectoNumeroCrear = computed(() => {
+    if (!formNuevo.value.equ_id_sec) return 1;
+    const sec = (props.secciones || []).find((s) => s.sec_id == formNuevo.value.equ_id_sec);
+    return Number(sec?.sec_id_tra || sec?.trayecto?.tra_numero || 1);
+});
+
+const lineaAutomaticaCrear = computed(() => {
+    return trayectoNumeroCrear.value === 1 ? "Alfabetización Tecnológica" : "Desarrollo de Software";
+});
+
+const tipoProyectoAutoCrear = computed(() => {
+    const palabra = trayectoNumeroCrear.value === 1 ? "alfabet" : "software";
+    return (props.tiposProyecto || []).find((tp) =>
+        (tp.tpr_nombre || "").toLowerCase().includes(palabra)
+    );
+});
+
+const trayectoNumeroEditar = computed(() => {
+    return Number(equipoSeleccionado.value?.equ_id_tra || equipoSeleccionado.value?.trayecto?.tra_numero || 1);
+});
+
+const lineaAutomaticaEditar = computed(() => {
+    return trayectoNumeroEditar.value === 1 ? "Alfabetización Tecnológica" : "Desarrollo de Software";
+});
+
+const tipoProyectoAutoEditar = computed(() => {
+    const palabra = trayectoNumeroEditar.value === 1 ? "alfabet" : "software";
+    return (props.tiposProyecto || []).find((tp) =>
+        (tp.tpr_nombre || "").toLowerCase().includes(palabra)
+    );
+});
+
 const opcionesTiposProyEqu = computed(() => [
     { value: "", label: "Seleccionar línea de investigación..." },
     ...(props.tiposProyecto || []).map((t) => ({ value: t.tpr_id, label: t.tpr_nombre })),
@@ -3851,7 +3945,6 @@ const opcionesTiposProyEqu = computed(() => [
 const opcionesModalidadesCrearEqu = computed(() => [
     { value: "", label: "Seleccionar modalidad..." },
     ...listaModalidadesEqu.value.map((m) => ({ value: m.mpr_id, label: m.mpr_nombre })),
-    { value: "__OTRO__", label: "➕ Otro (Crear nueva modalidad...)" },
 ]);
 const opcionesModalidadesEditarEqu = computed(() => [
     { value: "", label: "Seleccionar modalidad..." },
@@ -4217,7 +4310,7 @@ const base = computed(() => (esProfesor.value ? "/profesor" : "/coordinador"));
 
 const busqueda = ref("");
 const pagina = ref(1);
-const porPagina = 8;
+const porPagina = 3;
 const verDisueltos = ref(false);
 const loading = ref(false);
 const loadingEditar = ref(false);
@@ -4770,7 +4863,7 @@ const abrirModalCrear = () => {
     }
     formProyecto.value = {
         pco_id_com: "",
-        pco_id_tpr: "",
+        pco_id_tpr: tipoProyectoAutoCrear.value?.tpr_id || "",
         pco_id_mpr: "",
         pco_id_pco_previo: "",
         pco_fecha_limite: "",
@@ -4791,7 +4884,7 @@ const abrirModalEditar = (equ) => {
     formEditar.value = {
         equ_titulo: equ.equ_titulo,
         pco_id_com: p?.pco_id_com ?? "",
-        pco_id_tpr: p?.pco_id_tpr ?? "",
+        pco_id_tpr: tipoProyectoAutoEditar.value?.tpr_id || p?.pco_id_tpr || "",
         pco_id_mpr: p?.pco_id_mpr ?? "",
         pco_id_pco_previo: p?.pco_id_pco_previo ?? "",
         pco_resumen: p?.pco_resumen ?? "",

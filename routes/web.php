@@ -229,10 +229,11 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ]);
     })->name('dashboard');
 
-    // Tablas maestras (Coordinador: solo consulta)
+    // Tablas maestras (Coordinador)
+    Route::post('tipos-proyecto/{id}/reactivar', [MaestraController::class, 'reactivar'])
+        ->name('tipos-proyecto.reactivar');
     Route::resource('tipos-proyecto', MaestraController::class)
-        ->parameters(['tipos-proyecto' => 'id'])
-        ->only(['index']);
+        ->parameters(['tipos-proyecto' => 'id']);
 
     Route::resource('comunidades', ComunidadController::class)
         ->parameters(['comunidades' => 'id'])
@@ -244,8 +245,12 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->parameters(['secciones' => 'id'])
         ->only(['index']);
 
-    // Tablas maestras genéricas (Coordinador: solo consulta)
+    // Tablas maestras genéricas (Coordinador: gestión completa)
     Route::get('maestras/{tabla}', [TablaMaestraController::class, 'index'])->name('maestras.index');
+    Route::post('maestras/{tabla}', [TablaMaestraController::class, 'store'])->name('maestras.store');
+    Route::put('maestras/{tabla}/{id}', [TablaMaestraController::class, 'update'])->name('maestras.update');
+    Route::delete('maestras/{tabla}/{id}', [TablaMaestraController::class, 'destroy'])->name('maestras.destroy');
+    Route::post('maestras/{tabla}/{id}/reactivar', [TablaMaestraController::class, 'reactivar'])->name('maestras.reactivar');
 
     
 
@@ -321,6 +326,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('transicion-semestral.equipo.repositorio');
     Route::post('transicion-semestral/seccion/{id_sec}/repositorio', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'cerrarRepositorioSeccion'])
         ->name('transicion-semestral.seccion.repositorio');
+    Route::post('transicion-semestral/sincronizar-sogac', [\App\Http\Controllers\Coordinador\TransicionSemestralController::class, 'sincronizarSogac'])
+        ->name('transicion-semestral.sincronizar-sogac');
 
     Route::get('cartas/{id}/descargar',
         [CartaController::class, 'descargar'])
@@ -516,6 +523,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('esquemas.clonar');
     Route::post('esquemas-evaluacion/asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'asignarSeccion'])
         ->name('esquemas.asignar');
+    Route::post('esquemas-evaluacion/auto-asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'autoAsignarRecomendados'])
+        ->name('esquemas.auto-asignar');
     // Equipos — Gestión autónoma del Docente de Proyecto por sección
     Route::get('equipos', [EquipoController::class, 'index'])
         ->name('equipos.index');

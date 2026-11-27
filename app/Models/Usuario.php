@@ -48,6 +48,14 @@ class Usuario extends Authenticatable
         return trim("{$this->usu_primer_nombre} {$this->usu_segundo_nombre} {$this->usu_primer_apellido} {$this->usu_segundo_apellido}");
     }
 
+    public function getDebeCambiarPasswordAttribute(): bool
+    {
+        if (empty($this->usu_cedula) || empty($this->usu_password)) {
+            return false;
+        }
+        return \Illuminate\Support\Facades\Hash::check((string) $this->usu_cedula, (string) $this->usu_password);
+    }
+
     public function roles()
     {
         return $this->belongsToMany(Rol::class, 'usuario_rol', 'uro_id_usu', 'uro_id_rol')

@@ -30,11 +30,11 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <a
-                        href="/coordinador/reportes/exportar-general"
+                        :href="'/coordinador/reportes/exportar-general' + (filtros.id_periodo ? '?id_periodo=' + filtros.id_periodo : '')"
                         target="_blank"
                         class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold"
                         ><i class="bi bi-file-earmark-pdf me-1"></i>Exportar
-                        General</a
+                        General {{ periodoSeleccionadoTexto }}</a
                     >
                     <button class="tb-btn" @click="toggleTema">
                         <i
@@ -268,6 +268,18 @@
                     </div>
                     <div class="p-3">
                         <div class="row g-2 mb-3">
+                            <div class="col-md-4 col-12">
+                                <label class="form-label small fw-bold"
+                                    >Lapso Académico / Año</label
+                                >
+                                <SelectBuscable
+                                    v-model="filtros.id_periodo"
+                                    :options="opcionesPeriodos"
+                                    size="sm"
+                                    placeholder="Todos los lapsos (Histórico)"
+                                    @change="onPeriodoChange"
+                                />
+                            </div>
                             <div class="col-md-4 col-6">
                                 <label class="form-label small fw-bold"
                                     >Sección</label
@@ -418,7 +430,7 @@
                                     </thead>
                                     <tbody>
                                         <tr
-                                            v-for="e in resultadosFiltro"
+                                            v-for="e in paginadosFiltro"
                                             :key="e.equ_id"
                                         >
                                             <td class="fw-bold">
@@ -463,6 +475,46 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                            <!-- Paginación de 3 registros para resultados del reporte -->
+                            <div
+                                v-if="totalPaginasFiltro > 1"
+                                style="
+                                    padding: 0.75rem 1rem;
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    border-top: 1px solid var(--border);
+                                "
+                            >
+                                <span style="font-size: 0.82rem; color: var(--text-muted)">
+                                    Mostrando {{ desdeFiltro + 1 }}–{{ Math.min(hastaFiltro, totalFiltro) }} de {{ totalFiltro }} (3 por página)
+                                </span>
+                                <div class="d-flex gap-1">
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary"
+                                        :disabled="pagP === 1"
+                                        @click="pagP--"
+                                    >
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    <button
+                                        v-for="p in paginasVFiltro"
+                                        :key="p"
+                                        class="btn btn-sm"
+                                        :class="p === pagP ? 'btn-danger' : 'btn-outline-secondary'"
+                                        @click="pagP = p"
+                                    >
+                                        {{ p }}
+                                    </button>
+                                    <button
+                                        class="btn btn-sm btn-outline-secondary"
+                                        :disabled="pagP === totalPaginasFiltro"
+                                        @click="pagP++"
+                                    >
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div
@@ -1008,6 +1060,8 @@ const menuMaestras = ref(false);
 const menuSistema = ref(false);
 const page = usePage();
 const props = defineProps({
+    periodos: { type: Array, default: () => [] },
+    periodoActivo: { type: Object, default: null },
     secciones: Array,
     trayectos: Array,
     comunidades: Array,
@@ -1034,13 +1088,46 @@ const logout = () => router.post("/logout");
 
 // ── Solvencia ────────────────────────────────────────────────────────
 const seccionSeleccionada = ref("");
-const opcionesRepSeccionesTodas = computed(() => [
-    { value: "", label: "Todas" },
-    ...(props.secciones || []).map((s) => ({
-        value: s.sec_id,
-        label: `${s.sec_codigo} — ${s.trayecto?.tra_nombre || ""}`,
+
+const opcionesPeriodos = computed(() => [
+    { value: "", label: "Todos los lapsos (Histórico completo)" },
+    ...(props.periodos || []).map((p) => ({
+        value: String(p.id_periodo),
+        label: `${p.lapso_academico} (${p.tipo_semestre}) ${p.activo ? '★ [Activo]' : '[Histórico]'}`,
     })),
 ]);
+
+const periodoSeleccionadoTexto = computed(() => {
+    if (!filtros.value.id_periodo) return "";
+    const p = (props.periodos || []).find((per) => String(per.id_periodo) === String(filtros.value.id_periodo));
+    return p ? `(${p.lapso_academico})` : "";
+});
+
+const onPeriodoChange = () => {
+    filtros.value.sec_id = "";
+};
+
+const opcionesRepSeccionesTodas = computed(() => {
+    let secs = props.secciones || [];
+    if (filtros.value.id_periodo) {
+        const p = (props.periodos || []).find((per) => String(per.id_periodo) === String(filtros.value.id_periodo));
+        if (p) {
+            secs = secs.filter((s) => {
+                if (!s.sec_semestre) return true;
+                if (p.tipo_semestre === "Impar") return s.sec_semestre % 2 !== 0;
+                if (p.tipo_semestre === "Par") return s.sec_semestre % 2 === 0;
+                return true;
+            });
+        }
+    }
+    return [
+        { value: "", label: "Todas" },
+        ...secs.map((s) => ({
+            value: s.sec_id,
+            label: `${s.sec_codigo} — ${s.trayecto?.tra_nombre || ""}`,
+        })),
+    ];
+});
 const opcionesRepSeccionesTodasList = computed(() => [
     { value: "", label: "Todas las secciones" },
     ...(props.secciones || []).map((s) => ({
@@ -1090,6 +1177,7 @@ const generarSolvencia = () => {
 
 // ── Filtro combinado ─────────────────────────────────────────────────
 const filtros = ref({
+    id_periodo: props.periodoActivo?.id_periodo ? String(props.periodoActivo.id_periodo) : "",
     sec_id: "",
     tra_id: "",
     com_id: "",
@@ -1106,9 +1194,26 @@ const cargandoFiltro = ref(false);
 const filtroEjecutado = ref(false);
 const tabActiva = ref("general");
 
+const pagP = ref(1);
+const porPagina = 3;
+const totalPaginasFiltro = computed(() => Math.ceil((resultadosFiltro.value?.length || 0) / porPagina));
+const desdeFiltro = computed(() => (pagP.value - 1) * porPagina);
+const hastaFiltro = computed(() => desdeFiltro.value + porPagina);
+const paginadosFiltro = computed(() => (resultadosFiltro.value || []).slice(desdeFiltro.value, hastaFiltro.value));
+const paginasVFiltro = computed(() => {
+    const t = totalPaginasFiltro.value,
+        a = pagP.value,
+        p = [],
+        i = Math.max(1, a - 2),
+        f = Math.min(t, a + 2);
+    for (let x = i; x <= f; x++) p.push(x);
+    return p;
+});
+
 const aplicarFiltro = async () => {
     cargandoFiltro.value = true;
     filtroEjecutado.value = true;
+    pagP.value = 1;
     const params = new URLSearchParams();
     Object.entries(filtros.value).forEach(([k, v]) => {
         if (v !== "" && v !== false) params.append(k, v);
@@ -1133,6 +1238,7 @@ const aplicarFiltro = async () => {
 
 const limpiarFiltros = () => {
     filtros.value = {
+        id_periodo: props.periodoActivo?.id_periodo ? String(props.periodoActivo.id_periodo) : "",
         sec_id: "",
         tra_id: "",
         com_id: "",
@@ -1146,6 +1252,7 @@ const limpiarFiltros = () => {
     resultadosFiltro.value = [];
     totalFiltro.value = 0;
     filtroEjecutado.value = false;
+    pagP.value = 1;
 };
 
 // ── Por comunidad ────────────────────────────────────────────────────

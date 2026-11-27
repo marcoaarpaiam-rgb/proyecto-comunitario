@@ -422,11 +422,15 @@ class EquipoController extends Controller
             if ($crearProyecto) {
                 $mprId = !empty($proy['pco_id_mpr']) ? $proy['pco_id_mpr'] : (\App\Models\ModalidadProyecto::where('mpr_nombre', 'Nuevo')->value('mpr_id') ?? \App\Models\ModalidadProyecto::first()?->mpr_id);
                 $fechaLim = !empty($proy['pco_fecha_limite']) ? $proy['pco_fecha_limite'] : now()->addMonths(6)->toDateString();
+                $trayNum = (int) ($trayecto->tra_numero ?? $trayecto->tra_id);
+                $tprIdAuto = \App\Models\TipoProyecto::obtenerIdPorTrayecto($trayNum);
+                $lineaNombreAuto = \App\Models\TipoProyecto::obtenerNombrePorTrayecto($trayNum);
 
                 $proyecto = ProyectoComunidad::create([
                     'pco_id_equ'                   => $equipo->equ_id,
                     'pco_id_com'                   => $proy['pco_id_com'],
-                    'pco_id_tpr'                   => $proy['pco_id_tpr'],
+                    'pco_id_tpr'                   => $tprIdAuto,
+                    'pco_linea_investigacion'      => $lineaNombreAuto,
                     'pco_id_mpr'                   => $mprId,
                     'pco_id_pco_previo'            => !empty($proy['pco_id_pco_previo']) ? $proy['pco_id_pco_previo'] : null,
                     'pco_resumen'                  => $proy['pco_resumen'] ?? '',
@@ -581,16 +585,21 @@ class EquipoController extends Controller
                 'equ_id_usu_updated'           => auth()->id(),
             ]);
 
+            $trayNum = (int) ($equipo->equ_id_tra ?: 1);
+            $tprIdAuto = \App\Models\TipoProyecto::obtenerIdPorTrayecto($trayNum);
+            $lineaNombreAuto = \App\Models\TipoProyecto::obtenerNombrePorTrayecto($trayNum);
+
             if (!$proyecto) {
                 if ($request->filled('pco_id_com')) {
                     $mprId = $request->pco_id_mpr ?: (\App\Models\ModalidadProyecto::where('mpr_nombre', 'Nuevo')->value('mpr_id') ?? \App\Models\ModalidadProyecto::first()?->mpr_id);
-                    $tprId = $request->pco_id_tpr ?: (\App\Models\TipoProyecto::first()?->tpr_id);
+                    $tprId = $tprIdAuto;
                     $fechaLim = $request->filled('pco_fecha_limite') ? $request->pco_fecha_limite : now()->addMonths(6)->toDateString();
 
                     $proyecto = ProyectoComunidad::create([
                         'pco_id_equ'                  => $equipo->equ_id,
                         'pco_id_com'                  => $request->pco_id_com,
                         'pco_id_tpr'                  => $tprId,
+                        'pco_linea_investigacion'     => $lineaNombreAuto,
                         'pco_id_mpr'                  => $mprId,
                         'pco_id_pco_previo'           => $request->pco_id_pco_previo ?: null,
                         'pco_resumen'                 => $request->pco_resumen ?? '',
@@ -629,7 +638,8 @@ class EquipoController extends Controller
 
             $proyecto->update([
                 'pco_id_com'                   => $request->pco_id_com ?: $proyecto->pco_id_com,
-                'pco_id_tpr'                   => $request->pco_id_tpr ?: $proyecto->pco_id_tpr,
+                'pco_id_tpr'                   => $tprIdAuto,
+                'pco_linea_investigacion'      => $lineaNombreAuto,
                 'pco_id_mpr'                   => $request->pco_id_mpr ?: $proyecto->pco_id_mpr,
                 'pco_resumen'                  => $request->pco_resumen ?? $proyecto->pco_resumen,
                 'pco_justificacion_duplicidad' => $justifDuplicidad,

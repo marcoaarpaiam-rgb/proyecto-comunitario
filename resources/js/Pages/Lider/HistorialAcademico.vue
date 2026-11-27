@@ -13,90 +13,8 @@
             @click="sidebarOpen = false"
         ></div>
 
-        <!-- SIDEBAR -->
-        <div class="sb-lid" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-avatar">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">
-                        <i
-                            class="bi bi-star-fill me-1"
-                            style="color: #ffd700; font-size: 0.65rem"
-                        ></i
-                        >Líder de Equipo
-                    </div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Mi Proyecto</div>
-                <Link href="/lider" class="sb-link">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </Link>
-                <Link href="/lider/equipo" class="sb-link">
-                    <i class="bi bi-people"></i> Mi Equipo
-                </Link>
-                <Link href="/lider/proyecto" class="sb-link">
-                    <i class="bi bi-building"></i> Mi Comunidad
-                </Link>
-                <div class="sb-sec">Acciones</div>
-                <Link href="/lider/entregables" class="sb-link">
-                    <i class="bi bi-cloud-upload"></i> Entregables
-                </Link>
-                <Link href="/lider/carta" class="sb-link">
-                    <i class="bi bi-send"></i> Carta de Presentación
-                </Link>
-                <Link href="/lider/historial-academico" class="sb-link active">
-                    <i class="bi bi-mortarboard"></i> Historial Académico
-                </Link>
-                <div style="padding: 0.75rem 1.4rem; margin-top: auto">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-link w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- SIDEBAR LIDER UNIFICADO -->
+        <SidebarLider :sidebar-open="sidebarOpen" @close="sidebarOpen = false" />
 
         <!-- MAIN -->
         <div class="main-lid">
@@ -124,6 +42,7 @@
 
             <!-- CONTENIDO -->
             <div class="content-lid">
+                <BannerComunidadPendiente />
                 <div v-if="!equipo" class="text-center py-5">
                     <i class="bi bi-exclamation-triangle text-danger fs-1 d-block mb-3"></i>
                     <h5 class="fw-bold">No tienes un equipo asignado</h5>
@@ -274,8 +193,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="(puc, idx) in equipo.puntos_control" :key="puc.puc_id">
-                                            <td><span class="bs bsec">{{ puc.puc_orden || idx + 1 }}</span></td>
+                                        <tr v-for="(puc, idx) in pucPaginados" :key="puc.puc_id">
+                                            <td><span class="bs bsec">{{ puc.puc_orden || (pagPuc - 1) * porPagina + idx + 1 }}</span></td>
                                             <td>
                                                 <div class="fw-bold">{{ puc.puc_nombre }}</div>
                                                 <small class="text-muted" v-if="puc.puc_descripcion">{{ puc.puc_descripcion }}</small>
@@ -304,6 +223,14 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                            <div v-if="totalPaginasPuc > 1" class="d-flex justify-content-between align-items-center py-2 px-3 border-top">
+                                <small class="text-muted">Mostrando {{ (pagPuc - 1) * porPagina + 1 }}–{{ Math.min(pagPuc * porPagina, totalPuntos) }} de {{ totalPuntos }} (3 por página)</small>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-secondary" :disabled="pagPuc === 1" @click="pagPuc--"><i class="bi bi-chevron-left"></i></button>
+                                    <button v-for="p in totalPaginasPuc" :key="p" class="btn btn-sm" :class="p === pagPuc ? 'btn-danger' : 'btn-outline-secondary'" @click="pagPuc = p">{{ p }}</button>
+                                    <button class="btn btn-sm btn-outline-secondary" :disabled="pagPuc === totalPaginasPuc" @click="pagPuc++"><i class="bi bi-chevron-right"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -339,7 +266,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="ent in equipo.entregables" :key="ent.entr_id">
+                                        <tr v-for="ent in entPaginados" :key="ent.entr_id">
                                             <td>
                                                 <div class="fw-bold">{{ ent.tipo_entregable?.tet_nombre || 'Entregable' }}</div>
                                                 <small class="text-muted"><i class="bi bi-file-earmark me-1"></i>{{ ent.entr_nombre_archivo }}</small>
@@ -369,6 +296,14 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                            <div v-if="totalPaginasEnt > 1" class="d-flex justify-content-between align-items-center py-2 px-3 border-top">
+                                <small class="text-muted">Mostrando {{ (pagEnt - 1) * porPagina + 1 }}–{{ Math.min(pagEnt * porPagina, totalEntregables) }} de {{ totalEntregables }} (3 por página)</small>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-secondary" :disabled="pagEnt === 1" @click="pagEnt--"><i class="bi bi-chevron-left"></i></button>
+                                    <button v-for="p in totalPaginasEnt" :key="p" class="btn btn-sm" :class="p === pagEnt ? 'btn-danger' : 'btn-outline-secondary'" @click="pagEnt = p">{{ p }}</button>
+                                    <button class="btn btn-sm btn-outline-secondary" :disabled="pagEnt === totalPaginasEnt" @click="pagEnt++"><i class="bi bi-chevron-right"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -466,6 +401,8 @@
 import { ref, computed } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import SidebarLider from "@/Components/SidebarLider.vue";
+import BannerComunidadPendiente from "@/Components/BannerComunidadPendiente.vue";
 
 const props = defineProps({
     equipo: { type: Object, default: null },
@@ -507,6 +444,14 @@ const totalEntregables = computed(() => props.equipo?.entregables?.length || 0);
 const entregablesAprobados = computed(() => {
     return (props.equipo?.entregables || []).filter((e) => e.entr_aprobado === true).length;
 });
+
+const pagPuc = ref(1);
+const pagEnt = ref(1);
+const porPagina = 3;
+const totalPaginasPuc = computed(() => Math.ceil((props.equipo?.puntos_control?.length || 0) / porPagina));
+const pucPaginados = computed(() => (props.equipo?.puntos_control || []).slice((pagPuc.value - 1) * porPagina, pagPuc.value * porPagina));
+const totalPaginasEnt = computed(() => Math.ceil((props.equipo?.entregables?.length || 0) / porPagina));
+const entPaginados = computed(() => (props.equipo?.entregables || []).slice((pagEnt.value - 1) * porPagina, pagEnt.value * porPagina));
 
 const totalSocializaciones = computed(() => props.equipo?.socializaciones?.length || 0);
 const socializacionesAptas = computed(() => {

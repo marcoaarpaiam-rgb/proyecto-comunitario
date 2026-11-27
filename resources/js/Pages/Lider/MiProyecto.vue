@@ -196,6 +196,111 @@
                                         placeholder="Seleccionar comunidad..."
                                         search-placeholder="Buscar comunidad..."
                                     />
+
+                                    <!-- Radar de Comunidad e Historial Comunitario -->
+                                    <div v-if="formPost.pco_id_com" class="mt-3">
+                                        <div class="p-3 rounded-3 border bg-light small">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold text-dark text-uppercase">
+                                                    <i class="bi bi-radar text-danger me-1"></i>
+                                                    Radar Comunitario: {{ radarLider?.comunidad?.com_nombre || 'Consultando...' }}
+                                                </span>
+                                                <span v-if="loadingRadarLider" class="spinner-border spinner-border-sm text-danger"></span>
+                                                <span v-else-if="radarLider" class="badge bg-dark">
+                                                    {{ radarLider.proyectos_activos?.length || 0 }} activos &bull; {{ radarLider.proyectos_culminados?.length || 0 }} culminados
+                                                </span>
+                                            </div>
+
+                                            <!-- Alerta de Similitud / Duplicidad -->
+                                            <div
+                                                v-if="radarLider?.alerta_similitud?.existe"
+                                                class="alert p-2 mb-2 rounded-3"
+                                                :class="radarLider.alerta_similitud.es_critico ? 'alert-danger border-danger' : 'alert-warning border-warning'"
+                                            >
+                                                <div class="fw-bold mb-1">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                    Posible Proyecto Repetido (Similitud del {{ radarLider.alerta_similitud.porcentaje }}%)
+                                                </div>
+                                                <p class="mb-2">{{ radarLider.alerta_similitud.mensaje }}</p>
+
+                                                <div class="mt-2 pt-2 border-top">
+                                                    <label class="form-label fw-bold text-dark small mb-1">
+                                                        <i class="bi bi-shield-fill-exclamation text-danger me-1"></i>
+                                                        Justificación contra Duplicidad (Escalamiento / Nueva Fase) <span class="text-danger">*</span>
+                                                    </label>
+                                                    <textarea
+                                                        class="form-control form-control-sm bg-white"
+                                                        rows="2"
+                                                        v-model="formPost.pco_justificacion_duplicidad"
+                                                        placeholder="Explique el motivo (ej. Fase II, módulo complementario, nuevo alcance o usuarios distintos)..."
+                                                    ></textarea>
+                                                </div>
+                                            </div>
+
+                                            <!-- Acordeón / Historial de Proyectos en esta Comunidad -->
+                                            <div v-if="radarLider && radarLider.total_historico > 0" class="mt-2">
+                                                <div class="card border border-light-subtle shadow-sm">
+                                                    <div
+                                                        class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#collapseHistorialLider"
+                                                        style="cursor: pointer;"
+                                                    >
+                                                        <span class="fw-bold text-dark small">
+                                                            <i class="bi bi-clock-history text-primary me-1"></i>
+                                                            Historial de Proyectos en esta Comunidad ({{ radarLider.total_historico }})
+                                                        </span>
+                                                        <span class="badge bg-light text-dark border">
+                                                            Ver detalle <i class="bi bi-chevron-down ms-1"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div id="collapseHistorialLider" class="collapse show">
+                                                        <div class="card-body p-2 bg-light">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm table-hover align-middle mb-0 bg-white rounded border">
+                                                                    <thead class="table-light small">
+                                                                        <tr>
+                                                                            <th>Código / Título</th>
+                                                                            <th>Año / Lapso</th>
+                                                                            <th>Trayecto</th>
+                                                                            <th>Modalidad</th>
+                                                                            <th class="text-center">Estatus</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody class="small">
+                                                                        <tr v-for="proj in [...(radarLider.proyectos_activos || []), ...(radarLider.proyectos_culminados || [])]" :key="proj.pco_id">
+                                                                            <td>
+                                                                                <div class="fw-bold text-dark">{{ proj.equ_titulo }}</div>
+                                                                                <div class="text-muted font-monospace" style="font-size: 0.75rem;">{{ proj.equ_codigo }}</div>
+                                                                            </td>
+                                                                            <td>
+                                                                                <span class="badge bg-secondary">{{ proj.anio_lapso || '—' }}</span>
+                                                                            </td>
+                                                                            <td>{{ proj.trayecto || '—' }}</td>
+                                                                            <td>
+                                                                                <span class="badge bg-light text-dark border">{{ proj.modalidad || 'General' }}</span>
+                                                                            </td>
+                                                                            <td class="text-center">
+                                                                                <span v-if="proj.es_culminado" class="badge bg-success">
+                                                                                    <i class="bi bi-check-circle me-1"></i>Culminado
+                                                                                </span>
+                                                                                <span v-else class="badge bg-primary">
+                                                                                    <i class="bi bi-gear-wide-connected me-1"></i>Activo
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div v-else-if="radarLider && !loadingRadarLider" class="text-success fw-semibold mt-1">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Comunidad sin otros proyectos registrados.
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div v-else class="row g-2">
@@ -297,12 +402,22 @@
                                         />
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label small fw-semibold">Línea de Investigación (PNFI) *</label>
-                                        <SelectBuscable
-                                            v-model="formPost.pco_id_tpr"
-                                            :options="opcionesTiposProyecto"
-                                            placeholder="Seleccionar línea..."
-                                        />
+                                        <label class="form-label small fw-semibold">Línea de Investigación (Institucional PNFI) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light text-danger fw-bold">
+                                                <i class="bi bi-shield-check me-1"></i> Trayecto {{ trayectoNumero }}
+                                            </span>
+                                            <input
+                                                type="text"
+                                                class="form-control bg-light fw-bold text-dark"
+                                                :value="lineaAutomatica"
+                                                readonly
+                                                disabled
+                                            />
+                                        </div>
+                                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                            Asignada automáticamente por PNFI: Trayecto I = Alfabetización Tecnológica; Trayectos II, III y IV = Desarrollo de Software.
+                                        </small>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small fw-semibold">Resumen del Proyecto *</label>
@@ -726,7 +841,7 @@
     </div>
 </template>
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import SidebarLider from "@/Components/SidebarLider.vue";
@@ -790,6 +905,21 @@ const opcionesTiposOrganizacion = computed(() => [
     })),
 ]);
 
+const trayectoNumero = computed(() => {
+    return Number(props.equipo?.trayecto?.tra_numero || props.equipo?.equ_id_tra || 1);
+});
+
+const lineaAutomatica = computed(() => {
+    return trayectoNumero.value === 1 ? "Alfabetización Tecnológica" : "Desarrollo de Software";
+});
+
+const tipoProyectoAuto = computed(() => {
+    const palabra = trayectoNumero.value === 1 ? "alfabet" : "software";
+    return (props.tiposProyecto || []).find((tp) =>
+        (tp.tpr_nombre || "").toLowerCase().includes(palabra)
+    );
+});
+
 const opcionesModalidadesProyecto = computed(() => [
     { value: "", label: "Seleccionar modalidad..." },
     ...(props.modalidades || []).map((m) => ({
@@ -809,6 +939,7 @@ const opcionesTiposProyecto = computed(() => [
 const formPost = ref({
     modo_comunidad: "catalogo",
     pco_id_com: props.equipo?.proyecto_comunidad?.pco_id_com || "",
+    pco_justificacion_duplicidad: props.equipo?.proyecto_comunidad?.pco_justificacion_duplicidad || "",
     nueva_comunidad_nombre: "",
     nueva_comunidad_ubicacion: "",
     nueva_comunidad_tor: "",
@@ -819,12 +950,47 @@ const formPost = ref({
     rco_cargo: props.responsable?.rco_cargo || "",
     pco_area_comunidad: props.equipo?.proyecto_comunidad?.pco_area_comunidad || "",
     pco_resumen: props.equipo?.proyecto_comunidad?.pco_resumen || "",
-    pco_id_tpr: props.equipo?.proyecto_comunidad?.pco_id_tpr || "",
+    pco_id_tpr: tipoProyectoAuto.value?.tpr_id || props.equipo?.proyecto_comunidad?.pco_id_tpr || "",
     pco_id_mpr: props.equipo?.proyecto_comunidad?.pco_id_mpr || "",
     pco_id_pco_previo: props.equipo?.proyecto_comunidad?.pco_id_pco_previo || "",
 });
 
+const radarLider = ref(null);
+const loadingRadarLider = ref(false);
+
+const consultarRadarLider = async (comId) => {
+    if (!comId) {
+        radarLider.value = null;
+        return;
+    }
+    loadingRadarLider.value = true;
+    try {
+        const res = await window.axios.get(`/api/comunidades/${comId}/radar-proyectos`);
+        radarLider.value = res.data;
+    } catch (e) {
+        console.error("Error al consultar radar de proyectos:", e);
+        radarLider.value = null;
+    } finally {
+        loadingRadarLider.value = false;
+    }
+};
+
+watch(
+    () => formPost.value.pco_id_com,
+    (newVal) => {
+        if (newVal && formPost.value.modo_comunidad === "catalogo") {
+            consultarRadarLider(newVal);
+        } else {
+            radarLider.value = null;
+        }
+    },
+    { immediate: true }
+);
+
 const enviarPostulacion = () => {
+    if (tipoProyectoAuto.value?.tpr_id) {
+        formPost.value.pco_id_tpr = tipoProyectoAuto.value.tpr_id;
+    }
     enviandoPostulacion.value = true;
     router.post("/lider/proyecto/postular", formPost.value, {
         preserveScroll: true,

@@ -79,7 +79,7 @@ import { ref, computed, watch } from "vue";
 const props = defineProps({
     items: { type: Array, default: () => [] },
     camposBusqueda: { type: Array, default: () => [] },
-    porPagina: { type: Number, default: 10 },
+    porPagina: { type: Number, default: 3 },
     placeholder: { type: String, default: "Buscar..." },
 });
 

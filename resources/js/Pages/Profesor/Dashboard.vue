@@ -582,7 +582,7 @@ onMounted(() => {
 });
 
 const paginaActual = ref(1);
-const equiposPorPagina = 5;
+const equiposPorPagina = 3;
 
 const equiposActivos = computed(() => {
     return (props.equipos || []).filter(

@@ -102,14 +102,23 @@ class TablaMaestraController extends Controller
         return $configs[$tabla] ?? abort(404);
     }
 
-    public function index(string $tabla)
+    public function index(Request $request, string $tabla)
     {
         $c = $this->config($tabla);
-        $registros = DB::table($c['tabla'])->orderBy($c['campo'])->get();
+        $query = DB::table($c['tabla'])->orderBy($c['campo']);
+        if ($request->filled('buscar')) {
+            $b = mb_strtolower(trim($request->buscar), 'UTF-8');
+            $query->whereRaw("LOWER(TRIM({$c['campo']})) LIKE ?", ["%{$b}%"]);
+        }
+        $registros = $query->paginate(3)->withQueryString();
+
         return Inertia::render('Coordinador/Maestras/GenericaMaestra', [
             'registros' => $registros,
             'config'    => $c,
             'tabla'     => $tabla,
+            'filtros'   => [
+                'buscar' => $request->input('buscar', ''),
+            ],
         ]);
     }
 
@@ -117,11 +126,30 @@ class TablaMaestraController extends Controller
     {
         $c = $this->config($tabla);
         $request->validate([
-            $c['campo'] => "required|string|max:{$c['max']}|unique:{$c['tabla']},{$c['campo']}",
+            $c['campo'] => "required|string|max:{$c['max']}",
         ]);
 
+        $valor = trim($request->input($c['campo']));
+        $valorLower = mb_strtolower($valor, 'UTF-8');
+
+        if (in_array($valorLower, ['otro', 'otros', 'otra', 'otras'])) {
+            return back()->withErrors([
+                $c['campo'] => 'No se permite registrar opciones genéricas como "Otro" o "Otros". Ingrese el nombre específico del registro.'
+            ]);
+        }
+
+        $duplicado = DB::table($c['tabla'])
+            ->whereRaw("LOWER(TRIM({$c['campo']})) = ?", [$valorLower])
+            ->exists();
+
+        if ($duplicado) {
+            return back()->withErrors([
+                $c['campo'] => "Ya existe un registro con este nombre (validación insensible a mayúsculas y espacios extras)."
+            ]);
+        }
+
         $data = [
-            $c['campo']   => $request->input($c['campo']),
+            $c['campo']   => $valor,
             $c['status']  => true,
             $c['created'] => auth()->id(),
         ];
@@ -138,11 +166,31 @@ class TablaMaestraController extends Controller
     {
         $c = $this->config($tabla);
         $request->validate([
-            $c['campo'] => "required|string|max:{$c['max']}|unique:{$c['tabla']},{$c['campo']},{$id},{$c['pk']}",
+            $c['campo'] => "required|string|max:{$c['max']}",
         ]);
 
+        $valor = trim($request->input($c['campo']));
+        $valorLower = mb_strtolower($valor, 'UTF-8');
+
+        if (in_array($valorLower, ['otro', 'otros', 'otra', 'otras'])) {
+            return back()->withErrors([
+                $c['campo'] => 'No se permite registrar opciones genéricas como "Otro" o "Otros". Ingrese el nombre específico del registro.'
+            ]);
+        }
+
+        $duplicado = DB::table($c['tabla'])
+            ->whereRaw("LOWER(TRIM({$c['campo']})) = ?", [$valorLower])
+            ->where($c['pk'], '!=', $id)
+            ->exists();
+
+        if ($duplicado) {
+            return back()->withErrors([
+                $c['campo'] => "Ya existe otro registro con este nombre (validación insensible a mayúsculas y espacios extras)."
+            ]);
+        }
+
         $data = [
-            $c['campo']   => $request->input($c['campo']),
+            $c['campo']   => $valor,
             $c['updated'] => auth()->id(),
         ];
 

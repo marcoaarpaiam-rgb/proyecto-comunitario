@@ -130,7 +130,6 @@ class DatabaseSeeder extends Seeder
             ['tor_nombre'=>'Cooperativa','tor_status'=>true],
             ['tor_nombre'=>'Institución Cultural','tor_status'=>true],
             ['tor_nombre'=>'Empresa','tor_status'=>true],
-            ['tor_nombre'=>'Otro','tor_status'=>true],
         ]);
 
         // ── COMUNIDADES ──────────────────────────────────────────────

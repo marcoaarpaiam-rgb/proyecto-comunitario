@@ -85,16 +85,20 @@ class ProyectoController extends Controller
         }
 
         DB::transaction(function () use ($request, $equipoActual, $justificacion, &$proyecto) {
+            $trayNum = (int) ($equipoActual?->equ_id_tra ?: 1);
+            $tprIdAuto = \App\Models\TipoProyecto::obtenerIdPorTrayecto($trayNum);
+            $lineaNombreAuto = \App\Models\TipoProyecto::obtenerNombrePorTrayecto($trayNum);
+
             $proyecto = ProyectoComunidad::create([
                 'pco_id_equ'          => $request->pco_id_equ,
                 'pco_id_com'          => $request->pco_id_com,
-                'pco_id_tpr'          => $request->pco_id_tpr,
+                'pco_id_tpr'          => $tprIdAuto,
                 'pco_id_mpr'          => $request->pco_id_mpr,
                 'pco_id_pco_previo'   => $request->pco_id_pco_previo,
                 'pco_resumen'         => $request->pco_resumen,
                 'pco_justificacion_duplicidad' => $justificacion,
                 'pco_area_comunidad'  => $request->pco_area_comunidad,
-                'pco_linea_investigacion' => $request->pco_linea_investigacion ?? 'Desarrollo de Software - Web',
+                'pco_linea_investigacion' => $lineaNombreAuto,
                 'pco_fecha_limite'    => $request->pco_fecha_limite,
                 'pco_fecha_aprobacion' => now()->toDateString(),
                 'pco_id_usu_aprobado'  => auth()->id(),
@@ -178,9 +182,14 @@ class ProyectoController extends Controller
             ]);
         }
 
+        $trayNum = (int) ($proyecto->equipo?->equ_id_tra ?: 1);
+        $tprIdAuto = \App\Models\TipoProyecto::obtenerIdPorTrayecto($trayNum);
+        $lineaNombreAuto = \App\Models\TipoProyecto::obtenerNombrePorTrayecto($trayNum);
+
         $proyecto->update([
             'pco_id_com'                   => $request->pco_id_com,
-            'pco_id_tpr'                   => $request->pco_id_tpr,
+            'pco_id_tpr'                   => $tprIdAuto,
+            'pco_linea_investigacion'      => $lineaNombreAuto,
             'pco_id_mpr'                   => $request->pco_id_mpr,
             'pco_resumen'                  => $request->pco_resumen,
             'pco_justificacion_duplicidad' => $justificacion,

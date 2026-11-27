@@ -328,4 +328,92 @@ class TransicionSemestralService
             ];
         });
     }
+
+    /**
+     * Sincronizar automáticamente transiciones semestrales cuando SOGAC actualice secciones/periodos.
+     * Empareja automáticamente las secciones impares con las pares del mismo año y promueve equipos con historial preservado.
+     */
+    public function sincronizarTransicionSogac(?int $id_usuario = null): array
+    {
+        return DB::transaction(function () use ($id_usuario) {
+            $seccionesImpares = Seccion::where('sec_status', true)
+                ->where(function ($q) {
+                    $q->whereRaw("MOD(COALESCE(sec_semestre, CAST(SUBSTRING(sec_codigo, 1, 1) AS UNSIGNED)), 2) != 0")
+                      ->orWhereRaw("SUBSTRING(sec_codigo, 1, 1) IN ('1', '3', '5', '7')");
+                })
+                ->with(['equipos'])
+                ->get();
+
+            $emparejamientos = [];
+            $equiposPromovidos = 0;
+            $errores = [];
+
+            foreach ($seccionesImpares as $secImpar) {
+                $codigoActual = (string) $secImpar->sec_codigo;
+                $primerDigito = (int) substr($codigoActual, 0, 1);
+                $nuevoPrimerDigito = $primerDigito + 1;
+                $nuevoCodigoSeccion = $nuevoPrimerDigito . substr($codigoActual, 1);
+
+                // Buscar o crear la sección par correspondiente
+                $seccionPar = Seccion::firstOrCreate(
+                    ['sec_codigo' => $nuevoCodigoSeccion],
+                    [
+                        'sec_id_tra'         => $secImpar->sec_id_tra,
+                        'sec_semestre'       => $nuevoPrimerDigito,
+                        'sec_id_tur'         => $secImpar->sec_id_tur,
+                        'sec_status'         => true,
+                        'sec_id_usu_created' => $id_usuario ?? auth()->id(),
+                    ]
+                );
+
+                // Asegurar que sec_semestre esté seteado correctamente
+                if ($seccionPar->sec_semestre !== $nuevoPrimerDigito) {
+                    $seccionPar->update(['sec_semestre' => $nuevoPrimerDigito]);
+                }
+
+                // Sincronizar docentes a la sección par
+                $profesores = DB::table('profesor_seccion')
+                    ->where('pse_id_sec', $secImpar->sec_id)
+                    ->where('pse_status', true)
+                    ->get();
+
+                foreach ($profesores as $pse) {
+                    DB::table('profesor_seccion')->updateOrInsert(
+                        [
+                            'pse_id_sec' => $seccionPar->sec_id,
+                            'pse_id_usu' => $pse->pse_id_usu,
+                        ],
+                        [
+                            'pse_status'         => true,
+                            'updated_at'         => now(),
+                            'pse_id_usu_created' => $id_usuario ?? auth()->id(),
+                        ]
+                    );
+                }
+
+                $emparejamientos[] = [
+                    'seccion_impar' => $secImpar->sec_codigo,
+                    'seccion_par'   => $seccionPar->sec_codigo,
+                ];
+
+                // Promover equipos de la sección que tengan Pre-Socialización apta
+                foreach ($secImpar->equipos as $eq) {
+                    try {
+                        $this->transicionSemestreImparAPar($eq->equ_id, $id_usuario);
+                        $equiposPromovidos++;
+                    } catch (\Exception $e) {
+                        $errores[] = "Equipo {$eq->equ_codigo}: " . $e->getMessage();
+                    }
+                }
+            }
+
+            return [
+                'exito'                 => true,
+                'secciones_emparejadas' => $emparejamientos,
+                'equipos_promovidos'    => $equiposPromovidos,
+                'errores'               => $errores,
+                'mensaje'               => "Sincronización SOGAC completada: " . count($emparejamientos) . " secciones emparejadas y {$equiposPromovidos} equipo(s) promovido(s) al semestre par.",
+            ];
+        });
+    }
 }

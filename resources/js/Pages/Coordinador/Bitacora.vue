@@ -211,40 +211,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div
-                        style="
-                            padding: 0.75rem 1rem;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            border-top: 1px solid var(--border);
-                        "
-                    >
-                        <span
-                            style="font-size: 0.82rem; color: var(--text-muted)"
-                            >Mostrando {{ registros.from }}–{{
-                                registros.to
-                            }}
-                            de {{ registros.total }}</span
-                        >
-                        <div class="d-flex gap-1">
-                            <a
-                                v-if="registros.prev_page_url"
-                                :href="registros.prev_page_url"
-                                class="btn btn-sm btn-outline-secondary"
-                                ><i class="bi bi-chevron-left"></i
-                            ></a>
-                            <span class="btn btn-sm btn-danger disabled">{{
-                                registros.current_page
-                            }}</span>
-                            <a
-                                v-if="registros.next_page_url"
-                                :href="registros.next_page_url"
-                                class="btn btn-sm btn-outline-secondary"
-                                ><i class="bi bi-chevron-right"></i
-                            ></a>
-                        </div>
-                    </div>
+                    <Pagination :paginador="registros" />
                 </div>
             </div>
         </div>
@@ -325,6 +292,7 @@
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
 import SelectBuscable from "@/Components/SelectBuscable.vue";
+import Pagination from "@/Components/Pagination.vue";
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";

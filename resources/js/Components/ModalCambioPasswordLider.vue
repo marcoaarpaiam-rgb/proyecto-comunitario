@@ -1,36 +1,5 @@
 <template>
     <div>
-        <!-- Banner persistente cuando el líder conserva su cédula como contraseña -->
-        <div
-            v-if="debeCambiar && !ignoradoBanner"
-            class="alert alert-danger border-2 border-danger shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2 m-3 mb-0"
-            role="alert"
-        >
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-key-fill fs-4 flex-shrink-0"></i>
-                <div class="small">
-                    <strong>Primer Acceso Detectado:</strong> Por seguridad, cambia tu contraseña inicial (actualmente es tu número de cédula).
-                </div>
-            </div>
-            <div class="d-flex gap-2">
-                <button
-                    type="button"
-                    class="btn btn-sm btn-danger fw-bold rounded-pill px-3"
-                    @click="abrir"
-                >
-                    <i class="bi bi-shield-lock me-1"></i>Cambiar Contraseña
-                </button>
-                <button
-                    type="button"
-                    class="btn btn-sm btn-outline-danger rounded-pill px-2"
-                    @click="ignoradoBanner = true"
-                    title="Recordar después"
-                >
-                    Después
-                </button>
-            </div>
-        </div>
-
         <!-- Modal Cambiar Contraseña -->
         <div class="modal fade" id="mCambiarClaveLider" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -100,13 +69,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 
 const page = usePage();
-const debeCambiar = computed(() => Boolean(page.props.auth?.debeCambiarPassword));
-const ignoradoBanner = ref(false);
+const debeCambiar = computed(() => Boolean(page.props.auth?.debeCambiarPassword || page.props.auth?.user?.debe_cambiar_password));
 const cargando = ref(false);
 const errores = ref({});
 let modalInst = null;
@@ -148,10 +116,15 @@ const guardar = () => {
 };
 
 onMounted(() => {
+    window.addEventListener("abrir-modal-cambio-clave", abrir);
     if (debeCambiar.value && !sessionStorage.getItem("lider_clave_modal_visto")) {
         sessionStorage.setItem("lider_clave_modal_visto", "1");
-        setTimeout(() => abrir(), 300);
+        setTimeout(() => abrir(), 400);
     }
+});
+
+onUnmounted(() => {
+    window.removeEventListener("abrir-modal-cambio-clave", abrir);
 });
 
 defineExpose({ abrir });

@@ -65,8 +65,16 @@
                                 margin-top: 2px;
                             "
                         >
-                            {{ config.subtitulo }} (Modo Consulta)
+                            {{ config.subtitulo }}
                         </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button
+                            class="btn btn-danger btn-sm px-3 fw-bold shadow-sm"
+                            @click="abrirModal()"
+                        >
+                            <i class="bi bi-plus-lg me-1"></i> Nuevo Registro
+                        </button>
                     </div>
                 </div>
 
@@ -82,21 +90,33 @@
                             gap: 8px;
                         "
                     >
-                        <div class="srch">
-                            <i class="bi bi-search"></i
-                            ><input
+                        <form
+                            @submit.prevent="ejecutarBusqueda"
+                            class="srch d-flex align-items-center"
+                        >
+                            <i class="bi bi-search"></i>
+                            <input
                                 v-model="busqueda"
                                 type="text"
-                                placeholder="Buscar..."
+                                placeholder="Buscar y presionar Enter..."
+                                @keyup.enter="ejecutarBusqueda"
                             />
-                        </div>
+                            <button
+                                v-if="busqueda"
+                                type="button"
+                                class="btn btn-sm btn-link text-muted p-0 me-2"
+                                @click="limpiarBusqueda"
+                            >
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </form>
                         <span
                             style="
                                 font-size: 0.82rem;
                                 color: var(--text-muted);
                                 font-weight: 600;
                             "
-                            >{{ filtrados.length }} resultado(s)</span
+                            >{{ totalRegistros }} resultado(s)</span
                         >
                     </div>
                     <div class="table-responsive">
@@ -111,7 +131,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-if="paginados.length === 0">
+                                <tr v-if="itemsAMostrar.length === 0">
                                     <td
                                         :colspan="config.extra ? 5 : 4"
                                         class="text-center py-5"
@@ -121,7 +141,7 @@
                                     </td>
                                 </tr>
                                 <tr
-                                    v-for="reg in paginados"
+                                    v-for="reg in itemsAMostrar"
                                     :key="reg[config.pk]"
                                 >
                                     <td
@@ -156,14 +176,43 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <span class="badge bg-secondary-subtle text-secondary">Solo consulta</span>
+                                        <div class="btn-group btn-group-sm">
+                                            <button
+                                                class="btn btn-outline-primary btn-sm"
+                                                title="Editar registro"
+                                                @click="abrirModal(reg)"
+                                            >
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button
+                                                v-if="reg[config.status]"
+                                                class="btn btn-outline-danger btn-sm"
+                                                title="Desactivar registro"
+                                                @click="desactivar(reg)"
+                                            >
+                                                <i class="bi bi-slash-circle"></i>
+                                            </button>
+                                            <button
+                                                v-else
+                                                class="btn btn-outline-success btn-sm"
+                                                title="Reactivar registro"
+                                                @click="reactivar(reg)"
+                                            >
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                    <!-- Paginación Backend o Frontend -->
+                    <Pagination
+                        v-if="esPaginadoBackend"
+                        :paginador="props.registros"
+                    />
                     <div
-                        v-if="totalPaginas > 1"
+                        v-else-if="totalPaginas > 1"
                         style="
                             padding: 0.75rem 1rem;
                             display: flex;
@@ -343,6 +392,7 @@
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
 import SelectBuscable from "@/Components/SelectBuscable.vue";
+import Pagination from "@/Components/Pagination.vue";
 import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -362,7 +412,13 @@ const toggleMenuMaestras = () => {
     localStorage.setItem("coord-menu-maestras", menuMaestras.value ? "true" : "false");
 };
 
-const props = defineProps({ registros: Array, config: Object, tabla: String });
+const props = defineProps({
+    registros: [Array, Object],
+    config: Object,
+    tabla: String,
+    filtros: Object,
+});
+
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");
@@ -384,9 +440,10 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
-const busqueda = ref("");
+
+const busqueda = ref(props.filtros?.buscar || "");
 const pagina = ref(1);
-const porPagina = 10;
+const porPagina = 3;
 const form = ref({ nombre: "", extra: "" });
 const opcionesTrayectosMaestra = [
     { value: "", label: "Seleccionar..." },
@@ -401,26 +458,47 @@ const editando = ref(null);
 const itemAEliminar = ref(null);
 let modal = null;
 let modalConf = null;
-watch(busqueda, () => {
-    pagina.value = 1;
+
+const esPaginadoBackend = computed(() => props.registros && Array.isArray(props.registros.data));
+
+const listaRegistros = computed(() => {
+    if (esPaginadoBackend.value) {
+        return props.registros.data;
+    }
+    return Array.isArray(props.registros) ? props.registros : [];
 });
+
+const totalRegistros = computed(() => {
+    if (esPaginadoBackend.value) {
+        return props.registros.total ?? listaRegistros.value.length;
+    }
+    return filtrados.value.length;
+});
+
 const filtrados = computed(() => {
-    if (!busqueda.value.trim()) return props.registros;
+    if (esPaginadoBackend.value) return listaRegistros.value;
+    if (!busqueda.value.trim()) return listaRegistros.value;
     const q = busqueda.value.toLowerCase();
-    return props.registros.filter((r) =>
+    return listaRegistros.value.filter((r) =>
         String(r[props.config.campo] || "")
             .toLowerCase()
             .includes(q),
     );
 });
+
 const totalPaginas = computed(() =>
     Math.ceil(filtrados.value.length / porPagina),
 );
 const desde = computed(() => (pagina.value - 1) * porPagina);
 const hasta = computed(() => desde.value + porPagina);
-const paginados = computed(() =>
-    filtrados.value.slice(desde.value, hasta.value),
-);
+
+const itemsAMostrar = computed(() => {
+    if (esPaginadoBackend.value) {
+        return listaRegistros.value;
+    }
+    return filtrados.value.slice(desde.value, hasta.value);
+});
+
 const paginasV = computed(() => {
     const t = totalPaginas.value,
         a = pagina.value,
@@ -430,19 +508,69 @@ const paginasV = computed(() => {
     for (let x = i; x <= f; x++) p.push(x);
     return p;
 });
+
+const ejecutarBusqueda = () => {
+    if (esPaginadoBackend.value) {
+        router.get(
+            `/coordinador/maestras/${props.tabla}`,
+            { buscar: busqueda.value },
+            { preserveState: true, replace: true },
+        );
+    } else {
+        pagina.value = 1;
+    }
+};
+
+const limpiarBusqueda = () => {
+    busqueda.value = "";
+    ejecutarBusqueda();
+};
+
 const abrirModal = (reg = null) => {
     editando.value = reg;
     form.value = {
         nombre: reg ? reg[props.config.campo] : "",
-        extra: reg && props.config.extra ? reg[props.config.extra] : "",
+        extra: reg && props.config.extra ? String(reg[props.config.extra]) : "",
     };
     errores.value = {};
     modal = modal || new Modal(document.getElementById("mMaestra"));
     modal.show();
 };
+
 const guardar = () => {
+    errores.value = {};
+    const nombre = (form.value.nombre || "").trim();
+    const nombreLower = nombre.toLowerCase();
+
+    if (!nombre) {
+        errores.value[props.config.campo] = "El nombre es obligatorio.";
+        return;
+    }
+
+    if (["otro", "otros", "otra", "otras"].includes(nombreLower)) {
+        errores.value[props.config.campo] = "No se permite registrar opciones genéricas como 'Otros'. Debe ingresar un nombre específico.";
+        return;
+    }
+
+    const existe = listaRegistros.value.some((r) => {
+        if (editando.value && r[props.config.pk] === editando.value[props.config.pk]) {
+            return false;
+        }
+        return (r[props.config.campo] || "").trim().toLowerCase() === nombreLower;
+    });
+
+    if (existe) {
+        errores.value[props.config.campo] = "Ya existe un registro con este nombre (no se permiten duplicados).";
+        return;
+    }
+
+    if (props.config.extra && !form.value.extra) {
+        errores.value[props.config.extra] = "Debe seleccionar un trayecto.";
+        return;
+    }
+
     loading.value = true;
-    const payload = { [props.config.campo]: form.value.nombre };
+    const payload = { [props.config.campo]: nombre };
     if (props.config.extra) payload[props.config.extra] = form.value.extra;
     const base = `/coordinador/maestras/${props.tabla}`;
     const url = editando.value
@@ -460,17 +588,22 @@ const guardar = () => {
         },
     });
 };
+
 const desactivar = (reg) => {
     itemAEliminar.value = reg;
     modalConf = modalConf || new Modal(document.getElementById("mConf"));
     modalConf.show();
 };
+
 const confirmarDesactivar = () => {
     router.delete(
         `/coordinador/maestras/${props.tabla}/${itemAEliminar.value[props.config.pk]}`,
+        {
+            onSuccess: () => modalConf?.hide(),
+        }
     );
-    modalConf?.hide();
 };
+
 const reactivar = (reg) => {
     router.post(
         `/coordinador/maestras/${props.tabla}/${reg[props.config.pk]}/reactivar`,

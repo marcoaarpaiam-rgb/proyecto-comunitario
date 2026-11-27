@@ -109,12 +109,19 @@ class LiderController extends Controller
             ->orderBy('entr_fecha_subida', 'desc')
             ->get();
 
+        $trayectoNum = (int) ($equipo->equ_id_tra ?: ($equipo->trayecto?->tra_numero ?: 1));
+
+        $socFinalAprobada = \App\Models\Socializacion::where('soc_id_equ', $equipo->equ_id)
+            ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 2))
+            ->where('soc_aprobado', true)
+            ->exists();
+
         return Inertia::render('Lider/Entregables', [
             'equipo'      => $equipo,
             'entregables' => $entregables,
             'tiposEntregable' => TipoEntregableTrayecto::where(
                 'tet_trayecto_numero',
-                $equipo->trayecto->tra_numero
+                $trayectoNum
             )->where('tet_status', true)->get(),
             'catalogoPnfi' => $catalogoPnfi,
             'cartaAprobada' => $equipo && $equipo->proyectoComunidad
@@ -122,6 +129,7 @@ class LiderController extends Controller
                     ->whereNotNull('cpr_fecha_aprobacion')
                     ->exists()
                 : false,
+            'socFinalAprobada' => $socFinalAprobada,
             'semestreActivo' => $semestreActivo,
         ]);
     }
@@ -146,6 +154,19 @@ class LiderController extends Controller
         $equipo = $this->getEquipo();
         if (!$equipo) return back()->withErrors(['equipo' => 'No tienes equipo asignado.']);
 
+        $trayectoNum = (int) ($equipo->equ_id_tra ?: ($equipo->trayecto?->tra_numero ?: 1));
+
+        // Validar que el tipo de entregable corresponda estrictamente al trayecto del equipo
+        if (!empty($request->entr_id_tet)) {
+            $tetValido = TipoEntregableTrayecto::where('tet_id', $request->entr_id_tet)
+                ->where('tet_trayecto_numero', $trayectoNum)
+                ->where('tet_status', true)
+                ->exists();
+            if (!$tetValido) {
+                return back()->withErrors(['entr_id_tet' => 'El tipo de entregable no corresponde al trayecto de tu equipo.']);
+            }
+        }
+
         if (!empty($request->entr_id_cep)) {
             $semestreActivo = app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion((int) ($equipo->equ_id_sec ?? 0));
             $semestreNumero = str_contains($semestreActivo, '2') ? '2' : '1';
@@ -164,11 +185,37 @@ class LiderController extends Controller
                 return back()->withErrors(['entr_id_cep' => 'El entregable seleccionado no corresponde al semestre actual de tu sección.']);
             }
         }
+
+        // Determinar si es entregable final / cierre de proyecto
+        $esFinal = (bool) ($request->entr_es_entregable_final || $request->boolean('entr_es_entregable_final'));
+        if (!empty($request->entr_id_cep)) {
+            $cepItem = \App\Models\CatalogoEntregablePnfi::find($request->entr_id_cep);
+            if ($cepItem) {
+                $nombreLower = mb_strtolower($cepItem->cep_nombre, 'UTF-8');
+                if (str_contains($nombreLower, 'final') || str_contains($nombreLower, 'repositorio') || str_contains($nombreLower, 'acta de socialización') || str_contains($nombreLower, 'acta de aprobación')) {
+                    $esFinal = true;
+                }
+            }
+        }
+
+        // Bloquear carga de entregables finales si la Socialización Final no está aprobada
+        if ($esFinal) {
+            $socFinalAprobada = \App\Models\Socializacion::where('soc_id_equ', $equipo->equ_id)
+                ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 2))
+                ->where('soc_aprobado', true)
+                ->exists();
+
+            if (!$socFinalAprobada) {
+                return back()->withErrors([
+                    'archivo' => 'La carga de entregables finales está bloqueada hasta que la Socialización Final de tu equipo esté formalmente aprobada por el jurado evaluador.'
+                ]);
+            }
+        }
         
         // Si no viene entr_id_tet pero viene entr_id_cep, mapear un default para compatibilidad con esquemas viejos
         $idTet = $request->entr_id_tet;
         if (empty($idTet) && !empty($request->entr_id_cep)) {
-            $defaultTet = TipoEntregableTrayecto::where('tet_trayecto_numero', $equipo->trayecto?->tra_numero ?? 1)
+            $defaultTet = TipoEntregableTrayecto::where('tet_trayecto_numero', $trayectoNum)
                 ->where('tet_status', true)
                 ->value('tet_id');
             $idTet = $defaultTet ?: null;
@@ -230,7 +277,7 @@ class LiderController extends Controller
             'entr_nombre_archivo'      => $request->entr_nombre_archivo,
             'entr_ruta'                => $ruta,
             'entr_version'             => $nuevaVersion, 
-            'entr_es_entregable_final' => $request->entr_es_entregable_final ?? false,
+            'entr_es_entregable_final' => $esFinal,
             'entr_a_tiempo'            => $aTiempo,
             'entr_aprobado'            => null,
             'entr_status'              => true,
@@ -500,12 +547,19 @@ class LiderController extends Controller
                 'pca_id_usu_created' => $lider->usu_id,
             ]);
 
+            // Determinar automáticamente la Línea de Investigación según el Trayecto
+            $trayectoNum = (int) ($equipo->equ_id_tra ?: ($equipo->trayecto?->tra_numero ?: 1));
+            $tprIdAuto = \App\Models\TipoProyecto::obtenerIdPorTrayecto($trayectoNum);
+            $lineaNombreAuto = \App\Models\TipoProyecto::obtenerNombrePorTrayecto($trayectoNum);
+
             // Crear o actualizar el proyecto del equipo como "Pendiente de Aprobación Docente"
             $datosPco = [
                 'pco_id_com'             => $comunidadId,
-                'pco_id_tpr'             => $request->pco_id_tpr,
+                'pco_id_tpr'             => $tprIdAuto,
+                'pco_linea_investigacion'=> $lineaNombreAuto,
                 'pco_id_mpr'             => $request->pco_id_mpr,
                 'pco_id_pco_previo'      => $request->pco_id_pco_previo ?: null,
+                'pco_justificacion_duplicidad' => $request->pco_justificacion_duplicidad ? trim($request->pco_justificacion_duplicidad) : null,
                 'pco_resumen'            => trim($request->pco_resumen),
                 'pco_area_comunidad'     => trim((string) ($request->pco_area_comunidad ?? '')),
                 'pco_fecha_limite'       => $equipo->proyectoComunidad?->pco_fecha_limite ?: now()->addMonths(6)->toDateString(),

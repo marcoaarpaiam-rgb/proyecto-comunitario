@@ -144,6 +144,45 @@
                             </tbody>
                         </table>
                     </div>
+                    <div
+                        v-if="totalPaginas > 1"
+                        style="
+                            padding: 0.75rem 1rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-top: 1px solid var(--border);
+                        "
+                    >
+                        <span style="font-size: 0.82rem; color: var(--text-muted)">
+                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, entregablesFiltrados.length) }} de {{ entregablesFiltrados.length }} (3 por página)
+                        </span>
+                        <div class="d-flex gap-1">
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="paginaActual === 1"
+                                @click="paginaActual--"
+                            >
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button
+                                v-for="p in paginasV"
+                                :key="p"
+                                class="btn btn-sm"
+                                :class="p === paginaActual ? 'btn-danger' : 'btn-outline-secondary'"
+                                @click="paginaActual = p"
+                            >
+                                {{ p }}
+                            </button>
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="paginaActual === totalPaginas"
+                                @click="paginaActual++"
+                            >
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- TABS DE NAVEGACIÓN: PENDIENTES VS ARCHIVADOS -->
@@ -220,7 +259,7 @@
                                     </td>
                                 </tr>
                                 <tr
-                                    v-for="ent in entregablesFiltrados"
+                                    v-for="ent in entregablesPaginados"
                                     :key="ent.entr_id"
                                 >
                                     <td class="ps-4">
@@ -356,6 +395,45 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <div
+                        v-if="totalPaginas > 1"
+                        style="
+                            padding: 0.75rem 1rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-top: 1px solid var(--border);
+                        "
+                    >
+                        <span style="font-size: 0.82rem; color: var(--text-muted)">
+                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, entregablesFiltrados.length) }} de {{ entregablesFiltrados.length }} (3 por página)
+                        </span>
+                        <div class="d-flex gap-1">
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="paginaActual === 1"
+                                @click="paginaActual--"
+                            >
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button
+                                v-for="p in paginasV"
+                                :key="p"
+                                class="btn btn-sm"
+                                :class="p === paginaActual ? 'btn-danger' : 'btn-outline-secondary'"
+                                @click="paginaActual = p"
+                            >
+                                {{ p }}
+                            </button>
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="paginaActual === totalPaginas"
+                                @click="paginaActual++"
+                            >
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -541,6 +619,25 @@ const entregablesFiltrados = computed(() => {
         list = list.filter((e) => e.entr_id_equ == equipoFiltro.value);
     }
     return list;
+});
+
+const paginaActual = ref(1);
+const porPagina = 3;
+watch([tabEntregables, equipoFiltro], () => {
+    paginaActual.value = 1;
+});
+const totalPaginas = computed(() => Math.ceil(entregablesFiltrados.value.length / porPagina));
+const desde = computed(() => (paginaActual.value - 1) * porPagina);
+const hasta = computed(() => desde.value + porPagina);
+const entregablesPaginados = computed(() => entregablesFiltrados.value.slice(desde.value, hasta.value));
+const paginasV = computed(() => {
+    const t = totalPaginas.value,
+        a = paginaActual.value,
+        p = [],
+        i = Math.max(1, a - 2),
+        f = Math.min(t, a + 2);
+    for (let x = i; x <= f; x++) p.push(x);
+    return p;
 });
 
 const tema = ref(localStorage.getItem("prof-theme") || "light");

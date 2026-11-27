@@ -70,13 +70,14 @@ class EsquemaEvaluacionController extends Controller
             ->get();
 
         return Inertia::render('Profesor/EsquemasEvaluacion', [
-            'esquemas'      => $esquemas,
-            'secciones'     => $secciones,
-            'esCoordinador' => $esCoordinador,
-            'usuarioActual' => [
+            'esquemas'        => $esquemas,
+            'secciones'       => $secciones,
+            'esCoordinador'   => $esCoordinador,
+            'usuarioActual'   => [
                 'usu_id' => $profesor->usu_id,
                 'nombre' => "{$profesor->usu_primer_nombre} {$profesor->usu_primer_apellido}",
             ],
+            'tiposEntregable' => \App\Models\TipoEntregableTrayecto::where('tet_status', true)->get(),
         ]);
     }
 
@@ -266,5 +267,45 @@ class EsquemaEvaluacionController extends Controller
         }
 
         return back()->with('success', $mensaje);
+    }
+
+    /**
+     * Asignar automáticamente los esquemas oficiales recomendados según la paridad del semestre.
+     */
+    public function autoAsignarRecomendados(Request $request)
+    {
+        $profesor = Auth::user();
+        $idsSecciones = $profesor->seccionesProfesor()
+            ->where('pse_status', true)
+            ->pluck('pse_id_sec');
+
+        $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
+        $esqCualitativo = EsquemaEvaluacion::where('esq_activo', true)->where('esq_modo', 'cualitativo_respaldado')->first();
+        $esqCuantitativo = EsquemaEvaluacion::where('esq_activo', true)->where('esq_modo', 'cuantitativo')->first();
+
+        foreach ($idsSecciones as $secId) {
+            $seccion = Seccion::find($secId);
+            if (!$seccion) continue;
+
+            $numSem = $seccion->getSemestreNumero();
+            $esImpar = ($numSem % 2 !== 0);
+            $esqElegido = $esImpar ? $esqCualitativo : $esqCuantitativo;
+
+            if ($esqElegido) {
+                \DB::table('esquema_seccion')->updateOrInsert(
+                    [
+                        'esq_sec_id_sec' => $secId,
+                        'esq_sec_lapso'  => $lapsoActivo,
+                    ],
+                    [
+                        'esq_sec_id_esq' => $esqElegido->esq_id,
+                        'esq_sec_activo' => true,
+                        'updated_at'     => now(),
+                    ]
+                );
+            }
+        }
+
+        return back()->with('success', 'Esquemas de evaluación oficiales asignados correctamente a tus secciones.');
     }
 }

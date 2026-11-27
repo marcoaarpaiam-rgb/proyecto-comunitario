@@ -29,12 +29,23 @@
                         Gestión Académica de Secciones: Transición Semestral y Cierre
                     </div>
                 </div>
-                <button class="tb-btn" @click="toggleTema" title="Cambiar tema">
-                    <i
-                        class="bi"
-                        :class="tema === 'dark' ? 'bi-sun' : 'bi-moon-stars'"
-                    ></i>
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <button
+                        class="btn btn-dark btn-sm fw-bold rounded-pill px-3 shadow-sm border border-secondary"
+                        @click="sincronizarSogac"
+                        :disabled="sincronizando"
+                    >
+                        <span v-if="sincronizando" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-arrow-repeat me-1 text-danger"></i>
+                        Sincronizar Transición SOGAC
+                    </button>
+                    <button class="tb-btn" @click="toggleTema" title="Cambiar tema">
+                        <i
+                            class="bi"
+                            :class="tema === 'dark' ? 'bi-sun' : 'bi-moon-stars'"
+                        ></i>
+                    </button>
+                </div>
             </div>
 
             <!-- CONTENIDO PRINCIPAL -->
@@ -522,6 +533,20 @@ const ejecutarAccionModal = () => {
     } else if (accionModal.value === "cierre_seccion") {
         router.post(`/coordinador/transicion-semestral/seccion/${elementoSeleccionado.value.sec_id}/repositorio`);
     }
+};
+
+const sincronizando = ref(false);
+const sincronizarSogac = () => {
+    if (!confirm("¿Deseas ejecutar la sincronización automática de transiciones semestrales con SOGAC? Las secciones impares se emparejarán automáticamente con las pares y los equipos aptos avanzarán preservando su expediente.")) {
+        return;
+    }
+    sincronizando.value = true;
+    router.post("/coordinador/transicion-semestral/sincronizar-sogac", {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            sincronizando.value = false;
+        }
+    });
 };
 </script>
 

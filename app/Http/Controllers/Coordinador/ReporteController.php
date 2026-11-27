@@ -13,6 +13,7 @@ use App\Models\Entregable;
 use App\Models\Socializacion;
 use App\Models\PuntoControl;
 use App\Models\Usuario;
+use App\Models\PeriodoAcademico;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -21,6 +22,8 @@ class ReporteController extends Controller
 {
     public function index()
     {
+        $periodos    = PeriodoAcademico::orderBy('fecha_inicio', 'desc')->get();
+        $periodoActivo = PeriodoAcademico::periodoActivo();
         $secciones   = Seccion::with(['trayecto', 'turno'])->where('sec_status', true)->get();
         $trayectos   = Trayecto::where('tra_status', true)->get();
         $comunidades = Comunidad::where('com_status', true)->orderBy('com_nombre')->get();
@@ -31,6 +34,8 @@ class ReporteController extends Controller
         )->get(['usu_id', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_cedula']);
 
         return Inertia::render('Coordinador/Reportes', [
+            'periodos'          => $periodos,
+            'periodoActivo'     => $periodoActivo,
             'secciones'         => $secciones,
             'trayectos'         => $trayectos,
             'comunidades'       => $comunidades,
@@ -99,6 +104,30 @@ class ReporteController extends Controller
                 'resultadoProyecto.estadoProyecto',
                 'puntosControl',
             ]);
+
+        // Filtro por lapso/período académico histórico o activo
+        if ($request->filled('id_periodo')) {
+            $periodo = PeriodoAcademico::find($request->id_periodo);
+            if ($periodo) {
+                $ini = $periodo->fecha_inicio ? \Carbon\Carbon::parse($periodo->fecha_inicio)->startOfDay() : null;
+                $fin = $periodo->fecha_fin ? \Carbon\Carbon::parse($periodo->fecha_fin)->endOfDay() : null;
+
+                $query->where(function ($q) use ($ini, $fin, $periodo) {
+                    if ($ini && $fin) {
+                        $q->whereBetween('equ_created_at', [$ini, $fin])
+                          ->orWhereHas('proyectoComunidad', fn($qp) =>
+                              $qp->whereBetween('pco_created_at', [$ini, $fin])
+                                 ->orWhereBetween('pco_fecha_limite', [$ini->toDateString(), $fin->toDateString()])
+                          );
+                    }
+                    if ($periodo->tipo_semestre === 'Impar') {
+                        $q->orWhereHas('seccion', fn($qs) => $qs->whereRaw('MOD(sec_semestre, 2) != 0'));
+                    } elseif ($periodo->tipo_semestre === 'Par') {
+                        $q->orWhereHas('seccion', fn($qs) => $qs->whereRaw('MOD(sec_semestre, 2) = 0'));
+                    }
+                });
+            }
+        }
 
         // Filtro por sección
         if ($request->filled('sec_id')) {
@@ -427,13 +456,29 @@ class ReporteController extends Controller
         return $pdf->download("Solvencia_{$seccion->sec_codigo}.pdf");
     }
 
-    public function exportarGeneralPdf()
+    public function exportarGeneralPdf(Request $request)
     {
-        $secciones = Seccion::with(['trayecto', 'turno', 'equipos.resultadoProyecto.estadoProyecto'])
-            ->where('sec_status', true)->get();
+        $querySecciones = Seccion::with(['trayecto', 'turno', 'equipos.resultadoProyecto.estadoProyecto'])
+            ->where('sec_status', true);
+
+        $periodo = null;
+        if ($request->filled('id_periodo')) {
+            $periodo = PeriodoAcademico::find($request->id_periodo);
+            if ($periodo) {
+                if ($periodo->tipo_semestre === 'Impar') {
+                    $querySecciones->whereRaw('MOD(sec_semestre, 2) != 0');
+                } elseif ($periodo->tipo_semestre === 'Par') {
+                    $querySecciones->whereRaw('MOD(sec_semestre, 2) = 0');
+                }
+            }
+        }
+
+        $secciones = $querySecciones->get();
         $resumen = $this->resumenGeneral();
-        $pdf = Pdf::loadView('pdf.reporte_general', compact('secciones', 'resumen'))
+        $lapsoTexto = $periodo ? $periodo->lapso_academico : PeriodoAcademico::lapsoActivoTexto();
+
+        $pdf = Pdf::loadView('pdf.reporte_general', compact('secciones', 'resumen', 'lapsoTexto'))
             ->setPaper('letter', 'landscape');
-        return $pdf->download('Reporte_General_' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('Reporte_General_' . ($periodo ? $periodo->lapso_academico . '_' : '') . now()->format('Y-m-d') . '.pdf');
     }
 }

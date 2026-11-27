@@ -326,16 +326,24 @@
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Tipo de Organización
-                                    <span class="text-danger">*</span></label
-                                >
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-semibold mb-0"
+                                        >Tipo de Organización
+                                        <span class="text-danger">*</span></label
+                                    >
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-link text-danger p-0 fw-semibold text-decoration-none"
+                                        @click="creandoOtroTipoOrg = !creandoOtroTipoOrg"
+                                    >
+                                        <i class="bi bi-plus-circle me-1"></i>Nuevo Tipo
+                                    </button>
+                                </div>
                                 <SelectBuscable
                                     v-model="form.com_id_tor"
                                     :options="opcionesTiposOrgModal"
                                     :has-error="!!errores.com_id_tor"
-                                    placeholder="Seleccionar..."
-                                    @change="verificarOtroTipoOrg"
+                                    placeholder="Seleccionar tipo de organización..."
                                 />
                                 <div v-if="creandoOtroTipoOrg" class="mt-2 p-2 rounded border bg-light">
                                     <label class="small fw-bold text-danger mb-1">Nombre del nuevo Tipo de Organización:</label>
@@ -344,7 +352,7 @@
                                             v-model="nuevoTipoOrgNombre"
                                             type="text"
                                             class="form-control"
-                                            placeholder="Ej: Cooperativa, Consejo Comunal, etc."
+                                            placeholder="Ej: Fundación, Cooperativa, etc."
                                             @keyup.enter.prevent="guardarNuevoTipoOrg"
                                         />
                                         <button
@@ -466,7 +474,7 @@ const iniciales = computed(() => {
 });
 const busqueda = ref("");
 const pagina = ref(1);
-const porPagina = 10;
+const porPagina = 3;
 const form = ref({ com_nombre: "", com_ubicacion: "", com_lat: null, com_lng: null, com_id_tor: "" });
 const errores = ref({});
 const loading = ref(false);
@@ -475,30 +483,35 @@ const itemAEliminar = ref(null);
 
 const listaTiposOrg = ref([...(props.tiposOrganizacion || [])]);
 const opcionesTiposOrgModal = computed(() => [
-    { value: "", label: "Seleccionar..." },
+    { value: "", label: "Seleccionar tipo de organización..." },
     ...listaTiposOrg.value.map((tipo) => ({ value: tipo.tor_id, label: tipo.tor_nombre })),
-    { value: "__OTRO__", label: "➕ Otro (Crear nueva opción...)" },
 ]);
 const creandoOtroTipoOrg = ref(false);
 const nuevoTipoOrgNombre = ref("");
 const guardandoTipoOrg = ref(false);
 
-const verificarOtroTipoOrg = () => {
-    if (form.value.com_id_tor === "__OTRO__") {
-        creandoOtroTipoOrg.value = true;
-        nuevoTipoOrgNombre.value = "";
-    } else {
-        creandoOtroTipoOrg.value = false;
-    }
-};
-
 const guardarNuevoTipoOrg = async () => {
-    if (!nuevoTipoOrgNombre.value.trim()) return;
+    const nombre = nuevoTipoOrgNombre.value.trim();
+    if (!nombre) return;
+
+    if (["otro", "otros", "otra", "otras"].includes(nombre.toLowerCase())) {
+        alert("No se permite registrar opciones genéricas como 'Otros'. Debe ingresar un nombre específico.");
+        return;
+    }
+
+    const existe = listaTiposOrg.value.some(
+        (t) => (t.tor_nombre || "").trim().toLowerCase() === nombre.toLowerCase()
+    );
+    if (existe) {
+        alert("Ya existe un tipo de organización con este nombre.");
+        return;
+    }
+
     guardandoTipoOrg.value = true;
     try {
         const res = await axios.post("/catalogos/crear-opcion", {
             catalogo: "tipo_organizacion",
-            nombre: nuevoTipoOrgNombre.value.trim(),
+            nombre: nombre,
         });
         if (res.data.success) {
             listaTiposOrg.value.push({ tor_id: res.data.id, tor_nombre: res.data.nombre });
@@ -508,6 +521,7 @@ const guardarNuevoTipoOrg = async () => {
         }
     } catch (e) {
         console.error("Error al crear tipo de organización:", e);
+        alert(e.response?.data?.message || "Error al crear tipo de organización.");
     } finally {
         guardandoTipoOrg.value = false;
     }

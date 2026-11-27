@@ -29,6 +29,12 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button
+                        class="btn btn-outline-danger btn-sm fw-bold rounded-pill px-3"
+                        @click="abrirModalNuevoEntregable"
+                    >
+                        <i class="bi bi-file-earmark-plus me-1"></i>+ Nuevo Entregable
+                    </button>
+                    <button
                         class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
                         @click="abrirModal()"
                     >
@@ -122,6 +128,54 @@
                     <ul class="mb-0 ps-3">
                         <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
                     </ul>
+                </div>
+
+                <!-- ALERTA DE CONFIGURACIÓN OBLIGATORIA DE ESQUEMA DE EVALUACIÓN -->
+                <div
+                    v-if="(filtroSeccion && seccionFiltroSinEsquema) || (!filtroSeccion && seccionesSinEsquema.length > 0)"
+                    class="alert alert-warning border-warning shadow-sm rounded-3 p-3 mb-4"
+                >
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                            <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-2 mb-1">
+                                <i class="bi bi-exclamation-octagon-fill text-warning fs-5"></i>
+                                Configuración Requerida: Esquema de Evaluación Pendiente
+                            </div>
+                            <div class="text-muted small">
+                                <template v-if="filtroSeccion && seccionFiltroSinEsquema">
+                                    La sección actual aún no tiene esquema de evaluación confirmado en el sistema.
+                                    <span v-if="seccionFiltroSinEsquema.es_semestre_impar" class="fw-semibold text-primary">
+                                        Para semestres impares corresponde la <strong>Evaluación Cualitativa Literal</strong> (baremo A, B, C, D) con respaldo documental.
+                                    </span>
+                                    <span v-else class="fw-semibold text-danger">
+                                        Para semestres pares corresponde la <strong>Evaluación Cuantitativa</strong> (escala 1 a 20 pts, mínima aprobatoria 16 pts).
+                                    </span>
+                                </template>
+                                <template v-else>
+                                    Tienes <strong>{{ seccionesSinEsquema.length }}</strong> sección(es) sin esquema de evaluación oficial configurado. Debes confirmarlo para asegurar la coherencia evaluativa.
+                                </template>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            <button
+                                type="button"
+                                class="btn btn-danger btn-sm fw-bold px-3 py-2 text-nowrap shadow-sm"
+                                @click="confirmarEsquemaRecomendado"
+                                :disabled="confirmandoEsquema"
+                            >
+                                <span v-if="confirmandoEsquema" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-check2-circle me-1"></i>
+                                {{ filtroSeccion ? 'Confirmar Esquema Oficial' : 'Confirmar Esquemas Oficiales' }}
+                            </button>
+                            <Link
+                                href="/profesor/esquemas-evaluacion"
+                                class="btn btn-outline-dark btn-sm fw-semibold px-3 py-2 text-nowrap"
+                            >
+                                <i class="bi bi-sliders me-1"></i>
+                                Ver Esquemas
+                            </Link>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- BARRA COMPACTA DE FILTROS POR SEMÁFORO Y PANEL DE DETALLE -->
@@ -370,7 +424,7 @@
                                         {{ tabPuntos === 'pendientes' ? 'No hay puntos de control pendientes por confirmar' : 'No hay puntos de control confirmados / archivados' }}
                                     </td>
                                 </tr>
-                                <tr v-for="puc in filtrados" :key="puc.puc_id">
+                                <tr v-for="puc in paginados" :key="puc.puc_id">
                                     <td class="ps-4 fw-semibold">
                                         {{ puc.puc_nombre }}
                                     </td>
@@ -511,6 +565,45 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <div
+                        v-if="totalPaginas > 1"
+                        style="
+                            padding: 0.75rem 1rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-top: 1px solid var(--border);
+                        "
+                    >
+                        <span style="font-size: 0.82rem; color: var(--text-muted)">
+                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, filtrados.length) }} de {{ filtrados.length }} (3 por página)
+                        </span>
+                        <div class="d-flex gap-1">
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="paginaActual === 1"
+                                @click="paginaActual--"
+                            >
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button
+                                v-for="p in paginasV"
+                                :key="p"
+                                class="btn btn-sm"
+                                :class="p === paginaActual ? 'btn-danger' : 'btn-outline-secondary'"
+                                @click="paginaActual = p"
+                            >
+                                {{ p }}
+                            </button>
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="paginaActual === totalPaginas"
+                                @click="paginaActual++"
+                            >
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -765,6 +858,56 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL NUEVO ENTREGABLE EN TABLA MAESTRA -->
+        <div class="modal fade" id="modalNuevoEntregableMaestro" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-dark text-white">
+                        <h6 class="modal-title fw-bold">
+                            <i class="bi bi-file-earmark-plus text-danger me-2"></i>Registrar Nuevo Entregable en Catálogo Maestro
+                        </h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="guardarNuevoEntregableMaestro">
+                        <div class="modal-body p-4">
+                            <div v-if="errorNuevoEntregable" class="alert alert-danger py-2 small mb-3">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ errorNuevoEntregable }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-uppercase text-muted">Nombre del Entregable *</label>
+                                <input
+                                    v-model="formNuevoEntregable.nombre"
+                                    type="text"
+                                    class="form-control"
+                                    placeholder="Ej. Manual de Arquitectura, Guía de Despliegue..."
+                                    required
+                                />
+                                <div class="form-text small">
+                                    Se validará que no sea duplicado ni contenga opciones genéricas como "Otro".
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-uppercase text-muted">Trayecto PNFI *</label>
+                                <select v-model="formNuevoEntregable.trayecto" class="form-select">
+                                    <option :value="1">Trayecto I (Alfabetización Tecnológica)</option>
+                                    <option :value="2">Trayecto II (Desarrollo de Software)</option>
+                                    <option :value="3">Trayecto III (Desarrollo de Software)</option>
+                                    <option :value="4">Trayecto IV (Desarrollo de Software / Grado)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 bg-light p-3">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-danger btn-sm fw-bold px-3" :disabled="guardandoEntregable">
+                                <span v-if="guardandoEntregable" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-check-lg me-1"></i>Guardar en Catálogo Maestro
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 <script setup>
@@ -790,6 +933,8 @@ const props = defineProps({
     semanaActual: { type: Number, default: 1 },
     tiposEncuentro: { type: Array, default: () => [] },
     esquemasPorSeccion: { type: Object, default: () => ({}) },
+    plantillasEsquemas: { type: Array, default: () => [] },
+    tiposEntregable: { type: Array, default: () => [] },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -812,6 +957,102 @@ const filtroSemaforo = ref("");
 const equipoSeleccionadoDiag = ref("");
 const tabPuntos = ref("pendientes"); // "pendientes" | "archivados"
 const puntoConfirmadoReciente = ref(null);
+
+const seccionesSinEsquema = computed(() => {
+    return (props.secciones || []).filter(sec => {
+        const esqInfo = props.esquemasPorSeccion?.[sec.sec_id];
+        return esqInfo && !esqInfo.tiene_esquema_configurado;
+    });
+});
+
+const seccionFiltroSinEsquema = computed(() => {
+    if (filtroSeccion.value) {
+        const esqInfo = props.esquemasPorSeccion?.[filtroSeccion.value];
+        return esqInfo && !esqInfo.tiene_esquema_configurado ? esqInfo : null;
+    }
+    return null;
+});
+
+const confirmandoEsquema = ref(false);
+
+const confirmarEsquemaRecomendado = () => {
+    confirmandoEsquema.value = true;
+    if (filtroSeccion.value && seccionFiltroSinEsquema.value) {
+        const info = seccionFiltroSinEsquema.value;
+        router.post("/profesor/esquemas-evaluacion/asignar", {
+            esq_sec_id_esq: info.id_esquema_recomendado || info.esq_id,
+            esq_sec_id_sec: filtroSeccion.value,
+            esq_sec_lapso: info.lapso,
+            accion: "asignar",
+        }, {
+            preserveScroll: true,
+            onFinish: () => { confirmandoEsquema.value = false; }
+        });
+    } else {
+        router.post("/profesor/esquemas-evaluacion/auto-asignar", {}, {
+            preserveScroll: true,
+            onFinish: () => { confirmandoEsquema.value = false; }
+        });
+    }
+};
+
+// Modal Nuevo Entregable en Catálogo Maestro
+const modalNuevoEntregable = ref(null);
+const guardandoEntregable = ref(false);
+const errorNuevoEntregable = ref("");
+const formNuevoEntregable = ref({
+    nombre: "",
+    trayecto: 1,
+});
+
+const abrirModalNuevoEntregable = () => {
+    formNuevoEntregable.value = {
+        nombre: "",
+        trayecto: 1,
+    };
+    errorNuevoEntregable.value = "";
+    const el = document.getElementById("modalNuevoEntregableMaestro");
+    if (el) {
+        modalNuevoEntregable.value = modalNuevoEntregable.value || new Modal(el);
+        modalNuevoEntregable.value.show();
+    }
+};
+
+const guardarNuevoEntregableMaestro = async () => {
+    const nom = formNuevoEntregable.value.nombre.trim();
+    if (!nom) {
+        errorNuevoEntregable.value = "El nombre del entregable es obligatorio.";
+        return;
+    }
+    if (["otro", "otros", "otra", "otras"].includes(nom.toLowerCase())) {
+        errorNuevoEntregable.value = "No se permite registrar opciones genéricas como 'Otro' o 'Otros'.";
+        return;
+    }
+    guardandoEntregable.value = true;
+    errorNuevoEntregable.value = "";
+    try {
+        const res = await window.axios.post("/catalogos/crear-opcion", {
+            catalogo: "tipo_entregable",
+            nombre: nom,
+            trayecto: formNuevoEntregable.value.trayecto,
+        });
+        if (res.data.success) {
+            props.tiposEntregable.push({
+                tet_id: res.data.id,
+                tet_nombre: res.data.nombre,
+                tet_trayecto_numero: formNuevoEntregable.value.trayecto,
+                tet_status: 1,
+            });
+            modalNuevoEntregable.value?.hide();
+        } else {
+            errorNuevoEntregable.value = res.data.message || "Error al registrar el entregable.";
+        }
+    } catch (e) {
+        errorNuevoEntregable.value = e.response?.data?.message || "Error al registrar el entregable.";
+    } finally {
+        guardandoEntregable.value = false;
+    }
+};
 
 const opcionesSeccionesFiltro = computed(() => [
     { value: "", label: "Todas mis secciones..." },
@@ -1156,6 +1397,25 @@ const filtrados = computed(() => {
         });
     }
     return list;
+});
+
+const paginaActual = ref(1);
+const porPagina = 3;
+watch([busqueda, filtroSeccion, filtroSemaforo, tabPuntos], () => {
+    paginaActual.value = 1;
+});
+const totalPaginas = computed(() => Math.ceil(filtrados.value.length / porPagina));
+const desde = computed(() => (paginaActual.value - 1) * porPagina);
+const hasta = computed(() => desde.value + porPagina);
+const paginados = computed(() => filtrados.value.slice(desde.value, hasta.value));
+const paginasV = computed(() => {
+    const t = totalPaginas.value,
+        a = paginaActual.value,
+        p = [],
+        i = Math.max(1, a - 2),
+        f = Math.min(t, a + 2);
+    for (let x = i; x <= f; x++) p.push(x);
+    return p;
 });
 const abrirModal = () => {
     modalPuntoRef.value?.abrir();

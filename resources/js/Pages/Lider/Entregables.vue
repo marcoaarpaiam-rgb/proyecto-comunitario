@@ -67,6 +67,35 @@
                         aprobada antes de subir entregables.
                     </div>
                 </div>
+
+                <div
+                    v-if="!socFinalAprobada"
+                    class="alert py-2 mb-3 d-flex align-items-center gap-2"
+                    style="
+                        background: rgba(13, 110, 253, 0.05);
+                        border: 1px solid rgba(13, 110, 253, 0.2);
+                        border-radius: 10px;
+                    "
+                >
+                    <i class="bi bi-info-circle-fill text-primary flex-shrink-0"></i>
+                    <div class="small">
+                        <strong>Fase Formativa / Entregables Parciales:</strong> Puedes cargar entregables de avance. Los <strong>Entregables Finales</strong> se desbloquearán una vez que la <strong>Socialización Final</strong> sea aprobada por el jurado evaluador.
+                    </div>
+                </div>
+                <div
+                    v-else
+                    class="alert py-2 mb-3 d-flex align-items-center gap-2"
+                    style="
+                        background: rgba(25, 135, 84, 0.08);
+                        border: 1px solid rgba(25, 135, 84, 0.25);
+                        border-radius: 10px;
+                    "
+                >
+                    <i class="bi bi-patch-check-fill text-success flex-shrink-0"></i>
+                    <div class="small">
+                        <strong>Socialización Final Aprobada:</strong> La carga de entregables finales, actas definitivas y repositorio institucional está completamente habilitada.
+                    </div>
+                </div>
                 <div style="margin-bottom: 1.25rem">
                     <h4
                         style="
@@ -169,7 +198,7 @@
                         has subido entregables aún
                     </div>
                     <div
-                        v-for="ent in entregables"
+                        v-for="ent in entregablesPaginados"
                         :key="ent.entr_id"
                         class="ent-row"
                     >
@@ -255,6 +284,46 @@
                                       : "Rechazado"
                             }}
                         </span>
+                    </div>
+
+                    <div
+                        v-if="totalPaginas > 1"
+                        style="
+                            padding: 0.75rem 1rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-top: 1px solid var(--border);
+                        "
+                    >
+                        <span style="font-size: 0.82rem; color: var(--text-muted)">
+                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, entregables.length) }} de {{ entregables.length }} (3 por página)
+                        </span>
+                        <div class="d-flex gap-1">
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="pagina === 1"
+                                @click="pagina--"
+                            >
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button
+                                v-for="p in paginasV"
+                                :key="p"
+                                class="btn btn-sm"
+                                :class="p === pagina ? 'btn-danger' : 'btn-outline-secondary'"
+                                @click="pagina = p"
+                            >
+                                {{ p }}
+                            </button>
+                            <button
+                                class="btn btn-sm btn-outline-secondary"
+                                :disabled="pagina === totalPaginas"
+                                @click="pagina++"
+                            >
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -350,6 +419,25 @@
                                 </div>
                             </div>
                             <div class="mb-3">
+                                <div class="form-check form-switch p-2 bg-light rounded border">
+                                    <input
+                                        class="form-check-input ms-0 me-2"
+                                        type="checkbox"
+                                        id="checkFinal"
+                                        v-model="form.entr_es_entregable_final"
+                                    />
+                                    <label class="form-check-label fw-semibold small text-dark" for="checkFinal">
+                                        ¿Es un Entregable Final / Cierre de Proyecto?
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div v-if="bloqueoEntregaFinal" class="alert alert-warning py-2 small mb-3 border-warning">
+                                <i class="bi bi-shield-lock-fill text-danger me-1"></i>
+                                <strong>Entrega Final Bloqueada:</strong> La carga de entregables de cierre requiere que la Socialización Final del equipo esté formalmente aprobada por el jurado evaluador.
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Versión</label
                                 >
@@ -383,7 +471,7 @@
                             <button
                                 type="submit"
                                 class="btn btn-danger fw-bold"
-                                :disabled="loading"
+                                :disabled="loading || bloqueoEntregaFinal"
                             >
                                 <span
                                     v-if="loading"
@@ -426,6 +514,7 @@ const props = defineProps({
     tiposEntregable: { type: Array, default: () => [] },
     catalogoPnfi: { type: Array, default: () => [] },
     cartaAprobada: { type: Boolean, default: false },
+    socFinalAprobada: { type: Boolean, default: false },
     semestreActivo: { type: String, default: "Semestre 1" },
 });
 
@@ -448,6 +537,22 @@ const page = usePage();
 const sidebarOpen = ref(false);
 const mostrarListaVerificacion = ref(true);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
+
+const pagina = ref(1);
+const porPagina = 3;
+const totalPaginas = computed(() => Math.ceil((props.entregables?.length || 0) / porPagina));
+const desde = computed(() => (pagina.value - 1) * porPagina);
+const hasta = computed(() => desde.value + porPagina);
+const entregablesPaginados = computed(() => (props.entregables || []).slice(desde.value, hasta.value));
+const paginasV = computed(() => {
+    const t = totalPaginas.value,
+        a = pagina.value,
+        p = [],
+        i = Math.max(1, a - 2),
+        f = Math.min(t, a + 2);
+    for (let x = i; x <= f; x++) p.push(x);
+    return p;
+});
 const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";
     localStorage.setItem("lid-theme", tema.value);
@@ -480,7 +585,25 @@ const form = ref({
     archivo: null,
     entr_version: "1.0",
     entr_descripcion: "",
+    entr_es_entregable_final: false,
 });
+
+const esCepFinal = computed(() => {
+    if (!form.value.entr_id_cep) return false;
+    const cep = (props.catalogoPnfi || []).find(c => c.cep_id == form.value.entr_id_cep);
+    if (!cep) return false;
+    const nom = (cep.cep_nombre || "").toLowerCase();
+    return nom.includes("final") || nom.includes("repositorio") || nom.includes("socialización") || nom.includes("aprobación");
+});
+
+const esEntregableFinal = computed(() => {
+    return Boolean(form.value.entr_es_entregable_final || esCepFinal.value);
+});
+
+const bloqueoEntregaFinal = computed(() => {
+    return esEntregableFinal.value && !props.socFinalAprobada;
+});
+
 const errores = ref({});
 const loading = ref(false);
 let modal = null;
@@ -491,12 +614,19 @@ const abrirModal = () => {
         archivo: null,
         entr_version: "1.0",
         entr_descripcion: "",
+        entr_es_entregable_final: false,
     };
     errores.value = {};
     modal = modal || new Modal(document.getElementById("mSubir"));
     modal.show();
 };
 const guardar = () => {
+    if (bloqueoEntregaFinal.value) {
+        errores.value = {
+            archivo: "La subida de entregables finales está bloqueada hasta que la Socialización Final sea aprobada por el jurado evaluador."
+        };
+        return;
+    }
     loading.value = true;
     const data = new FormData();
     data.append("entr_id_tet", form.value.entr_id_tet);
@@ -504,6 +634,7 @@ const guardar = () => {
     if (form.value.archivo) data.append("archivo", form.value.archivo);
     data.append("entr_version", form.value.entr_version);
     data.append("entr_descripcion", form.value.entr_descripcion);
+    data.append("entr_es_entregable_final", form.value.entr_es_entregable_final ? "1" : "0");
     data.append(
         "entr_nombre_archivo",
         form.value.archivo?.name ?? "entregable",

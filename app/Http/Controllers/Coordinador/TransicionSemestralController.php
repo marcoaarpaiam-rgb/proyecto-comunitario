@@ -252,4 +252,17 @@ class TransicionSemestralController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
+
+    /**
+     * Sincronizar automáticamente transiciones semestrales cuando SOGAC actualice secciones/periodos.
+     */
+    public function sincronizarSogac(Request $request)
+    {
+        try {
+            $resultado = $this->transicionService->sincronizarTransicionSogac(auth()->id());
+            return redirect()->back()->with('success', $resultado['mensaje'] ?? 'Sincronización semestral completada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
 }

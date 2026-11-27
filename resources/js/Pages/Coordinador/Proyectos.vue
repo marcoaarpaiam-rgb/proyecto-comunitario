@@ -398,52 +398,24 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold"
-                                        >Línea de Investigación
-                                        <span class="text-danger"
-                                            >*</span
-                                        ></label
+                                        >Línea de Investigación (Institucional PNFI)
+                                        <span class="text-danger">*</span></label
                                     >
-                                    <SelectBuscable
-                                        v-model="form.pco_id_tpr"
-                                        :options="opcionesTiposInvProy"
-                                        :has-error="!!errores.pco_id_tpr"
-                                        placeholder="Seleccionar..."
-                                        @change="verificarOtroTipoInv"
-                                    />
-                                    <div v-if="creandoOtroTipoInv" class="mt-2 p-2 rounded border bg-light">
-                                        <label class="small fw-bold text-danger mb-1">Nombre de la nueva Línea de Investigación:</label>
-                                        <div class="input-group input-group-sm">
-                                            <input
-                                                v-model="nuevoTipoInvNombre"
-                                                type="text"
-                                                class="form-control"
-                                                placeholder="Ej: Redes Comunitarias, Ciberseguridad Popular..."
-                                                @keyup.enter.prevent="guardarNuevoTipoInv"
-                                            />
-                                            <button
-                                                class="btn btn-danger fw-bold"
-                                                type="button"
-                                                :disabled="!nuevoTipoInvNombre.trim() || guardandoTipoInv"
-                                                @click="guardarNuevoTipoInv"
-                                            >
-                                                <span v-if="guardandoTipoInv" class="spinner-border spinner-border-sm me-1"></span>
-                                                <i v-else class="bi bi-check-lg me-1"></i>Crear
-                                            </button>
-                                            <button
-                                                class="btn btn-outline-secondary"
-                                                type="button"
-                                                @click="creandoOtroTipoInv = false"
-                                            >
-                                                Cancelar
-                                            </button>
-                                        </div>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light text-danger fw-bold">
+                                            <i class="bi bi-shield-check me-1"></i> Trayecto {{ trayectoNumeroForm }}
+                                        </span>
+                                        <input
+                                            type="text"
+                                            class="form-control bg-light fw-bold text-dark"
+                                            :value="lineaAutomaticaForm"
+                                            readonly
+                                            disabled
+                                        />
                                     </div>
-                                    <div
-                                        v-if="errores.pco_id_tpr"
-                                        class="invalid-feedback"
-                                    >
-                                        {{ errores.pco_id_tpr }}
-                                    </div>
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.73rem;">
+                                        Asignada automáticamente por PNFI: Trayecto I = Alfabetización Tecnológica; Trayectos II, III y IV = Desarrollo de Software.
+                                    </small>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold"
@@ -782,7 +754,7 @@ const iniciales = computed(() => {
 const busqueda = ref("");
 const filtroAprobacion = ref("");
 const pagina = ref(1);
-const porPagina = 8;
+const porPagina = 3;
 const form = ref({
     pco_id_equ: "",
     pco_id_com: "",
@@ -806,15 +778,39 @@ const opcionesFiltroAprobacion = [
     { value: "aprobado", label: "Aprobados" },
     { value: "pendiente", label: "Pendientes" },
 ];
+
+const equipoSeleccionadoForm = computed(() => {
+    return (props.equipos || []).find((e) => e.equ_id == form.value.pco_id_equ);
+});
+
+const trayectoNumeroForm = computed(() => {
+    return Number(equipoSeleccionadoForm.value?.equ_id_tra || equipoSeleccionadoForm.value?.trayecto?.tra_numero || 1);
+});
+
+const lineaAutomaticaForm = computed(() => {
+    return trayectoNumeroForm.value === 1 ? "Alfabetización Tecnológica" : "Desarrollo de Software";
+});
+
+const tipoProyectoAutoForm = computed(() => {
+    const palabra = trayectoNumeroForm.value === 1 ? "alfabet" : "software";
+    return (props.tipos || []).find((tp) =>
+        (tp.tpr_nombre || "").toLowerCase().includes(palabra)
+    );
+});
+
+watch(equipoSeleccionadoForm, (eq) => {
+    if (eq && tipoProyectoAutoForm.value?.tpr_id) {
+        form.value.pco_id_tpr = tipoProyectoAutoForm.value.tpr_id;
+    }
+});
+
 const opcionesTiposInvProy = computed(() => [
     { value: "", label: "Seleccionar..." },
     ...listaTiposInvestigacion.value.map((t) => ({ value: t.tpr_id, label: t.tpr_nombre })),
-    { value: "__OTRO__", label: "➕ Otro (Crear nueva Línea de Investigación...)" },
 ]);
 const opcionesModalidadesProy = computed(() => [
     { value: "", label: "Seleccionar..." },
     ...(listaModalidades?.value || props.modalidades || []).map((m) => ({ value: m.mpr_id, label: m.mpr_nombre })),
-    { value: "__OTRO__", label: "➕ Otro (Crear nueva Modalidad...)" },
 ]);
 const opcionesBeneficiariosProy = computed(() => [
     { value: "", label: "Selecciona tipo de beneficiario..." },

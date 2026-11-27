@@ -144,6 +144,14 @@ class ComunidadController extends Controller
             $actaFinal = \Illuminate\Support\Facades\DB::table('actas_finales_trayecto')->where('id_proyecto', $p->pco_id)->first();
             $esCulminado = (bool) $envioRepo || ($actaFinal && $actaFinal->cerrada);
 
+            $fecha = $eq->equ_created_at ?? $p->pco_created_at;
+            $anio = $fecha ? \Carbon\Carbon::parse($fecha)->year : date('Y');
+            $periodo = \Illuminate\Support\Facades\DB::table('periodos_academicos')
+                ->where('fecha_inicio', '<=', $fecha)
+                ->where('fecha_fin', '>=', $fecha)
+                ->first();
+            $anioLapso = $periodo ? $periodo->lapso_academico : (string)$anio;
+
             $item = [
                 'pco_id'           => $p->pco_id,
                 'equ_id'           => $eq->equ_id,
@@ -153,6 +161,8 @@ class ComunidadController extends Controller
                 'trayecto'         => $eq->seccion?->trayecto?->tra_nombre,
                 'tipo_proyecto'    => $p->tipoProyecto?->tpr_nombre,
                 'modalidad'        => $p->modalidad?->mpr_nombre,
+                'anio_lapso'       => $anioLapso,
+                'estatus_nombre'   => $esCulminado ? 'Culminado' : 'Activo',
                 'lider'            => $nombreLider,
                 'es_culminado'     => $esCulminado,
                 'calificacion'     => $actaFinal ? (float) $actaFinal->calificacion_definitiva_cuantitativa : null,

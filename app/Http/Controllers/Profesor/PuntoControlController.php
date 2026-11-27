@@ -120,7 +120,15 @@ class PuntoControlController extends Controller
                 )
                 ->first();
 
-            $rawCriterios = $esq?->esq_criterios ?? $esquemaPorDefecto?->esq_criterios;
+            $tieneEsquemaConfigurado = (bool) $esq;
+            
+            // Esquema recomendado según paridad del semestre
+            $esquemaRecomendado = \App\Models\EsquemaEvaluacion::where('esq_activo', true)
+                ->where('esq_modo', $esImparSec ? 'cualitativo_respaldado' : 'cuantitativo')
+                ->orderBy('esq_es_plantilla', 'desc')
+                ->first() ?: $esquemaPorDefecto;
+
+            $rawCriterios = $esq?->esq_criterios ?? $esquemaRecomendado?->esq_criterios;
             $decoded = is_string($rawCriterios) ? json_decode($rawCriterios, true) : ($rawCriterios ?: []);
             $criterios = (is_array($decoded) && array_key_exists('criterios', $decoded))
                 ? ($decoded['criterios'] ?? [])
@@ -130,17 +138,19 @@ class PuntoControlController extends Controller
                 : ($esImparSec || ($esq?->esq_modo === 'cualitativo_respaldado') ? $baremoPorDefecto : []);
 
             $esquemasPorSeccion[$secId] = [
-                'esq_id'            => $esq->esq_id ?? $esquemaPorDefecto?->esq_id,
-                'nombre'            => $esq->esq_nombre ?? $esquemaPorDefecto?->esq_nombre ?? ($esImparSec ? 'Evaluación Cualitativa Literal PNFI' : 'Evaluación Cuantitativa PST UPTP'),
-                'modo'              => $esq->esq_modo ?? ($esImparSec ? 'cualitativo_respaldado' : ($esquemaPorDefecto?->esq_modo ?? 'cuantitativo')),
-                'escala_min'        => $esq->esq_escala_min ?? $esquemaPorDefecto?->esq_escala_min ?? 1,
-                'escala_max'        => $esq->esq_escala_max ?? $esquemaPorDefecto?->esq_escala_max ?? 20,
-                'nota_aprobatoria'  => $esq->esq_nota_aprobatoria ?? $esquemaPorDefecto?->esq_nota_aprobatoria ?? 16,
-                'lapso'             => $esq->esq_sec_lapso ?? \App\Models\PeriodoAcademico::lapsoActivoTexto(),
-                'criterios'         => $criterios,
-                'baremo'            => $baremo,
-                'es_semestre_impar' => $esImparSec,
-                'semestre_numero'   => $numSemestreSec,
+                'esq_id'                    => $esq->esq_id ?? $esquemaRecomendado?->esq_id,
+                'nombre'                    => $esq->esq_nombre ?? $esquemaRecomendado?->esq_nombre ?? ($esImparSec ? 'Evaluación Cualitativa Literal PNFI' : 'Evaluación Cuantitativa PST UPTP'),
+                'modo'                      => $esq->esq_modo ?? ($esImparSec ? 'cualitativo_respaldado' : 'cuantitativo'),
+                'escala_min'                => $esq->escala_min ?? $esquemaRecomendado?->esq_escala_min ?? 1,
+                'escala_max'                => $esq->escala_max ?? $esquemaRecomendado?->esq_escala_max ?? 20,
+                'nota_aprobatoria'          => $esq->nota_aprobatoria ?? $esquemaRecomendado?->esq_nota_aprobatoria ?? 16,
+                'lapso'                     => $esq->esq_sec_lapso ?? \App\Models\PeriodoAcademico::lapsoActivoTexto(),
+                'criterios'                 => $criterios,
+                'baremo'                    => $baremo,
+                'es_semestre_impar'         => $esImparSec,
+                'semestre_numero'           => $numSemestreSec,
+                'tiene_esquema_configurado' => $tieneEsquemaConfigurado,
+                'id_esquema_recomendado'    => $esquemaRecomendado?->esq_id,
             ];
         }
 
@@ -157,6 +167,8 @@ class PuntoControlController extends Controller
             'semanaActual'        => $semanaActual,
             'tiposEncuentro'      => $tiposEncuentro,
             'esquemasPorSeccion'  => $esquemasPorSeccion,
+            'plantillasEsquemas'  => \App\Models\EsquemaEvaluacion::where('esq_activo', true)->get(),
+            'tiposEntregable'     => \App\Models\TipoEntregableTrayecto::where('tet_status', true)->get(),
         ]);
     }
 

@@ -39,11 +39,13 @@ class HandleInertiaRequests extends Middleware
         ...parent::share($request),
         'auth' => [
             'user' => $request->user() ? [
-                'usu_id'              => $request->user()->usu_id,
-                'usu_primer_nombre'   => $request->user()->usu_primer_nombre,
-                'usu_primer_apellido' => $request->user()->usu_primer_apellido,
-                'usu_username'        => $request->user()->usu_username,
-                'usu_email'           => $request->user()->usu_email,
+                'usu_id'                => $request->user()->usu_id,
+                'usu_primer_nombre'     => $request->user()->usu_primer_nombre,
+                'usu_primer_apellido'   => $request->user()->usu_primer_apellido,
+                'usu_username'          => $request->user()->usu_username,
+                'usu_email'             => $request->user()->usu_email,
+                'usu_cedula'            => $request->user()->usu_cedula,
+                'debe_cambiar_password' => (bool) ($request->user()->debe_cambiar_password ?? false),
             ] : null,
             'rol' => function () use ($request) {
                 $user = $request->user();

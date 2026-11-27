@@ -29,6 +29,12 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button
+                        class="btn btn-outline-danger btn-sm fw-bold rounded-pill px-3 shadow-sm"
+                        @click="abrirModalNuevoEntregable"
+                    >
+                        <i class="bi bi-file-earmark-plus me-1"></i>+ Nuevo Entregable
+                    </button>
+                    <button
                         class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm"
                         @click="abrirModalCrear"
                     >
@@ -46,6 +52,34 @@
                 <div v-if="$page.props.flash?.error" class="alert alert-danger alert-dismissible fade show" role="alert">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ $page.props.flash.error }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- ALERTA DE SECCIONES SIN ESQUEMA ASIGNADO -->
+                <div v-if="seccionesSinEsquema.length > 0" class="alert alert-warning border-warning shadow-sm rounded-3 p-3 mb-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                            <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-2 mb-1">
+                                <i class="bi bi-exclamation-octagon-fill text-warning fs-5"></i>
+                                Tienes {{ seccionesSinEsquema.length }} sección(es) sin esquema de evaluación asignado
+                            </div>
+                            <div class="text-muted small">
+                                Secciones pendientes:
+                                <span v-for="sec in seccionesSinEsquema" :key="sec.sec_id" class="badge bg-white text-dark border me-1">
+                                    {{ sec.sec_codigo }} (Semestre {{ sec.sec_semestre || '—' }})
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            class="btn btn-danger btn-sm fw-bold px-3 py-2 text-nowrap shadow-sm"
+                            @click="autoAsignarEsquemas"
+                            :disabled="asignandoAuto"
+                        >
+                            <span v-if="asignandoAuto" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-magic me-1"></i>
+                            Asignar Esquemas Oficiales Automáticamente
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Info institucional -->
@@ -380,6 +414,56 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL NUEVO ENTREGABLE EN TABLA MAESTRA -->
+        <div class="modal fade" id="modalNuevoEntregableMaestro" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-dark text-white">
+                        <h6 class="modal-title fw-bold">
+                            <i class="bi bi-file-earmark-plus text-danger me-2"></i>Registrar Nuevo Entregable en Catálogo Maestro
+                        </h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="guardarNuevoEntregableMaestro">
+                        <div class="modal-body p-4">
+                            <div v-if="errorNuevoEntregable" class="alert alert-danger py-2 small mb-3">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ errorNuevoEntregable }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-uppercase text-muted">Nombre del Entregable *</label>
+                                <input
+                                    v-model="formNuevoEntregable.nombre"
+                                    type="text"
+                                    class="form-control"
+                                    placeholder="Ej. Manual de Arquitectura, Guía de Despliegue..."
+                                    required
+                                />
+                                <div class="form-text small">
+                                    Se validará que no sea duplicado ni contenga opciones genéricas como "Otro".
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-uppercase text-muted">Trayecto PNFI *</label>
+                                <select v-model="formNuevoEntregable.trayecto" class="form-select">
+                                    <option :value="1">Trayecto I (Alfabetización Tecnológica)</option>
+                                    <option :value="2">Trayecto II (Desarrollo de Software)</option>
+                                    <option :value="3">Trayecto III (Desarrollo de Software)</option>
+                                    <option :value="4">Trayecto IV (Desarrollo de Software / Grado)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 bg-light p-3">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-danger btn-sm fw-bold px-3" :disabled="guardandoEntregable">
+                                <span v-if="guardandoEntregable" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-check-lg me-1"></i>Guardar en Catálogo Maestro
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -395,7 +479,85 @@ const props = defineProps({
     secciones: { type: Array, default: () => [] },
     esCoordinador: { type: Boolean, default: false },
     usuarioActual: { type: Object, default: () => ({}) },
+    tiposEntregable: { type: Array, default: () => [] },
 })
+
+const seccionesSinEsquema = computed(() => {
+    const assignedSecIds = new Set();
+    (props.esquemas || []).forEach(esq => {
+        (esq.secciones || []).forEach(sec => {
+            assignedSecIds.add(sec.sec_id);
+        });
+    });
+    return (props.secciones || []).filter(s => !assignedSecIds.has(s.sec_id));
+});
+
+const asignandoAuto = ref(false);
+const autoAsignarEsquemas = () => {
+    asignandoAuto.value = true;
+    useForm({}).post("/profesor/esquemas-evaluacion/auto-asignar", {
+        preserveScroll: true,
+        onFinish: () => { asignandoAuto.value = false; }
+    });
+};
+
+// Modal Nuevo Entregable en Catálogo Maestro
+const modalNuevoEntregable = ref(null);
+const guardandoEntregable = ref(false);
+const errorNuevoEntregable = ref("");
+const formNuevoEntregable = ref({
+    nombre: "",
+    trayecto: 1,
+});
+
+const abrirModalNuevoEntregable = () => {
+    formNuevoEntregable.value = {
+        nombre: "",
+        trayecto: 1,
+    };
+    errorNuevoEntregable.value = "";
+    const el = document.getElementById("modalNuevoEntregableMaestro");
+    if (el) {
+        modalNuevoEntregable.value = modalNuevoEntregable.value || new bootstrap.Modal(el);
+        modalNuevoEntregable.value.show();
+    }
+};
+
+const guardarNuevoEntregableMaestro = async () => {
+    const nom = formNuevoEntregable.value.nombre.trim();
+    if (!nom) {
+        errorNuevoEntregable.value = "El nombre del entregable es obligatorio.";
+        return;
+    }
+    if (["otro", "otros", "otra", "otras"].includes(nom.toLowerCase())) {
+        errorNuevoEntregable.value = "No se permite registrar opciones genéricas como 'Otro' o 'Otros'.";
+        return;
+    }
+    guardandoEntregable.value = true;
+    errorNuevoEntregable.value = "";
+    try {
+        const res = await window.axios.post("/catalogos/crear-opcion", {
+            catalogo: "tipo_entregable",
+            nombre: nom,
+            trayecto: formNuevoEntregable.value.trayecto,
+        });
+        if (res.data.success) {
+            props.tiposEntregable.push({
+                tet_id: res.data.id,
+                tet_nombre: res.data.nombre,
+                tet_trayecto_numero: formNuevoEntregable.value.trayecto,
+                tet_status: 1,
+            });
+            modalNuevoEntregable.value?.hide();
+        } else {
+            errorNuevoEntregable.value = res.data.message || "Error al registrar el entregable.";
+        }
+    } catch (e) {
+        errorNuevoEntregable.value = e.response?.data?.message || "Error al registrar el entregable.";
+    } finally {
+        guardandoEntregable.value = false;
+    }
+};
 
 const opcionesModoEsq = [
     { value: "cuantitativo", label: "Cuantitativo (Escala Numérica)" },

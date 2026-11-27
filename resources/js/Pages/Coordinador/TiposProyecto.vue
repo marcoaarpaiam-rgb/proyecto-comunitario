@@ -65,8 +65,16 @@
                                 margin-top: 2px;
                             "
                         >
-                            Catálogo de líneas de investigación disponibles (Modo Consulta)
+                            Catálogo institucional de líneas de investigación por trayecto
                         </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button
+                            class="btn btn-danger btn-sm px-3 fw-bold shadow-sm"
+                            @click="abrirModal()"
+                        >
+                            <i class="bi bi-plus-lg me-1"></i> Nueva Línea
+                        </button>
                     </div>
                 </div>
 
@@ -82,21 +90,33 @@
                             gap: 8px;
                         "
                     >
-                        <div class="srch">
-                            <i class="bi bi-search"></i
-                            ><input
+                        <form
+                            @submit.prevent="ejecutarBusqueda"
+                            class="srch d-flex align-items-center"
+                        >
+                            <i class="bi bi-search"></i>
+                            <input
                                 v-model="busqueda"
                                 type="text"
-                                placeholder="Buscar..."
+                                placeholder="Buscar y presionar Enter..."
+                                @keyup.enter="ejecutarBusqueda"
                             />
-                        </div>
+                            <button
+                                v-if="busqueda"
+                                type="button"
+                                class="btn btn-sm btn-link text-muted p-0 me-2"
+                                @click="limpiarBusqueda"
+                            >
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </form>
                         <span
                             style="
                                 font-size: 0.82rem;
                                 color: var(--text-muted);
                                 font-weight: 600;
                             "
-                            >{{ tiposFiltrados.length }} resultado(s)</span
+                            >{{ totalRegistros }} resultado(s)</span
                         >
                     </div>
                     <div class="table-responsive">
@@ -110,7 +130,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-if="tiposPaginados.length === 0">
+                                <tr v-if="itemsAMostrar.length === 0">
                                     <td
                                         colspan="4"
                                         class="text-center py-5"
@@ -119,7 +139,7 @@
                                         Sin resultados
                                     </td>
                                 </tr>
-                                <tr v-for="t in tiposPaginados" :key="t.tpr_id">
+                                <tr v-for="t in itemsAMostrar" :key="t.tpr_id">
                                     <td
                                         class="ps-4"
                                         style="
@@ -144,14 +164,43 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <span class="badge bg-secondary-subtle text-secondary">Solo consulta</span>
+                                        <div class="btn-group btn-group-sm">
+                                            <button
+                                                class="btn btn-outline-primary btn-sm"
+                                                title="Editar"
+                                                @click="abrirModal(t)"
+                                            >
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button
+                                                v-if="t.tpr_status"
+                                                class="btn btn-outline-danger btn-sm"
+                                                title="Desactivar"
+                                                @click="desactivar(t)"
+                                            >
+                                                <i class="bi bi-slash-circle"></i>
+                                            </button>
+                                            <button
+                                                v-else
+                                                class="btn btn-outline-success btn-sm"
+                                                title="Reactivar"
+                                                @click="reactivar(t)"
+                                            >
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                    <!-- Paginación Backend o Frontend -->
+                    <Pagination
+                        v-if="esPaginadoBackend"
+                        :paginador="props.tipos"
+                    />
                     <div
-                        v-if="totalPaginas > 1"
+                        v-else-if="totalPaginas > 1"
                         style="
                             padding: 0.75rem 1rem;
                             display: flex;
@@ -319,6 +368,7 @@
 
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import Pagination from "@/Components/Pagination.vue";
 import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -338,7 +388,11 @@ const toggleMenuMaestras = () => {
     localStorage.setItem("coord-menu-maestras", menuMaestras.value ? "true" : "false");
 };
 
-const props = defineProps({ tipos: Array });
+const props = defineProps({
+    tipos: [Array, Object],
+    filtros: Object,
+});
+
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");
@@ -360,9 +414,10 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
-const busqueda = ref("");
+
+const busqueda = ref(props.filtros?.buscar || "");
 const pagina = ref(1);
-const porPagina = 10;
+const porPagina = 3;
 const form = ref({ tpr_nombre: "" });
 const errores = ref({});
 const loading = ref(false);
@@ -370,22 +425,43 @@ const editando = ref(null);
 const itemAEliminar = ref(null);
 let modal = null;
 let modalConf = null;
-watch(busqueda, () => {
-    pagina.value = 1;
+
+const esPaginadoBackend = computed(() => props.tipos && Array.isArray(props.tipos.data));
+
+const listaTipos = computed(() => {
+    if (esPaginadoBackend.value) {
+        return props.tipos.data;
+    }
+    return Array.isArray(props.tipos) ? props.tipos : [];
 });
+
+const totalRegistros = computed(() => {
+    if (esPaginadoBackend.value) {
+        return props.tipos.total ?? listaTipos.value.length;
+    }
+    return tiposFiltrados.value.length;
+});
+
 const tiposFiltrados = computed(() => {
-    if (!busqueda.value.trim()) return props.tipos;
+    if (esPaginadoBackend.value) return listaTipos.value;
+    if (!busqueda.value.trim()) return listaTipos.value;
     const q = busqueda.value.toLowerCase();
-    return props.tipos.filter((t) => t.tpr_nombre.toLowerCase().includes(q));
+    return listaTipos.value.filter((t) => t.tpr_nombre.toLowerCase().includes(q));
 });
+
 const totalPaginas = computed(() =>
     Math.ceil(tiposFiltrados.value.length / porPagina),
 );
 const desde = computed(() => (pagina.value - 1) * porPagina);
 const hasta = computed(() => desde.value + porPagina);
-const tiposPaginados = computed(() =>
-    tiposFiltrados.value.slice(desde.value, hasta.value),
-);
+
+const itemsAMostrar = computed(() => {
+    if (esPaginadoBackend.value) {
+        return listaTipos.value;
+    }
+    return tiposFiltrados.value.slice(desde.value, hasta.value);
+});
+
 const paginasV = computed(() => {
     const t = totalPaginas.value,
         a = pagina.value,
@@ -395,6 +471,24 @@ const paginasV = computed(() => {
     for (let x = i; x <= f; x++) p.push(x);
     return p;
 });
+
+const ejecutarBusqueda = () => {
+    if (esPaginadoBackend.value) {
+        router.get(
+            "/coordinador/tipos-proyecto",
+            { buscar: busqueda.value },
+            { preserveState: true, replace: true },
+        );
+    } else {
+        pagina.value = 1;
+    }
+};
+
+const limpiarBusqueda = () => {
+    busqueda.value = "";
+    ejecutarBusqueda();
+};
+
 const abrirModal = (tipo = null) => {
     editando.value = tipo;
     form.value = { tpr_nombre: tipo?.tpr_nombre || "" };
@@ -402,13 +496,40 @@ const abrirModal = (tipo = null) => {
     modal = modal || new Modal(document.getElementById("mTipo"));
     modal.show();
 };
+
 const guardar = () => {
+    errores.value = {};
+    const nombre = (form.value.tpr_nombre || "").trim();
+    const nombreLower = nombre.toLowerCase();
+
+    if (!nombre) {
+        errores.value.tpr_nombre = "El nombre de la línea de investigación es obligatorio.";
+        return;
+    }
+
+    if (["otro", "otros", "otra", "otras"].includes(nombreLower)) {
+        errores.value.tpr_nombre = "No se permite registrar opciones genéricas como 'Otros'. Ingrese un nombre específico.";
+        return;
+    }
+
+    const existe = listaTipos.value.some((t) => {
+        if (editando.value && t.tpr_id === editando.value.tpr_id) {
+            return false;
+        }
+        return (t.tpr_nombre || "").trim().toLowerCase() === nombreLower;
+    });
+
+    if (existe) {
+        errores.value.tpr_nombre = "Ya existe una línea de investigación con este nombre.";
+        return;
+    }
+
     loading.value = true;
     const url = editando.value
         ? `/coordinador/tipos-proyecto/${editando.value.tpr_id}`
         : "/coordinador/tipos-proyecto";
     const method = editando.value ? "put" : "post";
-    router[method](url, form.value, {
+    router[method](url, { tpr_nombre: nombre }, {
         onError: (e) => {
             errores.value = e;
             loading.value = false;
@@ -419,14 +540,21 @@ const guardar = () => {
         },
     });
 };
+
 const desactivar = (tipo) => {
     itemAEliminar.value = tipo;
     modalConf = modalConf || new Modal(document.getElementById("mConf"));
     modalConf.show();
 };
+
 const confirmarDesactivar = () => {
-    router.delete(`/coordinador/tipos-proyecto/${itemAEliminar.value.tpr_id}`);
-    modalConf?.hide();
+    router.delete(`/coordinador/tipos-proyecto/${itemAEliminar.value.tpr_id}`, {
+        onSuccess: () => modalConf?.hide(),
+    });
+};
+
+const reactivar = (tipo) => {
+    router.post(`/coordinador/tipos-proyecto/${tipo.tpr_id}/reactivar`);
 };
 </script>
 <style scoped>
