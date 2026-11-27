@@ -1,5 +1,6 @@
 <template>
     <div
+        class="puntos-page"
         :data-theme="tema"
         style="
             min-height: 100vh;
@@ -27,32 +28,6 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <!-- Botón Exportar Libro INVENTARIO (XLSX) -->
-                    <div class="dropdown" v-if="props.secciones && props.secciones.length > 0">
-                        <button
-                            class="btn btn-outline-success btn-sm fw-bold rounded-pill px-3 dropdown-toggle d-inline-flex align-items-center gap-1"
-                            type="button"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                        >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                            Exportar Libro INVENTARIO (.xlsx)
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 260px;">
-                            <li class="dropdown-header text-uppercase small fw-bold text-success">Plantilla Oficial UPTP (7 Hojas)</li>
-                            <li v-for="sec in props.secciones" :key="sec.sec_id">
-                                <a
-                                    class="dropdown-item d-flex align-items-center justify-content-between py-2"
-                                    :href="`/inventario/excel/libro-seccion/${sec.sec_id}`"
-                                    target="_blank"
-                                >
-                                    <span><strong>Sección:</strong> {{ sec.sec_codigo }}</span>
-                                    <span class="badge bg-success-subtle text-success ms-2">Descargar</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
                     <button
                         class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
                         @click="abrirModal()"
@@ -101,26 +76,64 @@
                             Seguimiento del avance de cada equipo
                         </p>
                     </div>
-                    <div class="srch">
-                        <i class="bi bi-search"></i
-                        ><input
-                            v-model="busqueda"
-                            type="text"
-                            placeholder="Buscar..."
-                        />
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div v-if="(secciones || []).length > 0" style="min-width: 210px;">
+                            <SelectBuscable
+                                v-model="filtroSeccion"
+                                :options="opcionesSeccionesFiltro"
+                                size="sm"
+                                placeholder="Todas mis secciones..."
+                                search-placeholder="Filtrar sección..."
+                            />
+                        </div>
+                        <div class="srch">
+                            <i class="bi bi-search"></i
+                            ><input
+                                v-model="busqueda"
+                                type="text"
+                                placeholder="Buscar..."
+                            />
+                        </div>
                     </div>
+                </div>
+
+                <!-- Alertas Flash / Validación -->
+                <div
+                    v-if="$page.props.flash?.error"
+                    class="alert alert-danger alert-dismissible fade show py-2 px-3 small mb-3"
+                    role="alert"
+                >
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ $page.props.flash.error }}
+                </div>
+                <div
+                    v-if="$page.props.flash?.success"
+                    class="alert alert-success alert-dismissible fade show py-2 px-3 small mb-3"
+                    role="alert"
+                >
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ $page.props.flash.success }}
+                </div>
+                <div
+                    v-if="Object.keys($page.props.errors || {}).length > 0"
+                    class="alert alert-danger py-2 px-3 small mb-3"
+                >
+                    <div class="fw-bold mb-1">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>No se pudo completar la operación:
+                    </div>
+                    <ul class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
                 </div>
 
                 <!-- BARRA COMPACTA DE FILTROS POR SEMÁFORO Y PANEL DE DETALLE -->
                 <div v-if="diagnosticosEquipos && Object.keys(diagnosticosEquipos).length > 0" class="mb-4">
-                    <div class="card border-0 shadow-sm p-3">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            <!-- Filtros rápidos por Enfoque de Gestión de Proyectos y Procesos -->
+                    <div class="sc p-3 mb-0">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <!-- Filtros rápidos por Situación del Proyecto (porcentaje) -->
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <span class="fw-bold small text-muted">Enfoque de Gestión de Proyectos y Procesos (Semana {{ semanaActual }}):</span>
+                                <span class="fw-bold small text-muted">Situación del Proyecto (Semana {{ semanaActual }}):</span>
                                 <button
                                     type="button"
-                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    class="btn btn-sm rounded-pill py-1 px-2"
                                     :class="filtroSemaforo === '' ? 'btn-dark' : 'btn-outline-secondary'"
                                     style="font-size: 0.78rem;"
                                     @click="filtroSemaforo = ''"
@@ -129,84 +142,70 @@
                                 </button>
                                 <button
                                     type="button"
-                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    class="btn btn-sm rounded-pill py-1 px-2"
                                     :class="filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta' ? 'btn-success' : 'btn-outline-success'"
                                     style="font-size: 0.78rem;"
                                     @click="filtroSemaforo = (filtroSemaforo === 'conforme' || filtroSemaforo === 'en_ruta') ? '' : 'conforme'"
-                                    title="Conforme: Cumple con los estándares y metas."
+                                    title="75% a 100%: Cumple con los estándares y metas."
                                 >
-                                    🟢 Conforme ({{ contarPorSemaforo('conforme') }})
+                                    🟢 Conforme ≥75% ({{ contarPorSemaforo('conforme') }})
                                 </button>
                                 <button
                                     type="button"
-                                    class="btn btn-sm rounded-pill py-0 px-2"
-                                    :class="filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
+                                    class="btn btn-sm rounded-pill py-1 px-2"
+                                    :class="filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar' ? 'btn-warning text-dark' : 'btn-outline-warning'"
                                     style="font-size: 0.78rem;"
                                     @click="filtroSemaforo = (filtroSemaforo === 'observado' || filtroSemaforo === 'acelerar') ? '' : 'observado'"
-                                    title="Observado: Tiene parametros menores que deben mejorarse."
+                                    title="50% a 74%: Tiene parámetros menores que deben mejorarse."
                                 >
-                                    🟡 Observado ({{ contarPorSemaforo('observado') }})
+                                    🟡 Observado 50–74% ({{ contarPorSemaforo('observado') }})
                                 </button>
                                 <button
                                     type="button"
-                                    class="btn btn-sm rounded-pill py-0 px-2"
+                                    class="btn btn-sm rounded-pill py-1 px-2"
                                     :class="filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto' ? 'btn-danger' : 'btn-outline-danger'"
                                     style="font-size: 0.78rem;"
                                     @click="filtroSemaforo = (filtroSemaforo === 'no_conforme' || filtroSemaforo === 'riesgo_alto') ? '' : 'no_conforme'"
-                                    title="No conforme: Incumplimiento grave de los parámetros del proyecto."
+                                    title="25% a 49%: Incumplimiento grave de los parámetros del proyecto."
                                 >
-                                    🔴 No conforme ({{ contarPorSemaforo('no_conforme') }})
+                                    🔴 No conforme 25–49% ({{ contarPorSemaforo('no_conforme') }})
                                 </button>
                                 <button
                                     type="button"
-                                    class="btn btn-sm rounded-pill py-0 px-2"
-                                    :class="filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-dark'"
+                                    class="btn btn-sm rounded-pill py-1 px-2"
+                                    :class="filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable' ? 'btn-dark' : 'btn-outline-secondary'"
                                     style="font-size: 0.78rem;"
                                     @click="filtroSemaforo = (filtroSemaforo === 'no_viable' || filtroSemaforo === 'inviable') ? '' : 'no_viable'"
-                                    title="No viable: Cierre administrativo por falta de factibilidad."
+                                    title="Menor a 25%: Cierre administrativo por falta de factibilidad."
                                 >
-                                    ⚫ No viable ({{ contarPorSemaforo('no_viable') }})
+                                    ⚫ No viable &lt;25% ({{ contarPorSemaforo('no_viable') }})
                                 </button>
                             </div>
 
-                            <!-- Selector de equipo para ver diagnóstico detallado -->
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="small text-muted fw-semibold mb-0">Detalle:</label>
-                                <select
-                                    v-model="equipoSeleccionadoDiag"
-                                    class="form-select form-select-sm"
-                                    style="max-width: 270px; font-size: 0.8rem;"
-                                >
-                                    <option value="">Seleccione equipo para ver ruta crítica...</option>
-                                    <option
-                                        v-for="(diag, idEq) in diagnosticosEquipos"
-                                        :key="idEq"
-                                        :value="idEq"
-                                    >
-                                        {{ getIconoSemaforo(diag.semaforo) }} {{ diag.nombre_equipo || ('Equipo #' + idEq) }}
-                                    </option>
-                                </select>
-                                <button
-                                    v-if="equipoSeleccionadoDiag"
-                                    type="button"
-                                    class="btn btn-sm btn-link text-muted p-0"
-                                    @click="equipoSeleccionadoDiag = ''"
-                                    title="Cerrar detalle"
-                                >
-                                    <i class="bi bi-x-circle fs-6"></i>
-                                </button>
+                            <!-- Selector de equipo con buscador para ver diagnóstico detallado -->
+                            <div class="d-flex align-items-center gap-2" style="min-width: 280px;">
+                                <label class="small text-muted fw-semibold mb-0 flex-shrink-0">Detalle:</label>
+                                <div class="flex-grow-1">
+                                    <SelectBuscable
+                                        v-model="equipoSeleccionadoDiag"
+                                        :options="opcionesEquiposDiag"
+                                        size="sm"
+                                        placeholder="Buscar equipo para ver porcentaje..."
+                                        search-placeholder="Código o nombre del equipo..."
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        <!-- BANNER DEL ESQUEMA DE EVALUACIÓN ASIGNADO Y SU RESPALDO FORMATIVO -->
-                        <div v-if="esquemaActual" class="mt-3 p-3 rounded-3 bg-white border border-light-subtle shadow-xs">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom">
+                        <!-- BANNER DEL ESQUEMA DE EVALUACIÓN ASIGNADO -->
+                        <div v-if="esquemaActual" class="mt-3 p-3 rounded-3 border" style="background: var(--bg-th); border-color: var(--border) !important;">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2 border-bottom" style="border-color: var(--border) !important;">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-circle">
                                         <i class="bi bi-file-earmark-ruled fs-6"></i>
                                     </span>
                                     <div>
-                                        <div class="fw-bold text-dark small d-flex align-items-center gap-2">
+                                        <div class="fw-bold small d-flex align-items-center gap-2">
                                             <span>Esquema de Evaluación Asignado: {{ esquemaActual.nombre }}</span>
                                             <span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size: 0.68rem;">
                                                 Lapso {{ esquemaActual.lapso }}
@@ -229,29 +228,29 @@
                             <!-- Respaldo de los indicadores para la evaluación -->
                             <div class="row g-2 pt-1">
                                 <div class="col-md-4">
-                                    <div class="p-2 rounded bg-light border-0 d-flex align-items-start gap-2 h-100">
+                                    <div class="p-2 rounded border d-flex align-items-start gap-2 h-100" style="background: var(--bg-card); border-color: var(--border) !important;">
                                         <i class="bi bi-person-check-fill text-success mt-1"></i>
                                         <div>
-                                            <div class="fw-bold text-dark" style="font-size: 0.76rem;">Asistencia y Puntualidad</div>
-                                            <div class="text-muted" style="font-size: 0.71rem;">Garantiza la participación continua en los puntos de control requeridos por el esquema.</div>
+                                            <div class="fw-bold" style="font-size: 0.76rem;">Asistencia y Puntualidad (30%)</div>
+                                            <div class="text-muted" style="font-size: 0.71rem;">Participación continua en los encuentros de puntos de control.</div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="p-2 rounded bg-light border-0 d-flex align-items-start gap-2 h-100">
+                                    <div class="p-2 rounded border d-flex align-items-start gap-2 h-100" style="background: var(--bg-card); border-color: var(--border) !important;">
                                         <i class="bi bi-file-earmark-check-fill text-primary mt-1"></i>
                                         <div>
-                                            <div class="fw-bold text-dark" style="font-size: 0.76rem;">Entregables del Catálogo PNFI</div>
-                                            <div class="text-muted" style="font-size: 0.71rem;">Constituyen las evidencias técnicas auditables evaluadas según los criterios del PNF.</div>
+                                            <div class="fw-bold" style="font-size: 0.76rem;">Entregables y Avance (50%)</div>
+                                            <div class="text-muted" style="font-size: 0.71rem;">Evidencias técnicas y valoración porcentual o literal en seguimientos.</div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="p-2 rounded bg-light border-0 d-flex align-items-start gap-2 h-100">
+                                    <div class="p-2 rounded border d-flex align-items-start gap-2 h-100" style="background: var(--bg-card); border-color: var(--border) !important;">
                                         <i class="bi bi-check2-circle text-warning mt-1"></i>
                                         <div>
-                                            <div class="fw-bold text-dark" style="font-size: 0.76rem;">Acuerdos Rectificados</div>
-                                            <div class="text-muted" style="font-size: 0.71rem;">Certifican la subsanación de correcciones metodológicas para el cierre evaluativo formal.</div>
+                                            <div class="fw-bold" style="font-size: 0.76rem;">Cumplimiento y Acuerdos (20%)</div>
+                                            <div class="text-muted" style="font-size: 0.71rem;">Subsanación de acuerdos y metas dentro de cada punto de control.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -259,9 +258,9 @@
                         </div>
 
                         <!-- PANEL COMPLETO SOLO PARA EL EQUIPO SELECCIONADO -->
-                        <div v-if="equipoSeleccionadoDiag && diagnosticosEquipos[equipoSeleccionadoDiag]" class="mt-3 pt-3 border-top">
+                        <div v-if="equipoSeleccionadoDiag && diagnosticosEquipos[equipoSeleccionadoDiag]" class="mt-3 pt-3 border-top" style="border-color: var(--border) !important;">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="fw-bold text-dark small">
+                                <span class="fw-bold small">
                                     <i class="bi bi-compass-fill text-danger me-1"></i> Diagnóstico Completo: {{ diagnosticosEquipos[equipoSeleccionadoDiag].nombre_equipo }}
                                 </span>
                                 <button
@@ -283,8 +282,9 @@
                     <ul class="nav nav-pills gap-2" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button
-                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
-                                :class="tabPuntos === 'pendientes' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2 border"
+                                :class="tabPuntos === 'pendientes' ? 'active bg-danger text-white border-danger shadow-sm' : 'text-body'"
+                                :style="tabPuntos !== 'pendientes' ? 'background: var(--bg-card); border-color: var(--border) !important;' : ''"
                                 type="button"
                                 @click="tabPuntos = 'pendientes'"
                             >
@@ -300,8 +300,9 @@
                         </li>
                         <li class="nav-item" role="presentation">
                             <button
-                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
-                                :class="tabPuntos === 'archivados' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2 border"
+                                :class="tabPuntos === 'archivados' ? 'active bg-danger text-white border-danger shadow-sm' : 'text-body'"
+                                :style="tabPuntos !== 'archivados' ? 'background: var(--bg-card); border-color: var(--border) !important;' : ''"
                                 type="button"
                                 @click="tabPuntos = 'archivados'"
                             >
@@ -394,6 +395,9 @@
                                                 :title="getEtiquetaSemaforo(diagnosticosEquipos[puc.puc_id_equ].semaforo) + ': ' + getSignificadoSemaforo(diagnosticosEquipos[puc.puc_id_equ].semaforo)"
                                                 @click="equipoSeleccionadoDiag = puc.puc_id_equ"
                                             >
+                                                <span v-if="diagnosticosEquipos[puc.puc_id_equ].porcentaje_situacion !== undefined" class="me-1">
+                                                    {{ diagnosticosEquipos[puc.puc_id_equ].porcentaje_situacion }}% ·
+                                                </span>
                                                 {{ getEtiquetaSemaforo(diagnosticosEquipos[puc.puc_id_equ].semaforo) }}
                                             </button>
                                         </div>
@@ -461,17 +465,8 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <!-- Si ya fue evaluado: corte Excel, consultar/editar -->
+                                        <!-- Si ya fue evaluado: consultar/editar -->
                                         <template v-if="estaEvaluado(puc)">
-                                            <a
-                                                :href="`/inventario/excel/punto-control/${puc.puc_id}`"
-                                                class="btn btn-sm btn-outline-success me-1 d-inline-flex align-items-center gap-1"
-                                                title="Descargar Corte Oficial Excel (Semana real)"
-                                                target="_blank"
-                                            >
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                                                Excel
-                                            </a>
                                             <button
                                                 class="btn btn-sm btn-outline-primary me-1"
                                                 @click="
@@ -521,998 +516,8 @@
             </div>
         </div>
 
-        <!-- Modal Nuevo Punto -->
-        <div class="modal fade" id="mPunto" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="mh">
-                        <h5>Nuevo Punto de Control</h5>
-                        <button
-                            class="btn btn-sm text-white p-0 fs-5"
-                            data-bs-dismiss="modal"
-                        >
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
-                    <form @submit.prevent="guardar">
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Sección</label
-                                >
-                                <select
-                                    v-model="seccionSeleccionadaModal"
-                                    class="form-select form-select-sm"
-                                    @change="onSeccionModalChange"
-                                >
-                                    <option value="">
-                                        Todas las secciones...
-                                    </option>
-                                    <option
-                                        v-for="sec in secciones"
-                                        :key="sec.sec_id"
-                                        :value="sec.sec_id"
-                                    >
-                                        Sección {{ sec.sec_codigo }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">
-                                    Equipo <span class="text-danger">*</span>
-                                </label>
-                                <SelectBuscableEquipo
-                                    v-model="form.puc_id_equ"
-                                    :equipos="equiposModalFiltrados"
-                                    :has-error="!!errores.puc_id_equ"
-                                    placeholder="🔍 Escribe código, título o sección del equipo..."
-                                />
-                                <div
-                                    v-if="errores.puc_id_equ"
-                                    class="text-danger small mt-1"
-                                >
-                                    {{ errores.puc_id_equ }}
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Nombre del Punto
-                                    <span class="text-danger">*</span></label
-                                >
-                                <input
-                                    v-model="form.puc_nombre"
-                                    type="text"
-                                    class="form-control"
-                                    :class="{
-                                        'is-invalid': errores.puc_nombre,
-                                    }"
-                                    placeholder="Ej: Punto de Control 1 — Diagnóstico"
-                                />
-                                <div
-                                    v-if="errores.puc_nombre"
-                                    class="invalid-feedback"
-                                >
-                                    {{ errores.puc_nombre }}
-                                </div>
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold"
-                                        >Semana de Corte / Encuentro <span class="text-danger">*</span></label
-                                    >
-                                    <div class="input-group">
-                                        <span
-                                            class="input-group-text"
-                                            style="
-                                                background: var(--bg-card);
-                                                color: var(--text-muted);
-                                            "
-                                            >Semana</span
-                                        >
-                                        <input
-                                            v-model.number="form.puc_semana"
-                                            type="number"
-                                            min="1"
-                                            max="18"
-                                            step="1"
-                                            class="form-control"
-                                            :class="{
-                                                'is-invalid': errorSemana || errores.puc_semana,
-                                            }"
-                                            placeholder="1 a 18"
-                                            @keydown="bloquearCaracteresSemana($event)"
-                                            @input="validarSemanaInput"
-                                            required
-                                        />
-                                    </div>
-                                    <div
-                                        v-if="errorSemana || errores.puc_semana"
-                                        class="invalid-feedback d-block"
-                                    >
-                                        {{ errorSemana || errores.puc_semana }}
-                                    </div>
-                                    <small
-                                        class="text-muted"
-                                        style="font-size: 0.72rem"
-                                        >Rango estricto del 1 al 18. Sugerido: 6 (Corte 1), 10 (Corte 2), 14 (Corte 3)</small
-                                    >
-                                </div>
-                                <div class="col-md-5">
-                                    <label class="form-label fw-semibold"
-                                        >Fecha de Encuentro
-                                        <span class="text-danger"
-                                            >*</span
-                                        ></label
-                                    >
-                                    <input
-                                        v-model="form.puc_fecha_limite"
-                                        type="date"
-                                        :min="$page.props.periodoActivo?.fecha_inicio || fechaHoy"
-                                        :max="$page.props.periodoActivo?.fecha_fin"
-                                        class="form-control"
-                                        :class="{
-                                            'is-invalid':
-                                                errores.puc_fecha_limite,
-                                        }"
-                                    />
-                                    <small v-if="$page.props.periodoActivo?.lapso_academico" class="text-muted d-block mt-1" style="font-size: 0.72rem;">
-                                        Lapso activo: {{ $page.props.periodoActivo.fecha_inicio_formato }} - {{ $page.props.periodoActivo.fecha_fin_formato }}
-                                    </small>
-                                    <div
-                                        v-if="errores.puc_fecha_limite"
-                                        class="invalid-feedback"
-                                    >
-                                        {{ errores.puc_fecha_limite }}
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold"
-                                        >Días Aviso</label
-                                    >
-                                    <!-- Días de aviso en PuntosControl.vue -->
-                                    <input
-                                        type="number"
-                                        class="form-control"
-                                        v-model="form.puc_dias_aviso"
-                                        min="1"
-                                        max="30"
-                                        @keypress="
-                                            (e) =>
-                                                !/[0-9]/.test(e.key) &&
-                                                e.preventDefault()
-                                        "
-                                    />
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <label class="form-label fw-semibold"
-                                    >Descripción</label
-                                >
-                                <textarea
-                                    v-model="form.puc_descripcion"
-                                    class="form-control"
-                                    rows="2"
-                                ></textarea>
-                            </div>
-
-                            <!-- Interruptor: Último Punto de Control del Semestre -->
-                            <div class="mt-3">
-                                <div class="form-check form-switch p-3 rounded" style="background: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2);">
-                                    <input
-                                        class="form-check-input"
-                                        type="checkbox"
-                                        id="checkPucUltimoPunto"
-                                        v-model="form.puc_es_ultimo_punto"
-                                        style="cursor: pointer;"
-                                    />
-                                    <label class="form-check-label fw-bold ms-2" for="checkPucUltimoPunto" style="cursor: pointer; color: var(--text-main);">
-                                        <i class="bi bi-flag-fill text-danger me-1"></i>
-                                        ¿Es el último punto de control del semestre?
-                                    </label>
-                                    <div class="small text-muted mt-1 ps-4">
-                                        Al marcar esta opción, este punto representará el cierre del lapso y sus observaciones se transferirán automáticamente como antecedentes para la <strong>Pre-Socialización</strong> del equipo.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0">
-                            <button
-                                type="button"
-                                class="btn btn-secondary"
-                                data-bs-dismiss="modal"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                class="btn btn-danger fw-bold"
-                                :disabled="loading"
-                            >
-                                <span
-                                    v-if="loading"
-                                    class="spinner-border spinner-border-sm me-2"
-                                ></span
-                                >Guardar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Seguimiento -->
-        <div class="modal fade" id="mSeg" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="mh">
-                        <h5>
-                            {{
-                                modoSoloLecturaSeg
-                                    ? "Evaluación del Punto — "
-                                    : "Registrar Seguimiento — "
-                            }}
-                            {{ puntoActual?.puc_nombre }}
-                        </h5>
-                        <button
-                            class="btn btn-sm text-white p-0 fs-5"
-                            data-bs-dismiss="modal"
-                        >
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
-                    <form @submit.prevent="guardarSeguimiento">
-                        <div class="modal-body">
-                            <div
-                                v-if="modoSoloLecturaSeg"
-                                class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-3"
-                            >
-                                <i
-                                    class="bi bi-lock-fill fs-5 text-secondary"
-                                ></i>
-                                <div>
-                                    <strong>Evaluación Registrada:</strong> Este
-                                    punto de control ya fue evaluado como
-                                    <span
-                                        class="badge"
-                                        :class="
-                                            formSeg.seq_cumplido
-                                                ? 'bg-success'
-                                                : 'bg-danger'
-                                        "
-                                    >
-                                        {{
-                                            formSeg.seq_cumplido
-                                                ? "Cumplido"
-                                                : "No cumplido"
-                                        }} </span
-                                    >. No es posible modificarlo ni volver a
-                                    subir el resultado.
-                                </div>
-                            </div>
-                            <div
-                                v-if="puntoActual?.seguimientos?.length"
-                                class="mt-2"
-                            >
-                                <p
-                                    class="small fw-bold mb-1"
-                                    style="color: var(--text-muted)"
-                                >
-                                    Asistencias registradas:
-                                </p>
-                                <table class="table table-sm small mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Integrante</th>
-                                            <th class="text-center">Asistió</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr
-                                            v-for="a in puntoActual
-                                                ?.seguimientos?.[0]
-                                                ?.asistencias"
-                                            :key="a.apc_id"
-                                        >
-                                            <td>
-                                                {{
-                                                    a.usuario?.usu_primer_nombre
-                                                }}
-                                                {{
-                                                    a.usuario
-                                                        ?.usu_primer_apellido
-                                                }}
-                                            </td>
-                                            <td class="text-center">
-                                                <span
-                                                    :class="
-                                                        a.apc_asistio
-                                                            ? 'ba'
-                                                            : 'bd'
-                                                    "
-                                                >
-                                                    {{
-                                                        a.apc_asistio
-                                                            ? "Sí"
-                                                            : "No"
-                                                    }}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- PREGUNTA PRINCIPAL: ¿Se cumplió el punto de control? -->
-                            <div class="card border p-3 mb-3" style="background: var(--bg-card); border-color: var(--border) !important;">
-                                <label class="form-label fw-bold d-flex align-items-center gap-2 mb-2" style="font-size: 0.95rem; color: var(--text-main);">
-                                    <i class="bi bi-question-circle-fill text-danger fs-5"></i>
-                                    <span>¿Se cumplió el punto de control?</span>
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <div class="d-flex gap-4">
-                                    <div class="form-check">
-                                        <input
-                                            type="radio"
-                                            class="form-check-input"
-                                            v-model="formSeg.seq_cumplido"
-                                            :value="true"
-                                            :disabled="modoSoloLecturaSeg"
-                                            :id="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
-                                        />
-                                        <label
-                                            class="form-check-label fw-bold"
-                                            :for="'cumplido_si_' + (puntoActual?.puc_id || 'item')"
-                                            style="color: #198754; cursor: pointer;"
-                                        >
-                                            <i class="bi bi-check-circle-fill me-1"></i>Sí
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input
-                                            type="radio"
-                                            class="form-check-input"
-                                            v-model="formSeg.seq_cumplido"
-                                            :value="false"
-                                            :disabled="modoSoloLecturaSeg"
-                                            :id="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
-                                        />
-                                        <label
-                                            class="form-check-label fw-bold"
-                                            :for="'cumplido_no_' + (puntoActual?.puc_id || 'item')"
-                                            style="color: #dc3545; cursor: pointer;"
-                                        >
-                                            <i class="bi bi-x-circle-fill me-1"></i>No
-                                        </label>
-                                    </div>
-                                </div>
-                                <div v-if="erroresSeg.seq_cumplido" class="text-danger small mt-1">
-                                    {{ erroresSeg.seq_cumplido }}
-                                </div>
-                            </div>
-
-                            <!-- Mensaje orientador si aún no ha seleccionado Sí o No -->
-                            <div v-if="formSeg.seq_cumplido === null && !modoSoloLecturaSeg" class="alert alert-light border py-4 px-3 text-center text-muted small mb-3">
-                                <i class="bi bi-hand-index-thumb fs-3 d-block mb-2 text-danger"></i>
-                                <span class="fw-semibold">Indique si el equipo cumplió o no con el punto de control para desplegar las opciones correspondientes.</span>
-                            </div>
-
-                            <!-- SI MARCA NO: SOLO JUSTIFICACIÓN Y REPROGRAMACIÓN (SIN CONTENIDO DE EVALUACIÓN) -->
-                            <div v-if="formSeg.seq_cumplido === false">
-                                <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
-                                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-                                    <div>
-                                        <strong>Punto No Cumplido:</strong> El punto de control fue marcado como no alcanzado por el equipo. Justifique el motivo a continuación.
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold" style="color: var(--text-main);">
-                                        Justificación del No Cumplimiento <span class="text-danger">*</span>
-                                    </label>
-                                    <textarea
-                                        v-model="formSeg.seq_observaciones"
-                                        :disabled="modoSoloLecturaSeg"
-                                        class="form-control"
-                                        :class="{ 'is-invalid': erroresSeg.seq_observaciones }"
-                                        rows="3"
-                                        placeholder="Explique detalladamente los motivos por los cuales el equipo no cumplió con las metas o requerimientos de este punto de control..."
-                                        required
-                                    ></textarea>
-                                    <div v-if="erroresSeg.seq_observaciones" class="invalid-feedback">
-                                        {{ erroresSeg.seq_observaciones }}
-                                    </div>
-                                </div>
-
-                                <!-- Pregunta de Reprogramación -->
-                                <div class="card border p-3 mb-3 rounded" style="background: rgba(220, 53, 69, 0.04); border: 1px solid rgba(220, 53, 69, 0.25) !important;">
-                                    <div class="form-check form-switch">
-                                        <input
-                                            class="form-check-input"
-                                            type="checkbox"
-                                            id="checkDeseaReprogramar"
-                                            v-model="formSeg.desea_reprogramar"
-                                            :disabled="modoSoloLecturaSeg"
-                                            style="cursor: pointer;"
-                                        />
-                                        <label class="form-check-label fw-bold ms-2" for="checkDeseaReprogramar" style="cursor: pointer; color: var(--text-main);">
-                                            <i class="bi bi-calendar-plus text-danger me-1"></i>
-                                            ¿Desea reprogramar el punto de control?
-                                        </label>
-                                        <div class="small text-muted mt-1 ps-4">
-                                            Si activa esta opción, podrá asignar una nueva fecha y semana para que el equipo vuelva a presentar este punto de control.
-                                        </div>
-                                    </div>
-
-                                    <!-- Campos de reprogramación si marcó Sí -->
-                                    <div v-if="formSeg.desea_reprogramar" class="mt-3 pt-3 border-top">
-                                        <div class="row g-3">
-                                            <div class="col-md-7">
-                                                <label class="form-label fw-semibold small">
-                                                    Nueva Fecha de Encuentro <span class="text-danger">*</span>
-                                                </label>
-                                                <input
-                                                    v-model="formSeg.nueva_fecha"
-                                                    type="date"
-                                                    :min="fechaMinimaReprog"
-                                                    :max="fechaMaximaReprog"
-                                                    class="form-control form-control-sm"
-                                                    :class="{ 'is-invalid': erroresSeg.nueva_fecha }"
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    required
-                                                />
-                                                <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">
-                                                    Límite permitido: desde hoy hasta un mes máximo ({{ fechaMinimaReprog }} al {{ fechaMaximaReprog }}).
-                                                </small>
-                                                <small v-if="$page.props.periodoActivo?.lapso_academico" class="text-muted d-block mt-1" style="font-size: 0.7rem;">
-                                                    Lapso activo: {{ $page.props.periodoActivo.fecha_inicio_formato }} - {{ $page.props.periodoActivo.fecha_fin_formato }}
-                                                </small>
-                                                <div v-if="erroresSeg.nueva_fecha" class="invalid-feedback">
-                                                    {{ erroresSeg.nueva_fecha }}
-                                                </div>
-                                            </div>
-                                            <div class="col-md-5">
-                                                <label class="form-label fw-semibold small">Nueva Semana (1 a 18)</label>
-                                                <input
-                                                    v-model.number="formSeg.nueva_semana"
-                                                    type="number"
-                                                    min="1"
-                                                    max="18"
-                                                    class="form-control form-control-sm"
-                                                    placeholder="Semana..."
-                                                    :disabled="modoSoloLecturaSeg"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div class="alert alert-info py-2 px-3 small mt-3 mb-0">
-                                            <i class="bi bi-info-circle-fill me-1"></i>
-                                            El punto de control se reprogramará con la nueva fecha y se mantendrá en curso para su evaluación posterior.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- SI MARCA SI: APARECE TODO EL CONTENIDO PARA EVALUAR EN EL MODAL -->
-                            <div v-if="formSeg.seq_cumplido === true">
-                            <!-- Búsqueda / Verificación encadenada de observaciones previas -->
-                            <div
-                                v-if="puntoActual?.punto_previo_observaciones"
-                                class="alert alert-warning py-2 px-3 mb-3 small border-warning"
-                            >
-                                <div
-                                    class="fw-bold text-dark d-flex align-items-center gap-1 mb-1"
-                                >
-                                    <i
-                                        class="bi bi-clock-history text-warning fs-6"
-                                    ></i>
-                                    <span
-                                        >Observaciones del Punto de Control
-                                        Previo ({{
-                                            puntoActual.punto_previo_nombre
-                                        }}):</span
-                                    >
-                                </div>
-                                <div
-                                    class="p-2 rounded bg-white text-dark border mb-2"
-                                    style="white-space: pre-wrap"
-                                >
-                                    {{ puntoActual.punto_previo_observaciones }}
-                                </div>
-                                <label class="form-label fw-bold mb-1"
-                                    >¿El equipo cumplió y subsanó las
-                                    observaciones anteriores?</label
-                                >
-                                <div class="d-flex gap-3 mb-2">
-                                    <div class="form-check">
-                                        <input
-                                            type="radio"
-                                            class="form-check-input"
-                                            v-model="formSeg.seq_cumplio_previo"
-                                            :value="true"
-                                            :disabled="modoSoloLecturaSeg"
-                                            :id="'cumplioPrevSi_' + (puntoActual?.puc_id || 'item')"
-                                        />
-                                        <label
-                                            class="form-check-label fw-semibold text-success"
-                                            :for="'cumplioPrevSi_' + (puntoActual?.puc_id || 'item')"
-                                            >Sí, cumplió</label
-                                        >
-                                    </div>
-                                    <div class="form-check">
-                                        <input
-                                            type="radio"
-                                            class="form-check-input"
-                                            v-model="formSeg.seq_cumplio_previo"
-                                            :value="false"
-                                            :disabled="modoSoloLecturaSeg"
-                                            :id="'cumplioPrevNo_' + (puntoActual?.puc_id || 'item')"
-                                        />
-                                        <label
-                                            class="form-check-label fw-semibold text-danger"
-                                            :for="'cumplioPrevNo_' + (puntoActual?.puc_id || 'item')"
-                                            >No cumplió</label
-                                        >
-                                    </div>
-                                </div>
-                                <input
-                                    type="text"
-                                    v-model="
-                                        formSeg.seq_obs_previas_verificacion
-                                    "
-                                    :disabled="modoSoloLecturaSeg"
-                                    class="form-control form-control-sm bg-white"
-                                    placeholder="Detalle de verificación de las observaciones anteriores..."
-                                />
-                            </div>
-
-                            <!-- Tipo de Encuentro -->
-                            <div class="card border p-3 mb-3 bg-light bg-opacity-50">
-                                <label class="form-label fw-bold d-flex align-items-center gap-1 mb-1">
-                                    <i class="bi bi-tag-fill text-danger"></i> Tipo de Encuentro <span class="text-danger">*</span>
-                                </label>
-                                <small class="text-muted mb-2 d-block" style="font-size: 0.73rem">
-                                    Modalidad de acompañamiento según el catálogo oficial
-                                </small>
-                                <select
-                                    v-model="formSeg.seq_id_tipo_encuentro"
-                                    class="form-select form-select-sm"
-                                    :disabled="modoSoloLecturaSeg"
-                                    @change="verificarOtroTipoEncuentro"
-                                >
-                                    <option :value="null">Seleccione tipo de encuentro...</option>
-                                    <option v-for="te in listaTiposEncuentro" :key="te.tep_id" :value="te.tep_id">
-                                        {{ te.tep_nombre }}
-                                    </option>
-                                    <option value="__OTRO__">➕ Otro (Crear nuevo tipo de encuentro...)</option>
-                                </select>
-                                <div v-if="creandoOtroTipoEncuentro" class="mt-2 p-2 rounded border bg-white">
-                                    <label class="small fw-bold text-danger mb-1">Nombre del nuevo Tipo de Encuentro:</label>
-                                    <div class="input-group input-group-sm">
-                                        <input
-                                            v-model="nuevoTipoEncuentroNombre"
-                                            type="text"
-                                            class="form-control"
-                                            placeholder="Ej: Acompañamiento en Sitio, Taller..."
-                                            @keyup.enter.prevent="guardarNuevoTipoEncuentro"
-                                        />
-                                        <button
-                                            class="btn btn-danger fw-bold"
-                                            type="button"
-                                            :disabled="!nuevoTipoEncuentroNombre.trim() || guardandoTipoEncuentro"
-                                            @click="guardarNuevoTipoEncuentro"
-                                        >
-                                            <span v-if="guardandoTipoEncuentro" class="spinner-border spinner-border-sm me-1"></span>
-                                            <i v-else class="bi bi-check-lg me-1"></i>Crear
-                                        </button>
-                                        <button
-                                            class="btn btn-outline-secondary"
-                                            type="button"
-                                            @click="creandoOtroTipoEncuentro = false"
-                                        >
-                                            Cancelar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Dos Campos Visualmente Separados: Nivel de Avance Técnico y Semáforo del Encuentro -->
-                            <div class="row g-3 mb-3">
-                                <!-- CAMPO 1: Nivel / % de Avance Técnico -->
-                                <div class="col-md-6">
-                                    <div class="card h-100 border p-3 bg-light bg-opacity-50">
-                                        <div class="d-flex align-items-center justify-content-between mb-1">
-                                            <label class="form-label fw-bold mb-0">Nivel de Avance Técnico</label>
-                                            <span class="badge bg-dark fw-bold">{{ formSeg.seq_valoracion_avance || 0 }}%</span>
-                                        </div>
-                                        <small class="text-muted mb-2 d-block" style="font-size: 0.72rem">
-                                            Estimación porcentual de lo ejecutado en este punto
-                                        </small>
-                                        <div class="input-group input-group-sm mb-2">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                v-model.number="formSeg.seq_valoracion_avance"
-                                                class="form-control"
-                                                placeholder="0 - 100"
-                                                :disabled="modoSoloLecturaSeg"
-                                            />
-                                            <span class="input-group-text">%</span>
-                                        </div>
-                                        <div class="progress" style="height: 6px;">
-                                            <div
-                                                class="progress-bar bg-danger"
-                                                role="progressbar"
-                                                :style="{ width: `${formSeg.seq_valoracion_avance || 0}%` }"
-                                            ></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- CAMPO 2: Enfoque de Gestión de Proyectos y Procesos -->
-                                <div class="col-md-6">
-                                    <div class="card h-100 border p-3 bg-light bg-opacity-50">
-                                        <label class="form-label fw-bold mb-1 d-flex align-items-center gap-1">
-                                            <i class="bi bi-diagram-3-fill text-danger"></i>
-                                            Enfoque de Gestión de Proyectos y Procesos
-                                        </label>
-                                        <small class="text-muted mb-2 d-block" style="font-size: 0.72rem">
-                                            Pase el cursor sobre cada estado para consultar su significado
-                                        </small>
-                                        <div class="d-flex flex-column gap-2">
-                                            <div class="form-check" title="Cumple con los estándares y metas.">
-                                                <input
-                                                    type="radio"
-                                                    class="form-check-input"
-                                                    v-model="formSeg.seq_estado_semaforo"
-                                                    value="conforme"
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    id="sem_conforme"
-                                                />
-                                                <label class="form-check-label text-success fw-bold small" for="sem_conforme" style="cursor: pointer;" title="Cumple con los estándares y metas.">
-                                                    🟢 Conforme <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Cumple con los estándares y metas)</span>
-                                                </label>
-                                            </div>
-                                            <div class="form-check" title="Tiene parametros menores que deben mejorarse.">
-                                                <input
-                                                    type="radio"
-                                                    class="form-check-input"
-                                                    v-model="formSeg.seq_estado_semaforo"
-                                                    value="observado"
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    id="sem_observado"
-                                                />
-                                                <label class="form-check-label text-warning fw-bold small" for="sem_observado" style="cursor: pointer;" title="Tiene parametros menores que deben mejorarse.">
-                                                    🟡 Observado <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Tiene parametros menores que deben mejorarse)</span>
-                                                </label>
-                                            </div>
-                                            <div class="form-check" title="Incumplimiento grave de los parámetros del proyecto.">
-                                                <input
-                                                    type="radio"
-                                                    class="form-check-input"
-                                                    v-model="formSeg.seq_estado_semaforo"
-                                                    value="no_conforme"
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    id="sem_no_conforme"
-                                                />
-                                                <label class="form-check-label text-danger fw-bold small" for="sem_no_conforme" style="cursor: pointer;" title="Incumplimiento grave de los parámetros del proyecto.">
-                                                    🔴 No conforme <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Incumplimiento grave de los parámetros del proyecto)</span>
-                                                </label>
-                                            </div>
-                                            <div class="form-check" title="Cierre administrativo por falta de factibilidad.">
-                                                <input
-                                                    type="radio"
-                                                    class="form-check-input"
-                                                    v-model="formSeg.seq_estado_semaforo"
-                                                    value="no_viable"
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    id="sem_no_viable"
-                                                />
-                                                <label class="form-check-label text-dark fw-bold small" for="sem_no_viable" style="cursor: pointer;" title="Cierre administrativo por falta de factibilidad.">
-                                                    ⚫ No viable <span class="fw-normal text-muted" style="font-size: 0.72rem;">(Cierre administrativo por falta de factibilidad)</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Acuerdos y Correcciones para el próximo encuentro -->
-                            <div class="card border p-3 mb-3 bg-light bg-opacity-50">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <label class="form-label fw-bold mb-0">Acuerdos y Correcciones para el Próximo Encuentro</label>
-                                        <small class="text-muted d-block" style="font-size: 0.72rem">
-                                            Compromisos con fecha límite y seguimiento de estado
-                                        </small>
-                                    </div>
-                                    <button
-                                        v-if="!modoSoloLecturaSeg"
-                                        type="button"
-                                        class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill"
-                                        @click="agregarAcuerdoModal"
-                                    >
-                                        <i class="bi bi-plus-circle me-1"></i> Agregar Compromiso
-                                    </button>
-                                </div>
-                                <div v-if="!formSeg.acuerdos || formSeg.acuerdos.length === 0" class="text-muted small p-2 bg-white rounded border">
-                                    Sin acuerdos específicos registrados para este encuentro.
-                                </div>
-                                <div v-for="(acue, aIdx) in formSeg.acuerdos" :key="aIdx" class="row g-2 mb-2 align-items-center p-2 bg-white rounded border">
-                                    <div class="col-md-5">
-                                        <label class="form-label text-muted small mb-0" style="font-size: 0.7rem">Descripción</label>
-                                        <input
-                                            v-model="acue.descripcion"
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            placeholder="Descripción del compromiso o corrección..."
-                                            :disabled="modoSoloLecturaSeg"
-                                        />
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted small mb-0" style="font-size: 0.7rem">Fecha límite</label>
-                                        <input
-                                            v-model="acue.fecha_limite"
-                                            type="date"
-                                            class="form-control form-control-sm"
-                                            :disabled="modoSoloLecturaSeg"
-                                        />
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted small mb-0" style="font-size: 0.7rem">Estado</label>
-                                        <select
-                                            v-model="acue.estado"
-                                            class="form-select form-select-sm"
-                                            :disabled="modoSoloLecturaSeg"
-                                        >
-                                            <option value="pendiente">⏳ Pendiente</option>
-                                            <option value="en_proceso">🔄 En Proceso</option>
-                                            <option value="rectificado">✅ Rectificado</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-1 text-end" v-if="!modoSoloLecturaSeg">
-                                        <label class="form-label d-block text-transparent small mb-0" style="font-size: 0.7rem">&nbsp;</label>
-                                        <button type="button" class="btn btn-sm btn-outline-danger p-0 px-1" @click="eliminarAcuerdoModal(aIdx)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold"
-                                    >Nuevas Observaciones para este punto</label
-                                >
-                                <textarea
-                                    v-model="formSeg.seq_observaciones"
-                                    :disabled="modoSoloLecturaSeg"
-                                    class="form-control"
-                                    rows="3"
-                                    placeholder="Indique las observaciones y correcciones que el equipo debe atender para el próximo corte..."
-                                ></textarea>
-                            </div>
-
-                            <!-- Interruptor: Transferir a Pre-Socialización -->
-                            <div class="mb-3">
-                                <div class="form-check form-switch p-3 rounded" style="background: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2);">
-                                    <input
-                                        class="form-check-input"
-                                        type="checkbox"
-                                        id="checkSegEsUltimoPunto"
-                                        v-model="formSeg.es_ultimo_punto"
-                                        :disabled="modoSoloLecturaSeg"
-                                        style="cursor: pointer;"
-                                    />
-                                    <label class="form-check-label fw-bold ms-2" for="checkSegEsUltimoPunto" style="cursor: pointer; color: var(--text-main);">
-                                        <i class="bi bi-arrow-right-circle-fill text-danger me-1"></i>
-                                        Transferir observaciones a la Pre-Socialización
-                                    </label>
-                                    <div class="small text-muted mt-1 ps-4">
-                                        Vinculará estas observaciones y recomendaciones directamente a la <strong>Pre-Socialización</strong> del equipo como antecedentes para la defensa.
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Control Individual de Asistencia y Participación -->
-                            <div class="card border p-3 mb-3 bg-light bg-opacity-50">
-                                <div class="mb-2">
-                                    <label class="form-label fw-bold mb-0">Control Individual de Asistencia y Participación</label>
-                                    <small class="text-muted d-block" style="font-size: 0.72rem">
-                                        Marque asistencia, participación verificable y registre justificativo o motivo de edición si aplica
-                                    </small>
-                                </div>
-                                <div
-                                    v-if="
-                                        !puntoActual?.equipo?.integrantes
-                                            ?.length
-                                    "
-                                    class="text-muted small"
-                                >
-                                    Sin integrantes cargados
-                                </div>
-                                <div
-                                    v-for="int in puntoActual?.equipo
-                                        ?.integrantes"
-                                    :key="int.ein_id"
-                                    class="p-2 mb-2 rounded border bg-white"
-                                >
-                                    <template v-if="formSeg.asistencias && formSeg.asistencias[int.ein_id_usu]">
-                                        <div
-                                            class="d-flex align-items-center justify-content-between flex-wrap gap-2"
-                                        >
-                                            <div>
-                                                <strong style="font-size: 0.9rem"
-                                                    >{{
-                                                        int.usuario
-                                                            ?.usu_primer_nombre
-                                                    }}
-                                                    {{
-                                                        int.usuario
-                                                            ?.usu_primer_apellido
-                                                    }}</strong
-                                                >
-                                                <span
-                                                    class="badge bg-light text-dark border ms-2 small"
-                                                    >C.I.
-                                                    {{
-                                                        int.usuario?.usu_cedula
-                                                    }}</span
-                                                >
-                                            </div>
-                                            <div class="d-flex align-items-center gap-3">
-                                                <!-- Switch Asistió -->
-                                                <div
-                                                    class="form-check form-switch mb-0"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        class="form-check-input"
-                                                        :id="'asist_' + int.ein_id"
-                                                        :disabled="modoSoloLecturaSeg"
-                                                        v-model="
-                                                            formSeg.asistencias[
-                                                                int.ein_id_usu
-                                                            ].asistio
-                                                        "
-                                                    />
-                                                    <label
-                                                        class="form-check-label small fw-bold"
-                                                        :for="'asist_' + int.ein_id"
-                                                    >
-                                                        {{
-                                                            formSeg.asistencias[
-                                                                int.ein_id_usu
-                                                            ]?.asistio
-                                                                ? "Asistió"
-                                                                : "Inasistencia"
-                                                        }}
-                                                    </label>
-                                                </div>
-
-                                                <!-- Switch Participación -->
-                                                <div
-                                                    class="form-check form-switch mb-0"
-                                                    v-if="formSeg.asistencias[int.ein_id_usu]?.asistio"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        class="form-check-input"
-                                                        :id="'part_' + int.ein_id"
-                                                        :disabled="modoSoloLecturaSeg"
-                                                        v-model="
-                                                            formSeg.asistencias[
-                                                                int.ein_id_usu
-                                                            ].participo
-                                                        "
-                                                    />
-                                                    <label
-                                                        class="form-check-label small fw-semibold text-primary"
-                                                        :for="'part_' + int.ein_id"
-                                                    >
-                                                        Participó
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <!-- Si falta, justificación -->
-                                        <div
-                                            v-if="
-                                                !formSeg.asistencias[int.ein_id_usu]
-                                                    ?.asistio
-                                            "
-                                            class="mt-2 p-2 rounded bg-danger bg-opacity-10 border border-danger-subtle"
-                                        >
-                                            <div
-                                                class="d-flex align-items-center gap-2 mb-1"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    class="form-check-input"
-                                                    :id="'just_' + int.ein_id"
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    v-model="
-                                                        formSeg.asistencias[
-                                                            int.ein_id_usu
-                                                        ].justificado
-                                                    "
-                                                />
-                                                <label
-                                                    class="form-check-label small fw-bold text-danger"
-                                                    :for="'just_' + int.ein_id"
-                                                >
-                                                    ¿Presentó Justificativo?
-                                                </label>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                v-model="
-                                                    formSeg.asistencias[
-                                                        int.ein_id_usu
-                                                    ].justificativo
-                                                "
-                                                :disabled="modoSoloLecturaSeg"
-                                                class="form-control form-control-sm"
-                                                placeholder="Motivo o constancia de la inasistencia..."
-                                            />
-                                        </div>
-                                        <!-- Observación individual y motivo de edición -->
-                                        <div class="mt-2 row g-2">
-                                            <div :class="formSeg.asistencias[int.ein_id_usu]?.es_existente ? 'col-md-7' : 'col-12'">
-                                                <input
-                                                    type="text"
-                                                    v-model="
-                                                        formSeg.asistencias[
-                                                            int.ein_id_usu
-                                                        ].observacion
-                                                    "
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    class="form-control form-control-sm"
-                                                    placeholder="Observación individual..."
-                                                />
-                                            </div>
-                                            <div v-if="formSeg.asistencias[int.ein_id_usu]?.es_existente" class="col-md-5">
-                                                <input
-                                                    type="text"
-                                                    v-model="
-                                                        formSeg.asistencias[
-                                                            int.ein_id_usu
-                                                        ].motivo_edicion
-                                                    "
-                                                    :disabled="modoSoloLecturaSeg"
-                                                    class="form-control form-control-sm border-warning"
-                                                    placeholder="Motivo si editó asistencia..."
-                                                />
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0">
-                            <button
-                                type="button"
-                                class="btn btn-secondary"
-                                data-bs-dismiss="modal"
-                            >
-                                {{ modoSoloLecturaSeg ? "Cerrar" : "Cancelar" }}
-                            </button>
-                            <button
-                                v-if="!modoSoloLecturaSeg"
-                                type="submit"
-                                class="btn btn-danger fw-bold"
-                                :disabled="loadingSeg"
-                            >
-                                <span
-                                    v-if="loadingSeg"
-                                    class="spinner-border spinner-border-sm me-2"
-                                ></span
-                                >Registrar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <ModalPuntoControl ref="modalPuntoRef" :secciones="secciones" :equipos="equipos" />
+        <ModalSeguimiento ref="modalSegRef" :tipos-encuentro="tiposEncuentro" :esquemas-por-seccion="esquemasPorSeccion" />
 
         <!-- Modal Reprogramar -->
         <div
@@ -1768,8 +773,14 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import SemaforoEquipo from "@/Components/SemaforoEquipo.vue";
 import SidebarProfesor from "@/Components/SidebarProfesor.vue";
+import ModalPuntoControl from "@/Components/ModalPuntoControl.vue";
+import ModalSeguimiento from "@/Components/ModalSeguimiento.vue";
+
+const modalPuntoRef = ref(null);
+const modalSegRef = ref(null);
 
 const props = defineProps({
     puntosControl: Array,
@@ -1795,11 +806,34 @@ const iniciales = computed(() => {
     );
 });
 const busqueda = ref("");
+const filtroSeccion = ref("");
 const seccionSeleccionadaModal = ref("");
 const filtroSemaforo = ref("");
 const equipoSeleccionadoDiag = ref("");
 const tabPuntos = ref("pendientes"); // "pendientes" | "archivados"
 const puntoConfirmadoReciente = ref(null);
+
+const opcionesSeccionesFiltro = computed(() => [
+    { value: "", label: "Todas mis secciones..." },
+    ...(props.secciones || []).map((s) => ({
+        value: s.sec_id,
+        label: `Sección ${s.sec_codigo}`,
+        sublabel: s.trayecto?.tra_nombre || "",
+    })),
+]);
+
+const opcionesEquiposDiag = computed(() => {
+    const opts = [{ value: "", label: "Buscar equipo para ver ruta crítica..." }];
+    Object.entries(props.diagnosticosEquipos || {}).forEach(([idEq, diag]) => {
+        const ico = getIconoSemaforo(diag.semaforo).icon;
+        const pct = diag.porcentaje_situacion !== undefined ? ` (${diag.porcentaje_situacion}%)` : "";
+        opts.push({
+            value: idEq,
+            label: `${ico} ${diag.nombre_equipo || "Equipo #" + idEq}${pct}`,
+        });
+    });
+    return opts;
+});
 
 const esConfirmado = (puc) => {
     const seg = puc?.seguimientos?.[0] || puc?.seguimiento;
@@ -2098,6 +1132,9 @@ const filtrados = computed(() => {
     } else {
         list = list.filter((p) => esConfirmado(p));
     }
+    if (filtroSeccion.value) {
+        list = list.filter((p) => String(p.equipo?.equ_id_sec) === String(filtroSeccion.value));
+    }
     if (busqueda.value.trim()) {
         const q = busqueda.value.toLowerCase();
         list = list.filter(
@@ -2110,26 +1147,18 @@ const filtrados = computed(() => {
     if (filtroSemaforo.value) {
         list = list.filter((p) => {
             const diag = props.diagnosticosEquipos?.[p.equipo?.equ_id];
-            return diag && diag.semaforo === filtroSemaforo.value;
+            if (!diag) return false;
+            if (filtroSemaforo.value === 'conforme') return diag.semaforo === 'conforme' || diag.semaforo === 'en_ruta';
+            if (filtroSemaforo.value === 'observado') return diag.semaforo === 'observado' || diag.semaforo === 'acelerar';
+            if (filtroSemaforo.value === 'no_conforme') return diag.semaforo === 'no_conforme' || diag.semaforo === 'riesgo_alto';
+            if (filtroSemaforo.value === 'no_viable') return diag.semaforo === 'no_viable' || diag.semaforo === 'inviable';
+            return diag.semaforo === filtroSemaforo.value;
         });
     }
     return list;
 });
 const abrirModal = () => {
-    seccionSeleccionadaModal.value = "";
-    errorSemana.value = "";
-    form.value = {
-        puc_id_equ: "",
-        puc_nombre: "",
-        puc_semana: 6,
-        puc_fecha_limite: "",
-        puc_dias_aviso: 3,
-        puc_descripcion: "",
-        puc_es_ultimo_punto: false,
-    };
-    errores.value = {};
-    mPunto = mPunto || new Modal(document.getElementById("mPunto"));
-    mPunto.show();
+    modalPuntoRef.value?.abrir();
 };
 const guardar = () => {
     if (!validarSemanaInput()) {
@@ -2159,6 +1188,10 @@ const estaEvaluado = (puc) => {
 };
 
 const abrirSeguimiento = (puc, soloLectura = false) => {
+    modalSegRef.value?.abrir(puc, soloLectura);
+};
+
+const _abrirSeguimientoLegacy = (puc, soloLectura = false) => {
     puntoActual.value = puc;
     modoSoloLecturaSeg.value = soloLectura;
     const initialAsist = {};
@@ -2405,7 +1438,7 @@ const confirmarEliminar = () => {
 };
 </script>
 <style scoped>
-:root {
+.puntos-page {
     --rojo: #dc3545;
     --bg-body: #f0f2f5;
     --bg-card: #fff;
@@ -2418,7 +1451,7 @@ const confirmarEliminar = () => {
     --bg-hover: #fff8f8;
     --border-side: rgba(220, 53, 69, 0.25);
 }
-[data-theme="dark"] {
+.puntos-page[data-theme="dark"] {
     --bg-body: #111317;
     --bg-card: #1e2128;
     --bg-sidebar: #0d0e11;

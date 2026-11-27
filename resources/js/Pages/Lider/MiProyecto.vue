@@ -35,6 +35,7 @@
                 </button>
             </div>
             <div class="content">
+                <BannerComunidadPendiente />
                 <div style="margin-bottom: 1.25rem">
                     <h4
                         style="
@@ -70,13 +71,266 @@
                     {{ $page.props.flash.success }}
                 </div>
 
-                <div v-if="!equipo?.proyecto_comunidad" class="sc">
+                <div v-if="!equipo" class="sc">
                     <div
                         class="p-5 text-center"
                         style="color: var(--text-muted)"
                     >
-                        <i class="bi bi-building fs-1 d-block mb-3"></i>Tu
-                        equipo aún no tiene un proyecto asignado
+                        <i class="bi bi-building fs-1 d-block mb-3"></i>No tienes un equipo activo asignado
+                    </div>
+                </div>
+
+                <!-- Etapa 2: Formulario de Postulación Comunitaria (cuando pco_comunidad_aprobada = false) -->
+                <div v-else-if="!comunidadAprobada">
+                    <!-- Vista de estado Pendiente de Aprobación Docente -->
+                    <div
+                        v-if="estadoPostulacion === 'pendiente_aprobacion' && !editandoPostulacion"
+                        class="sc mb-3 p-4"
+                    >
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                            <div>
+                                <span class="badge bg-info text-dark px-3 py-2 rounded-pill mb-2">
+                                    <i class="bi bi-hourglass-split me-1"></i>
+                                    Estado: Pendiente de Aprobación Docente
+                                </span>
+                                <h5 class="fw-bold mb-1">Postulación Comunitaria Enviada</h5>
+                                <p class="small text-muted mb-0">
+                                    Tu Docente de Proyecto revisará la no duplicidad y aprobará los datos para desbloquear la Carta de Presentación y Entregables.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn btn-outline-warning btn-sm fw-bold rounded-pill px-3"
+                                @click="editandoPostulacion = true"
+                            >
+                                <i class="bi bi-pencil me-1"></i>Editar Postulación
+                            </button>
+                        </div>
+
+                        <div class="row g-3 small mt-1">
+                            <div class="col-md-6">
+                                <div class="p-3 rounded border">
+                                    <div class="text-muted">Comunidad Beneficiada</div>
+                                    <div class="fw-bold fs-6">{{ equipo.proyecto_comunidad?.comunidad?.com_nombre || '—' }}</div>
+                                    <div class="text-muted">{{ equipo.proyecto_comunidad?.comunidad?.com_ubicacion || '' }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 rounded border">
+                                    <div class="text-muted">Responsable de la Comunidad</div>
+                                    <div class="fw-bold fs-6">{{ responsable?.rco_nombre || '—' }}</div>
+                                    <div class="text-muted">
+                                        CI: {{ responsable?.rco_cedula || '—' }} · Tel: {{ responsable?.rco_telefono || '—' }}
+                                        <span v-if="responsable?.rco_cargo"> · {{ responsable.rco_cargo }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 rounded border">
+                                    <div class="text-muted">Modalidad y Línea de Investigación</div>
+                                    <div class="fw-bold">Modalidad: {{ equipo.proyecto_comunidad?.modalidad?.mpr_nombre || '—' }}</div>
+                                    <div class="text-muted">Línea: {{ equipo.proyecto_comunidad?.tipo_proyecto?.tpr_nombre || '—' }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 rounded border">
+                                    <div class="text-muted">Resumen del Proyecto</div>
+                                    <div>{{ equipo.proyecto_comunidad?.pco_resumen || '—' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario completo de Postulación Comunitaria -->
+                    <div v-else class="sc mb-3">
+                        <div class="sh d-flex justify-content-between align-items-center">
+                            <h6>
+                                <i class="bi bi-building-add text-danger me-2"></i>
+                                Postulación de Vinculación Comunitaria (Etapa 2)
+                            </h6>
+                            <button
+                                v-if="estadoPostulacion === 'pendiente_aprobacion'"
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary rounded-pill"
+                                @click="editandoPostulacion = false"
+                            >
+                                Cancelar edición
+                            </button>
+                        </div>
+                        <form class="p-4" @submit.prevent="enviarPostulacion">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small text-uppercase text-muted">
+                                    1. Comunidad Beneficiada <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex gap-3 mb-3">
+                                    <div class="form-check">
+                                        <input
+                                            id="modoCat"
+                                            v-model="formPost.modo_comunidad"
+                                            class="form-check-input"
+                                            type="radio"
+                                            value="catalogo"
+                                        />
+                                        <label class="form-check-label small fw-semibold" for="modoCat">
+                                            Seleccionar del catálogo existente
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input
+                                            id="modoNueva"
+                                            v-model="formPost.modo_comunidad"
+                                            class="form-check-input"
+                                            type="radio"
+                                            value="nueva"
+                                        />
+                                        <label class="form-check-label small fw-semibold" for="modoNueva">
+                                            Registrar nueva comunidad
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div v-if="formPost.modo_comunidad === 'catalogo'">
+                                    <SelectBuscable
+                                        v-model="formPost.pco_id_com"
+                                        :options="opcionesComunidadesCatalogo"
+                                        placeholder="Seleccionar comunidad..."
+                                        search-placeholder="Buscar comunidad..."
+                                    />
+                                </div>
+
+                                <div v-else class="row g-2">
+                                    <div class="col-md-5">
+                                        <input
+                                            v-model="formPost.nueva_comunidad_nombre"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Nombre de la comunidad u organización *"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input
+                                            v-model="formPost.nueva_comunidad_ubicacion"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Ubicación / Dirección *"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <SelectBuscable
+                                            v-model="formPost.nueva_comunidad_tor"
+                                            :options="opcionesTiposOrganizacion"
+                                            placeholder="Tipo organización *"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-3" />
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small text-uppercase text-muted">
+                                    2. Responsable de la Comunidad <span class="text-danger">*</span>
+                                </label>
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <input
+                                            v-model="formPost.rco_nombre"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Nombre *"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input
+                                            v-model="formPost.rco_apellido"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Apellido"
+                                        />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input
+                                            v-model="formPost.rco_cedula"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Cédula *"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input
+                                            v-model="formPost.rco_telefono"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Teléfono *"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input
+                                            v-model="formPost.rco_cargo"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Cargo (ej: Vocero Principal) *"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-3" />
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-uppercase text-muted">
+                                    3. Datos del Proyecto y Modalidad <span class="text-danger">*</span>
+                                </label>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Modalidad del Proyecto *</label>
+                                        <SelectBuscable
+                                            v-model="formPost.pco_id_mpr"
+                                            :options="opcionesModalidadesProyecto"
+                                            placeholder="Seleccionar modalidad..."
+                                        />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Línea de Investigación (PNFI) *</label>
+                                        <SelectBuscable
+                                            v-model="formPost.pco_id_tpr"
+                                            :options="opcionesTiposProyecto"
+                                            placeholder="Seleccionar línea..."
+                                        />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold">Resumen del Proyecto *</label>
+                                        <textarea
+                                            v-model="formPost.pco_resumen"
+                                            class="form-control"
+                                            rows="3"
+                                            maxlength="255"
+                                            minlength="10"
+                                            placeholder="Describe brevemente el problema detectado en la comunidad y la solución sociotecnológica propuesta..."
+                                            required
+                                        ></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-4">
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger fw-bold rounded-pill px-4"
+                                    :disabled="enviandoPostulacion"
+                                >
+                                    <span v-if="enviandoPostulacion" class="spinner-border spinner-border-sm me-2"></span>
+                                    <i v-else class="bi bi-send-check me-2"></i>
+                                    Enviar Postulación para Aprobación Docente
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -367,7 +621,7 @@
                                         type="text"
                                         class="form-control form-control-sm"
                                         v-model="formResponsable.rco_nombre"
-                                        placeholder="Nombre del vocero o responsable"
+                                        placeholder="Nombre del responsable de la comunidad"
                                     />
                                 </div>
                                 <div class="col-md-6">
@@ -400,7 +654,7 @@
                                         type="text"
                                         class="form-control form-control-sm"
                                         v-model="formResponsable.rco_cargo"
-                                        placeholder="Ej: Vocero Principal"
+                                        placeholder="Ej: Responsable Principal"
                                     />
                                 </div>
                                 <div class="col-md-6">
@@ -477,6 +731,8 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import SidebarLider from "@/Components/SidebarLider.vue";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import BannerComunidadPendiente from "@/Components/BannerComunidadPendiente.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -501,8 +757,86 @@ const iniciales = computed(() => {
 });
 const props = defineProps({
     equipo: Object,
-    responsable: Object, // Agregado aquí junto con los demás
+    responsable: Object,
+    comunidades: { type: Array, default: () => [] },
+    tiposOrganizacion: { type: Array, default: () => [] },
+    tiposProyecto: { type: Array, default: () => [] },
+    modalidades: { type: Array, default: () => [] },
 });
+
+const comunidadAprobada = computed(
+    () => Boolean(props.equipo?.proyecto_comunidad?.pco_comunidad_aprobada || props.equipo?.proyecto_comunidad?.pco_fecha_aprobacion),
+);
+const estadoPostulacion = computed(
+    () => props.equipo?.proyecto_comunidad?.pco_estado_postulacion || "sin_postular",
+);
+const editandoPostulacion = ref(false);
+const enviandoPostulacion = ref(false);
+
+const opcionesComunidadesCatalogo = computed(() => [
+    { value: "", label: "Seleccionar comunidad..." },
+    ...(props.comunidades || []).map((c) => ({
+        value: c.com_id,
+        label: c.com_nombre,
+        sublabel: c.com_ubicacion || "",
+    })),
+]);
+
+const opcionesTiposOrganizacion = computed(() => [
+    { value: "", label: "Tipo organización *" },
+    ...(props.tiposOrganizacion || []).map((t) => ({
+        value: t.tor_id,
+        label: t.tor_nombre,
+    })),
+]);
+
+const opcionesModalidadesProyecto = computed(() => [
+    { value: "", label: "Seleccionar modalidad..." },
+    ...(props.modalidades || []).map((m) => ({
+        value: m.mpr_id,
+        label: m.mpr_nombre,
+    })),
+]);
+
+const opcionesTiposProyecto = computed(() => [
+    { value: "", label: "Seleccionar línea..." },
+    ...(props.tiposProyecto || []).map((tp) => ({
+        value: tp.tpr_id,
+        label: tp.tpr_nombre,
+    })),
+]);
+
+const formPost = ref({
+    modo_comunidad: "catalogo",
+    pco_id_com: props.equipo?.proyecto_comunidad?.pco_id_com || "",
+    nueva_comunidad_nombre: "",
+    nueva_comunidad_ubicacion: "",
+    nueva_comunidad_tor: "",
+    rco_nombre: props.responsable?.rco_nombre?.split(" ")[0] || "",
+    rco_apellido: props.responsable?.rco_nombre?.split(" ").slice(1).join(" ") || "",
+    rco_cedula: props.responsable?.rco_cedula || "",
+    rco_telefono: props.responsable?.rco_telefono || "",
+    rco_cargo: props.responsable?.rco_cargo || "",
+    pco_area_comunidad: props.equipo?.proyecto_comunidad?.pco_area_comunidad || "",
+    pco_resumen: props.equipo?.proyecto_comunidad?.pco_resumen || "",
+    pco_id_tpr: props.equipo?.proyecto_comunidad?.pco_id_tpr || "",
+    pco_id_mpr: props.equipo?.proyecto_comunidad?.pco_id_mpr || "",
+    pco_id_pco_previo: props.equipo?.proyecto_comunidad?.pco_id_pco_previo || "",
+});
+
+const enviarPostulacion = () => {
+    enviandoPostulacion.value = true;
+    router.post("/lider/proyecto/postular", formPost.value, {
+        preserveScroll: true,
+        onSuccess: () => {
+            enviandoPostulacion.value = false;
+            editandoPostulacion.value = false;
+        },
+        onError: () => {
+            enviandoPostulacion.value = false;
+        },
+    });
+};
 const mostrarFormResponsable = ref(false);
 const formResponsable = ref({
     rco_cedula: "",

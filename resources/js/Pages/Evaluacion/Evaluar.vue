@@ -156,22 +156,13 @@
                                     <label for="id_profesor" class="form-label fw-bold small text-dark">
                                         Docente Evaluador / Jurado: <span class="text-danger">*</span>
                                     </label>
-                                    <select
+                                    <SelectBuscable
                                         v-model="form.id_profesor"
-                                        id="id_profesor"
-                                        class="form-select"
-                                        :class="{ 'is-invalid': form.errors.id_profesor }"
-                                        required
-                                    >
-                                        <option value="">-- Seleccione el docente evaluador --</option>
-                                        <option
-                                            v-for="prof in profesores"
-                                            :key="prof.usu_id"
-                                            :value="prof.usu_id"
-                                        >
-                                            {{ prof.usu_primer_nombre }} {{ prof.usu_primer_apellido }} (C.I. {{ prof.usu_cedula }})
-                                        </option>
-                                    </select>
+                                        :options="opcionesProfesoresEval"
+                                        :has-error="!!form.errors.id_profesor"
+                                        placeholder="-- Seleccione el docente evaluador --"
+                                        search-placeholder="Nombre o cédula..."
+                                    />
                                     <div class="form-text small">Docente del PNFI responsable de emitir esta calificación.</div>
                                 </div>
                                 <div class="col-md-6 d-flex align-items-center">
@@ -309,27 +300,12 @@
                                     <label for="nivel_logro_cualitativo" class="form-label fw-bold small text-dark">
                                         Nivel de Logro Cualitativo Institucional <span class="text-danger">*</span>:
                                     </label>
-                                    <select
+                                    <SelectBuscable
                                         v-model="form.nivel_logro_cualitativo"
-                                        id="nivel_logro_cualitativo"
-                                        class="form-select"
-                                        :class="{ 'is-invalid': form.errors.nivel_logro_cualitativo }"
-                                        required
-                                    >
-                                        <option value="">-- Seleccione el nivel de logro alcanzado --</option>
-                                        <option value="Logrado con Excelencia">
-                                            Logrado con Excelencia (Dominio sobresaliente y aportes de alto impacto)
-                                        </option>
-                                        <option value="Logrado">
-                                            Logrado (Cumplimiento satisfactorio de todas las competencias requeridas)
-                                        </option>
-                                        <option value="En Proceso">
-                                            En Proceso (Competencias básicas alcanzadas con aspectos por consolidar)
-                                        </option>
-                                        <option value="No Logrado">
-                                            No Logrado (No alcanza las competencias mínimas exigidas en el trayecto)
-                                        </option>
-                                    </select>
+                                        :options="opcionesNivelLogroEval"
+                                        :has-error="!!form.errors.nivel_logro_cualitativo"
+                                        placeholder="-- Seleccione el nivel de logro alcanzado --"
+                                    />
                                     <div class="form-text small">Refleja la apreciación formativa y cualitativa según lineamientos del PNFI.</div>
                                 </div>
                             </div>
@@ -389,6 +365,7 @@ import { Link, usePage, useForm } from "@inertiajs/vue3";
 import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
 import SidebarLider from "@/Components/SidebarLider.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 
 const props = defineProps({
     recorrido: Object,
@@ -399,6 +376,23 @@ const props = defineProps({
     detallesPrevios: Object,
     profesores: Array,
 });
+
+const opcionesProfesoresEval = computed(() => [
+    { value: "", label: "-- Seleccione el docente evaluador --" },
+    ...(props.profesores || []).map((prof) => ({
+        value: prof.usu_id,
+        label: `${prof.usu_primer_nombre} ${prof.usu_primer_apellido}`,
+        sublabel: `C.I. ${prof.usu_cedula}`,
+    })),
+]);
+
+const opcionesNivelLogroEval = [
+    { value: "", label: "-- Seleccione el nivel de logro alcanzado --" },
+    { value: "Logrado con Excelencia", label: "Logrado con Excelencia (Dominio sobresaliente y aportes de alto impacto)" },
+    { value: "Logrado", label: "Logrado (Cumplimiento satisfactorio de todas las competencias requeridas)" },
+    { value: "En Proceso", label: "En Proceso (Competencias básicas alcanzadas con aspectos por consolidar)" },
+    { value: "No Logrado", label: "No Logrado (No alcanza las competencias mínimas exigidas en el trayecto)" },
+];
 
 const page = usePage();
 const sidebarOpen = ref(false);

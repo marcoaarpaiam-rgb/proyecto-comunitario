@@ -302,32 +302,58 @@ class SocializacionController extends Controller
 
     public function registrarResultado(Request $request, $id)
     {
+        $soc = Socializacion::with(['tipoSocializacion', 'equipo.proyectoComunidad'])->findOrFail($id);
+
+        $esPreSoc = ($soc->tipoSocializacion?->tso_orden === 1);
+
         $request->validate([
             'soc_apto'                  => 'nullable|boolean',
-            'soc_aprobado'             => 'nullable|boolean',
-            'soc_observaciones_no_apto'=> 'nullable|string',
-            'soc_observaciones'        => 'nullable|string',
+            'soc_aprobado'              => 'nullable|boolean',
+            'soc_observaciones_no_apto' => $esPreSoc && $request->soc_apto === false
+                ? 'required|string|min:5'
+                : 'nullable|string',
+            'soc_observaciones'         => 'nullable|string',
+        ], [
+            'soc_observaciones_no_apto.required' => 'Debe registrar las observaciones obligatorias para subsanar cuando el dictamen es No Apto.',
+            'soc_observaciones_no_apto.min'      => 'Las observaciones de subsanación deben tener al menos 5 caracteres.',
         ]);
-
-        $soc = Socializacion::with(['tipoSocializacion', 'equipo'])->findOrFail($id);
 
         $this->autorizarEquipoId($soc->soc_id_equ);
 
         // Bloquear si ya fue evaluada
-        $yaEvaluada = ($soc->tipoSocializacion?->tso_orden === 1 && $soc->soc_apto !== null)
-            || ($soc->tipoSocializacion?->tso_orden !== 1 && $soc->soc_aprobado !== null);
+        $yaEvaluada = ($esPreSoc && $soc->soc_apto !== null)
+            || (!$esPreSoc && $soc->soc_aprobado !== null);
 
         if ($yaEvaluada) {
             return back()->withErrors(['error' => 'Esta socialización ya cuenta con un resultado registrado y no puede ser modificada.']);
         }
         
         $soc->update([
-            'soc_apto'                   => $request->soc_apto,
+            'soc_apto'                  => $request->soc_apto,
             'soc_aprobado'              => $request->soc_aprobado,
             'soc_observaciones_no_apto' => $request->soc_observaciones_no_apto,
             'soc_observaciones'         => $request->soc_observaciones,
             'soc_id_usu_updated'        => auth()->id(),
         ]);
+
+        // Si es Pre-Socialización y resultó Apto, congelar la ponderación del 40% del Semestre Impar en recorrido_evaluacion_semestral
+        if ($esPreSoc && $request->boolean('soc_apto') && $soc->equipo?->proyectoComunidad) {
+            $pcoId = $soc->equipo->proyectoComunidad->pco_id;
+            app(\App\Services\EvaluacionTrayectoService::class)->inicializarRecorridoProyecto(
+                (int) $pcoId,
+                (int) $soc->soc_id_equ,
+                (int) ($soc->soc_id_tra ?? $soc->equipo->equ_id_tra ?? 1)
+            );
+            \Illuminate\Support\Facades\DB::table('recorrido_evaluacion_semestral')
+                ->where('id_proyecto', $pcoId)
+                ->where('semestre', 'Semestre 1')
+                ->update([
+                    'peso_en_trayecto'                => 40.00,
+                    'estado_semestre'                 => 'Culminado',
+                    'valoracion_cualitativa_semestre' => trim('DICTAMEN PRE-SOCIALIZACIÓN: APTO (40% del Trayecto congelado). ' . ($request->soc_observaciones ?? '')),
+                    'updated_at'                      => now(),
+                ]);
+        }
 
         // Actualizar asistencia y avance de integrantes
         foreach ($request->integrantes ?? [] as $int) {

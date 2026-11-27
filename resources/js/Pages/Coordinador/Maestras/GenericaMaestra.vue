@@ -65,15 +65,9 @@
                                 margin-top: 2px;
                             "
                         >
-                            {{ config.subtitulo }}
+                            {{ config.subtitulo }} (Modo Consulta)
                         </p>
                     </div>
-                    <button
-                        class="btn btn-danger fw-bold rounded-pill px-4"
-                        @click="abrirModal()"
-                    >
-                        <i class="bi bi-plus-lg me-2"></i>Nuevo Registro
-                    </button>
                 </div>
 
                 <div class="sc">
@@ -162,29 +156,7 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <button
-                                            class="btn btn-sm btn-outline-primary me-1"
-                                            @click="abrirModal(reg)"
-                                            title="Editar"
-                                        >
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button
-                                            v-if="reg[config.status]"
-                                            class="btn btn-sm btn-outline-danger"
-                                            @click="desactivar(reg)"
-                                            title="Desactivar"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                        <button
-                                            v-else
-                                            class="btn btn-sm btn-outline-success"
-                                            @click="reactivar(reg)"
-                                            title="Activar"
-                                        >
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                        </button>
+                                        <span class="badge bg-secondary-subtle text-secondary">Solo consulta</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -285,16 +257,11 @@
                                     >Trayecto
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.extra"
-                                    class="form-select"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option value="1">Trayecto I</option>
-                                    <option value="2">Trayecto II</option>
-                                    <option value="3">Trayecto III</option>
-                                    <option value="4">Trayecto IV</option>
-                                </select>
+                                    :options="opcionesTrayectosMaestra"
+                                    placeholder="Seleccionar..."
+                                />
                             </div>
                         </div>
                         <div class="modal-footer border-0">
@@ -375,6 +342,7 @@
 
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -420,6 +388,13 @@ const busqueda = ref("");
 const pagina = ref(1);
 const porPagina = 10;
 const form = ref({ nombre: "", extra: "" });
+const opcionesTrayectosMaestra = [
+    { value: "", label: "Seleccionar..." },
+    { value: "1", label: "Trayecto I" },
+    { value: "2", label: "Trayecto II" },
+    { value: "3", label: "Trayecto III" },
+    { value: "4", label: "Trayecto IV" },
+];
 const errores = ref({});
 const loading = ref(false);
 const editando = ref(null);

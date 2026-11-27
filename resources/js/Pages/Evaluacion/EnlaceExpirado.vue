@@ -52,7 +52,7 @@
                                     <i class="bi bi-shield-check text-success me-1"></i> ¿Qué debo hacer ahora?
                                 </h6>
                                 <p class="small text-muted mb-0" style="line-height: 1.6;">
-                                    Por motivos de seguridad académica y auditoría institucional, los enlaces de evaluación para jurados y voceros expiran a las 12 horas.
+                                    Por motivos de seguridad académica y auditoría institucional, los enlaces de evaluación para jurados y responsables de la comunidad expiran a las 12 horas.
                                     <strong>Contacte al Docente de Proyecto</strong> de este equipo para que genere y le envíe un nuevo enlace temporal actualizado.
                                 </p>
                             </div>

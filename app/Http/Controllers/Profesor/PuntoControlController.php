@@ -12,6 +12,7 @@ use App\Models\Usuario;
 use App\Models\TipoEncuentro;
 use App\Models\AcuerdoEncuentro;
 use App\Services\DiagnosticoProyectoService;
+use App\Http\Requests\StorePuntoControlRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Http\Controllers\Concerns\AutorizaPorSeccion;
@@ -89,9 +90,19 @@ class PuntoControlController extends Controller
             ->where('esq_es_plantilla', true)
             ->first();
 
+        $baremoPorDefecto = [
+            ['letra' => 'A', 'nivel' => 'Excelente', 'rango' => '19-20', 'aprobado' => true],
+            ['letra' => 'B', 'nivel' => 'Bueno / Aprobado', 'rango' => '16-18', 'aprobado' => true],
+            ['letra' => 'C', 'nivel' => 'En Proceso / Nivelación', 'rango' => '12-15', 'aprobado' => false],
+            ['letra' => 'D', 'nivel' => 'Deficiente', 'rango' => '01-11', 'aprobado' => false],
+        ];
+
         $esquemasPorSeccion = [];
         foreach ($profSecciones as $ps) {
             $secId = $ps->pse_id_sec;
+            $numSemestreSec = $ps->seccion ? $ps->seccion->getSemestreNumero() : 1;
+            $esImparSec = ($numSemestreSec % 2 !== 0);
+
             $esq = \Illuminate\Support\Facades\DB::table('esquema_seccion as es')
                 ->join('esquemas_evaluacion as ee', 'es.esq_sec_id_esq', '=', 'ee.esq_id')
                 ->where('es.esq_sec_id_sec', $secId)
@@ -110,17 +121,26 @@ class PuntoControlController extends Controller
                 ->first();
 
             $rawCriterios = $esq?->esq_criterios ?? $esquemaPorDefecto?->esq_criterios;
-            $criterios = is_string($rawCriterios) ? json_decode($rawCriterios, true) : ($rawCriterios ?: []);
+            $decoded = is_string($rawCriterios) ? json_decode($rawCriterios, true) : ($rawCriterios ?: []);
+            $criterios = (is_array($decoded) && array_key_exists('criterios', $decoded))
+                ? ($decoded['criterios'] ?? [])
+                : (is_array($decoded) ? $decoded : []);
+            $baremo = (is_array($decoded) && !empty($decoded['baremo']))
+                ? $decoded['baremo']
+                : ($esImparSec || ($esq?->esq_modo === 'cualitativo_respaldado') ? $baremoPorDefecto : []);
 
             $esquemasPorSeccion[$secId] = [
-                'esq_id'           => $esq->esq_id ?? $esquemaPorDefecto?->esq_id,
-                'nombre'           => $esq->esq_nombre ?? $esquemaPorDefecto?->esq_nombre ?? 'Evaluación Cuantitativa PST UPTP',
-                'modo'             => $esq->esq_modo ?? $esquemaPorDefecto?->esq_modo ?? 'cuantitativo',
-                'escala_min'       => $esq->esq_escala_min ?? $esquemaPorDefecto?->esq_escala_min ?? 1,
-                'escala_max'       => $esq->esq_escala_max ?? $esquemaPorDefecto?->esq_escala_max ?? 20,
-                'nota_aprobatoria' => $esq->esq_nota_aprobatoria ?? $esquemaPorDefecto?->esq_nota_aprobatoria ?? 16,
-                'lapso'            => $esq->esq_sec_lapso ?? '2026-II',
-                'criterios'        => $criterios,
+                'esq_id'            => $esq->esq_id ?? $esquemaPorDefecto?->esq_id,
+                'nombre'            => $esq->esq_nombre ?? $esquemaPorDefecto?->esq_nombre ?? ($esImparSec ? 'Evaluación Cualitativa Literal PNFI' : 'Evaluación Cuantitativa PST UPTP'),
+                'modo'              => $esq->esq_modo ?? ($esImparSec ? 'cualitativo_respaldado' : ($esquemaPorDefecto?->esq_modo ?? 'cuantitativo')),
+                'escala_min'        => $esq->esq_escala_min ?? $esquemaPorDefecto?->esq_escala_min ?? 1,
+                'escala_max'        => $esq->esq_escala_max ?? $esquemaPorDefecto?->esq_escala_max ?? 20,
+                'nota_aprobatoria'  => $esq->esq_nota_aprobatoria ?? $esquemaPorDefecto?->esq_nota_aprobatoria ?? 16,
+                'lapso'             => $esq->esq_sec_lapso ?? \App\Models\PeriodoAcademico::lapsoActivoTexto(),
+                'criterios'         => $criterios,
+                'baremo'            => $baremo,
+                'es_semestre_impar' => $esImparSec,
+                'semestre_numero'   => $numSemestreSec,
             ];
         }
 
@@ -140,36 +160,9 @@ class PuntoControlController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StorePuntoControlRequest $request)
     {
-        $request->validate([
-            'puc_id_equ'      => 'required|exists:equipo,equ_id',
-            'puc_nombre'      => 'required|string|max:150',
-            'puc_semana'      => 'required|integer|min:1|max:18',
-            'puc_descripcion' => 'nullable|string',
-            'puc_fecha_limite'=> 'required|date|after_or_equal:today',
-            'puc_dias_aviso'  => 'required|integer|min:1|max:30',
-        ], [
-            'puc_id_equ.required'            => 'El equipo es obligatorio.',
-            'puc_nombre.required'            => 'El nombre del punto de control es obligatorio.',
-            'puc_semana.required'            => 'La semana del punto de control es obligatoria (rango del 1 al 18).',
-            'puc_semana.integer'             => 'La semana debe ser un número entero válido (sin caracteres especiales ni letras).',
-            'puc_semana.min'                 => 'La semana debe ser como mínimo la semana 1.',
-            'puc_semana.max'                 => 'La semana no puede ser mayor a la semana 18.',
-            'puc_fecha_limite.required'      => 'La fecha del encuentro es obligatoria.',
-            'puc_fecha_limite.after_or_equal'=> 'La fecha del encuentro no puede ser anterior a la fecha de hoy.',
-            'puc_dias_aviso.required'        => 'Los días de aviso son obligatorios.',
-            'puc_dias_aviso.integer'         => 'Los días de aviso deben ser un número entero.',
-            'puc_dias_aviso.min'             => 'Los días de aviso deben ser al menos 1 día.',
-            'puc_dias_aviso.max'             => 'Los días de aviso no pueden superar 30 días.',
-        ]);
-
         $this->autorizarEquipoId($request->puc_id_equ);
-
-        // Validación contra el rango de fechas del período académico activo
-        if ($errFecha = \App\Models\PeriodoAcademico::validarFechaEnRango($request->puc_fecha_limite)) {
-            return back()->withErrors(['puc_fecha_limite' => $errFecha]);
-        }
 
         // Obtener el trayecto del equipo automáticamente
         $equipo = \App\Models\Equipo::findOrFail($request->puc_id_equ);
@@ -243,8 +236,12 @@ class PuntoControlController extends Controller
             'seq_observaciones'            => $request->seq_cumplido ? 'nullable|string' : 'required|string|min:4',
             'seq_cumplio_previo'           => 'nullable|boolean',
             'seq_obs_previas_verificacion' => 'nullable|string',
-            'seq_estado_semaforo'          => 'nullable|in:conforme,observado,no_conforme,no_viable,positivo,neutral,negativo',
+            'seq_estado_semaforo'          => 'nullable|in:conforme,observado,no_conforme,no_viable,en_ruta,acelerar,riesgo_alto,inviable,positivo,neutral,negativo',
             'seq_valoracion_avance'        => 'nullable|integer|min:0|max:100',
+            'seq_valoracion_literal'       => 'nullable|string|max:10',
+            'seq_nivel_logro'              => 'nullable|string|max:100',
+            'seq_equivalencia_referencial' => 'nullable|string|max:50',
+            'seq_aprobado_cualitativo'     => 'nullable|boolean',
             'seq_id_tipo_encuentro'        => 'nullable|exists:tipos_encuentro_puntual,tep_id',
             'acuerdos'                     => 'nullable|array',
             'asistencias'                  => 'nullable',
@@ -288,6 +285,18 @@ class PuntoControlController extends Controller
             ->where('seq_id_puc', $punto->puc_id)
             ->first();
 
+        $estadoSemaforo = $request->seq_cumplido
+            ? ($request->seq_estado_semaforo ?? 'conforme')
+            : ($request->seq_estado_semaforo ?? 'no_conforme');
+
+        if ($request->seq_cumplido && $request->filled('seq_valoracion_literal')) {
+            $estadoSemaforo = $this->diagnosticoService->traducirDesempenoCualitativoASemaforo(
+                $request->seq_valoracion_literal,
+                $request->has('seq_aprobado_cualitativo') ? $request->boolean('seq_aprobado_cualitativo') : null,
+                $request->seq_nivel_logro
+            );
+        }
+
         $seq = SeguimientoEquipo::updateOrCreate(
             ['seq_id_equ' => $punto->puc_id_equ, 'seq_id_puc' => $punto->puc_id],
             [
@@ -299,8 +308,12 @@ class PuntoControlController extends Controller
                 'seq_cumplio_previo'           => $request->seq_cumplido ? $request->seq_cumplio_previo : false,
                 'seq_obs_previas_verificacion' => $request->seq_cumplido ? $request->seq_obs_previas_verificacion : null,
                 'seq_observaciones'            => $request->seq_observaciones,
-                'seq_estado_semaforo'          => $request->seq_cumplido ? ($request->seq_estado_semaforo ?? 'conforme') : ($request->seq_estado_semaforo ?? 'no_conforme'),
+                'seq_estado_semaforo'          => $estadoSemaforo,
                 'seq_valoracion_avance'        => $request->seq_cumplido ? $request->seq_valoracion_avance : 0,
+                'seq_valoracion_literal'       => $request->seq_cumplido ? $request->seq_valoracion_literal : null,
+                'seq_nivel_logro'              => $request->seq_cumplido ? $request->seq_nivel_logro : null,
+                'seq_equivalencia_referencial' => $request->seq_cumplido ? $request->seq_equivalencia_referencial : null,
+                'seq_aprobado_cualitativo'     => $request->seq_cumplido && $request->has('seq_aprobado_cualitativo') ? $request->boolean('seq_aprobado_cualitativo') : null,
                 'seq_id_tipo_encuentro'        => $request->seq_cumplido ? $request->seq_id_tipo_encuentro : null,
                 'seq_fecha_registro'           => now()->toDateString(),
                 'seq_id_usu_updated'           => auth()->id(),
@@ -384,11 +397,13 @@ class PuntoControlController extends Controller
                 ->first();
 
             $datos = [
-                'apc_asistio'       => (bool)($asistencia['asistio'] ?? false),
-                'apc_justificado'   => (bool)($asistencia['justificado'] ?? false),
-                'apc_participo'     => (bool)($asistencia['participo'] ?? false),
-                'apc_justificativo' => $asistencia['justificativo'] ?? null,
-                'apc_observaciones' => $asistencia['observacion'] ?? ($asistencia['observaciones'] ?? null),
+                'apc_asistio'            => (bool)($asistencia['asistio'] ?? false),
+                'apc_justificado'        => (bool)($asistencia['justificado'] ?? false),
+                'apc_participo'          => (bool)($asistencia['participo'] ?? false),
+                'apc_valoracion_literal' => $asistencia['valoracion_literal'] ?? null,
+                'apc_nivel_logro'        => $asistencia['nivel_logro'] ?? null,
+                'apc_justificativo'      => $asistencia['justificativo'] ?? null,
+                'apc_observaciones'      => $asistencia['observacion'] ?? ($asistencia['observaciones'] ?? null),
             ];
 
             if ($existente) {

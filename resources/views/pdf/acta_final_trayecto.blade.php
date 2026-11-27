@@ -267,7 +267,7 @@
                             </strong>
                             <div style="font-size: 7.5pt; color: #666;">
                                 @if ($ev->rol_evaluador === 'comunidad')
-                                    Tutor / Vocero Comunitario
+                                    Tutor / Responsable de la Comunidad
                                 @elseif ($ev->rol_evaluador === 'estudiante')
                                     Colectivo de Estudiantes del PST
                                 @else
@@ -312,7 +312,7 @@
                             </strong>
                             <div style="font-size: 7.5pt; color: #666;">
                                 @if ($ev->rol_evaluador === 'comunidad')
-                                    Tutor / Vocero Comunitario
+                                    Tutor / Responsable de la Comunidad
                                 @elseif ($ev->rol_evaluador === 'estudiante')
                                     Colectivo de Estudiantes del PST
                                 @else
@@ -374,7 +374,7 @@
             </td>
             <td>
                 <div class="firma-linea">
-                    <strong>TUTOR(A) / VOCERO(A) COMUNITARIO</strong><br>
+                    <strong>TUTOR(A) / RESPONSABLE DE LA COMUNIDAD</strong><br>
                     {{ $proyecto->responsable_comunitario ?? $proyecto->comunidad_nombre }}<br>
                     Representación de la Comunidad
                 </div>

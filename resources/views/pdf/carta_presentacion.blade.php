@@ -5,7 +5,7 @@
   <title>Carta de Presentación - UPTP Juan de Jesús Montilla</title>
   <style>
     @page {
-      margin: 110px 45px 75px 55px;
+      margin: 98px 42px 66px 48px;
     }
     * {
       margin: 0;
@@ -14,23 +14,23 @@
     }
     body {
       font-family: "Times-Roman", "Times New Roman", Times, serif;
-      font-size: 11pt;
-      line-height: 1.4;
+      font-size: 10.5pt;
+      line-height: 1.32;
       color: #000000;
     }
 
     /* Encabezado fijo oficial */
     .header-fixed {
       position: fixed;
-      top: -95px;
+      top: -86px;
       left: 0;
       right: 0;
-      height: 90px;
+      height: 82px;
       text-align: center;
     }
     .cintillo-img {
       width: 100%;
-      max-height: 58px;
+      max-height: 54px;
       object-fit: contain;
       display: block;
     }
@@ -184,8 +184,9 @@
 
     /* Firmas y Sellos */
     .firmas-container {
-      margin-top: 15px;
+      margin-top: 12px;
       width: 100%;
+      page-break-inside: avoid;
     }
     .firmas-container table {
       width: 100%;
@@ -198,12 +199,12 @@
       padding: 0 10px;
     }
     .espacio-firma {
-      height: 48px;
+      height: 44px;
       display: block;
       text-align: center;
     }
     .espacio-firma img {
-      max-height: 48px;
+      max-height: 44px;
       max-width: 140px;
     }
     .linea-firma {
@@ -238,6 +239,17 @@
     $cintilloPath = public_path('images/cintillo_uptp.png');
     $cintilloBase64 = file_exists($cintilloPath) ? base64_encode(file_get_contents($cintilloPath)) : null;
     $fechaAprobacion = $carta->cpr_fecha_aprobacion ?? now();
+    $firmaRelativa = $coordinador?->usu_firma_digital;
+    $firmaPath = $firmaRelativa ? storage_path('app/public/' . $firmaRelativa) : null;
+    $firmaExt = $firmaPath ? strtolower(pathinfo($firmaPath, PATHINFO_EXTENSION)) : 'png';
+    $firmaMime = $firmaExt === 'jpg' || $firmaExt === 'jpeg' ? 'image/jpeg' : 'image/png';
+    $firmaBase64 = ($firmaPath && file_exists($firmaPath)) ? base64_encode(file_get_contents($firmaPath)) : null;
+    $responsableActivo = $proyecto?->comunidad?->responsables?->where('rco_status', true)->first()
+        ?? $proyecto?->comunidad?->responsables?->first();
+    $respNombre = $responsableActivo?->usuario
+        ? trim($responsableActivo->usuario->usu_primer_nombre . ' ' . $responsableActivo->usuario->usu_primer_apellido)
+        : null;
+    $integrantesActivos = ($proyecto?->equipo?->integrantes ?? collect())->where('ein_status', '!=', false)->values();
   @endphp
 
   <!-- Encabezado Oficial con Logos y Doble Línea Institucional -->
@@ -284,8 +296,11 @@
   <!-- Destinatario Formal -->
   <div class="destinatario">
     <p class="cargo">Ciudadanos(as):</p>
-    <p><strong>Voceros(as) y Demás Miembros del Consejo Comunal / Representantes de la Comunidad:</strong></p>
+    <p><strong>Responsable de la Comunidad y Demás Miembros de:</strong></p>
     <p><strong>{{ $proyecto->comunidad->com_nombre ?? 'Comunidad Receptora' }}</strong></p>
+    @if($respNombre)
+      <p>Atención: {{ $respNombre }}@if($responsableActivo?->usuario?->usu_cedula) (C.I. {{ $responsableActivo->usuario->usu_cedula }})@endif</p>
+    @endif
     <p>Ubicación / Sector: {{ $proyecto->comunidad->com_ubicacion ?? 'Presente' }}</p>
     <p class="presente">Presente.-</p>
   </div>
@@ -326,7 +341,7 @@
       </tr>
     </thead>
     <tbody>
-      @forelse($proyecto->equipo->integrantes as $index => $int)
+      @forelse($integrantesActivos as $index => $int)
         <tr>
           <td style="text-align: center; font-weight: bold;">{{ $index + 1 }}</td>
           <td style="font-weight: bold;">
@@ -358,12 +373,12 @@
       <tr>
         <td class="firma-col">
           <div class="espacio-firma">
-            @if(!empty($coordinador->usu_firma_digital) && file_exists(public_path('storage/' . $coordinador->usu_firma_digital)))
-              <img src="{{ public_path('storage/' . $coordinador->usu_firma_digital) }}" alt="Firma Coordinador">
+            @if($firmaBase64)
+              <img src="data:{{ $firmaMime }};base64,{{ $firmaBase64 }}" alt="Firma Coordinador">
             @endif
           </div>
           <div class="linea-firma">
-            <span class="nombre">{{ $coordinador->usu_primer_nombre ?? 'Dexia' }} {{ $coordinador->usu_primer_apellido ?? 'Colmenarez' }}</span><br>
+            <span class="nombre">{{ $coordinador->usu_primer_nombre ?? 'Coordinación' }} {{ $coordinador->usu_primer_apellido ?? 'PNFI' }}</span><br>
             <span class="cargo">Coordinación del PNF en Informática<br>UPTP «Juan de Jesús Montilla»</span>
           </div>
           @if($carta->cpr_sello)
@@ -373,8 +388,8 @@
         <td class="firma-col">
           <div class="espacio-firma"></div>
           <div class="linea-firma">
-            <span class="nombre">Por la Comunidad / Organización Receptora</span><br>
-            <span class="cargo">Vocero(a) o Representante Autorizado(a)<br>{{ $proyecto->comunidad->com_nombre ?? 'Comunidad Receptora' }}</span>
+            <span class="nombre">{{ $respNombre ?: 'Por la Comunidad / Organización Receptora' }}</span><br>
+            <span class="cargo">Responsable de la Comunidad<br>{{ $proyecto->comunidad->com_nombre ?? 'Comunidad Receptora' }}</span>
           </div>
           <div class="sello-cuadro">SELLO COMUNIDAD</div>
         </td>

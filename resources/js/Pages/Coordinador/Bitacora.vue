@@ -76,38 +76,21 @@
                             <label class="form-label fw-semibold"
                                 >Entidad</label
                             >
-                            <select
+                            <SelectBuscable
                                 v-model="filtros.entidad_id"
-                                class="form-select"
-                            >
-                                <option value="">Todas</option>
-                                <option
-                                    v-for="ent in entidades"
-                                    :key="ent.ent_id"
-                                    :value="ent.ent_id"
-                                >
-                                    {{ ent.ent_nombre }}
-                                </option>
-                            </select>
+                                :options="opcionesEntidades"
+                                placeholder="Todas"
+                            />
                         </div>
                         <div class="col-md-2">
                             <label class="form-label fw-semibold"
                                 >Usuario</label
                             >
-                            <select
+                            <SelectBuscable
                                 v-model="filtros.usuario_id"
-                                class="form-select"
-                            >
-                                <option value="">Todos</option>
-                                <option
-                                    v-for="usu in usuarios"
-                                    :key="usu.usu_id"
-                                    :value="usu.usu_id"
-                                >
-                                    {{ usu.usu_primer_nombre }}
-                                    {{ usu.usu_primer_apellido }}
-                                </option>
-                            </select>
+                                :options="opcionesUsuarios"
+                                placeholder="Todos"
+                            />
                         </div>
                         <div class="col-md-2">
                             <label class="form-label fw-semibold">Desde</label>
@@ -341,6 +324,7 @@
 </template>
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -369,6 +353,17 @@ const iniciales = computed(() => {
     );
 });
 const filtros = ref({ ...props.filtros });
+const opcionesEntidades = computed(() => [
+    { value: "", label: "Todas" },
+    ...(props.entidades || []).map((ent) => ({ value: ent.ent_id, label: ent.ent_nombre })),
+]);
+const opcionesUsuarios = computed(() => [
+    { value: "", label: "Todos" },
+    ...(props.usuarios || []).map((usu) => ({
+        value: usu.usu_id,
+        label: `${usu.usu_primer_nombre} ${usu.usu_primer_apellido}`,
+    })),
+]);
 const anterior = ref("");
 const nuevo = ref("");
 let modalDet = null;

@@ -12,6 +12,7 @@
                     style="cursor: help;"
                 >
                     {{ etiquetaSemaforo }}
+                    <span v-if="diagnostico.porcentaje_situacion !== undefined" class="ms-1">({{ diagnostico.porcentaje_situacion }}%)</span>
                 </span>
                 <span class="badge bg-white text-dark border shadow-xs d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
                     <i class="bi bi-calendar3 text-primary"></i>
@@ -32,8 +33,19 @@
         <div class="card-body p-3">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <span class="text-uppercase fw-bold text-muted" style="font-size: 0.72rem; letter-spacing: 0.5px;">
-                    Enfoque de Gestión de Proyectos y Procesos
+                    Situación del Proyecto
                 </span>
+                <span v-if="diagnostico.porcentaje_situacion !== undefined" class="fw-bold small" :class="`text-${diagnostico.color || 'secondary'}`">
+                    {{ diagnostico.porcentaje_situacion }}% cumplimiento
+                </span>
+            </div>
+            <div v-if="diagnostico.porcentaje_situacion !== undefined" class="progress mb-2" style="height: 8px; background-color: #e9ecef">
+                <div
+                    class="progress-bar"
+                    :class="`bg-${diagnostico.color || 'secondary'}`"
+                    role="progressbar"
+                    :style="{ width: `${diagnostico.porcentaje_situacion || 0}%` }"
+                ></div>
             </div>
             <!-- Mensaje en lenguaje humano con significado al posar el mouse -->
             <p class="mb-2 small text-dark fw-medium lh-sm" :title="significadoSemaforo" style="cursor: help;">
@@ -96,34 +108,34 @@
             <!-- Leyenda Interactiva con tooltips al pasar el mouse -->
             <div class="mt-3 pt-2 border-top">
                 <div class="d-flex flex-wrap gap-2 align-items-center" style="font-size: 0.72rem;">
-                    <span class="text-muted fw-bold">Enfoque de Gestión de Proyectos y Procesos:</span>
+                    <span class="text-muted fw-bold">Situación del Proyecto:</span>
                     <span
                         class="badge bg-light text-dark border px-2 py-1"
                         style="cursor: help;"
-                        title="Cumple con los estándares y metas."
+                        title="75% a 100%: Cumple con los estándares y metas."
                     >
-                        🟢 Conforme
+                        🟢 Conforme (≥75%)
                     </span>
                     <span
                         class="badge bg-light text-dark border px-2 py-1"
                         style="cursor: help;"
-                        title="Tiene parametros menores que deben mejorarse."
+                        title="50% a 74%: Tiene parámetros menores que deben mejorarse."
                     >
-                        🟡 Observado
+                        🟡 Observado (50–74%)
                     </span>
                     <span
                         class="badge bg-light text-dark border px-2 py-1"
                         style="cursor: help;"
-                        title="Incumplimiento grave de los parámetros del proyecto."
+                        title="25% a 49%: Incumplimiento grave de los parámetros del proyecto."
                     >
-                        🔴 No conforme
+                        🔴 No conforme (25–49%)
                     </span>
                     <span
                         class="badge bg-light text-dark border px-2 py-1"
                         style="cursor: help;"
-                        title="Cierre administrativo por falta de factibilidad."
+                        title="Menor a 25%: Cierre administrativo por falta de factibilidad."
                     >
-                        ⚫ No viable
+                        ⚫ No viable (&lt;25%)
                     </span>
                 </div>
             </div>
@@ -200,7 +212,7 @@ const significadoSemaforo = computed(() => {
         case 'no_viable':
             return 'Cierre administrativo por falta de factibilidad.'
         default:
-            return 'Enfoque de Gestión de Proyectos y Procesos'
+            return 'Situación del Proyecto'
     }
 })
 

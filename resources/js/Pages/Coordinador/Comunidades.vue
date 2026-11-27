@@ -65,15 +65,21 @@
                                 margin-top: 2px;
                             "
                         >
-                            Catálogo permanente de comunidades
+                            Catálogo permanente de comunidades (Modo Consulta)
                         </p>
                     </div>
-                    <button
-                        class="btn btn-danger fw-bold rounded-pill px-4"
-                        @click="abrirModal()"
-                    >
-                        <i class="bi bi-plus-lg me-2"></i>Nueva Comunidad
-                    </button>
+                </div>
+
+                <div
+                    v-if="$page.props.flash?.error || Object.keys($page.props.errors || {}).length"
+                    class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-3"
+                >
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span v-if="$page.props.flash?.error">{{ $page.props.flash.error }}</span>
+                    <ul v-else class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
 
                 <div class="sc">
@@ -157,18 +163,7 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <button
-                                            class="btn btn-sm btn-outline-primary me-1"
-                                            @click="abrirModal(com)"
-                                        >
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-sm btn-outline-danger"
-                                            @click="desactivar(com)"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <span class="badge bg-secondary-subtle text-secondary">Solo consulta</span>
                                     </td>
                                     <td>
                                         <span class="badge bg-danger"
@@ -335,24 +330,13 @@
                                     >Tipo de Organización
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.com_id_tor"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.com_id_tor,
-                                    }"
+                                    :options="opcionesTiposOrgModal"
+                                    :has-error="!!errores.com_id_tor"
+                                    placeholder="Seleccionar..."
                                     @change="verificarOtroTipoOrg"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="tipo in listaTiposOrg"
-                                        :key="tipo.tor_id"
-                                        :value="tipo.tor_id"
-                                    >
-                                        {{ tipo.tor_nombre }}
-                                    </option>
-                                    <option value="__OTRO__">➕ Otro (Crear nueva opción...)</option>
-                                </select>
+                                />
                                 <div v-if="creandoOtroTipoOrg" class="mt-2 p-2 rounded border bg-light">
                                     <label class="small fw-bold text-danger mb-1">Nombre del nuevo Tipo de Organización:</label>
                                     <div class="input-group input-group-sm">
@@ -457,6 +441,7 @@
 
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -489,6 +474,11 @@ const editando = ref(null);
 const itemAEliminar = ref(null);
 
 const listaTiposOrg = ref([...(props.tiposOrganizacion || [])]);
+const opcionesTiposOrgModal = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...listaTiposOrg.value.map((tipo) => ({ value: tipo.tor_id, label: tipo.tor_nombre })),
+    { value: "__OTRO__", label: "➕ Otro (Crear nueva opción...)" },
+]);
 const creandoOtroTipoOrg = ref(false);
 const nuevoTipoOrgNombre = ref("");
 const guardandoTipoOrg = ref(false);

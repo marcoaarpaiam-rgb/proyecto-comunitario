@@ -46,6 +46,7 @@
                 </div>
             </div>
             <div class="content">
+                <BannerComunidadPendiente />
                 <div
                     v-if="!cartaAprobada"
                     class="alert py-2 mb-3 d-flex align-items-center gap-2"
@@ -93,7 +94,7 @@
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div>
                             <h6 class="fw-bold mb-0 text-danger d-flex align-items-center gap-2">
-                                <i class="bi bi-card-checklist"></i>Ruta Oficial de Entregables PNFI
+                                <i class="bi bi-card-checklist"></i>Lista de Verificación de Recaudos (PNFI)
                                 <span class="badge bg-danger-subtle text-danger" style="font-size: 0.75rem;">{{ semestreActivo }}</span>
                             </h6>
                             <p class="text-muted small mb-0">
@@ -102,14 +103,14 @@
                         </div>
                         <button
                             class="btn btn-sm btn-outline-secondary rounded-pill px-3"
-                            @click="mostrarChecklist = !mostrarChecklist"
+                            @click="mostrarListaVerificacion = !mostrarListaVerificacion"
                         >
-                            <i class="bi" :class="mostrarChecklist ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-                            {{ mostrarChecklist ? 'Ocultar' : 'Ver Detalles' }}
+                            <i class="bi" :class="mostrarListaVerificacion ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            {{ mostrarListaVerificacion ? 'Ocultar' : 'Ver Detalles' }}
                         </button>
                     </div>
 
-                    <div v-if="mostrarChecklist" class="table-responsive mt-3">
+                    <div v-if="mostrarListaVerificacion" class="table-responsive mt-3">
                         <table class="table table-sm align-middle mb-0" style="font-size: 0.84rem; --bs-table-bg: transparent; --bs-table-color: var(--text-main);">
                             <thead>
                                 <tr style="background: var(--bg-th); color: var(--text-main);">
@@ -295,25 +296,15 @@
                                     >Tipo de Entregable
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.entr_id_tet"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.entr_id_tet,
-                                    }"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="tipo in tiposEntregable"
-                                        :key="tipo.tet_id"
-                                        :value="tipo.tet_id"
-                                    >
-                                        {{ tipo.tet_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesTiposEntregable"
+                                    :has-error="!!errores.entr_id_tet"
+                                    placeholder="Seleccionar..."
+                                />
                                 <div
                                     v-if="errores.entr_id_tet"
-                                    class="invalid-feedback"
+                                    class="invalid-feedback d-block"
                                 >
                                     {{ errores.entr_id_tet }}
                                 </div>
@@ -322,21 +313,13 @@
                                 <label class="form-label fw-semibold">
                                     Vincular a Catálogo Oficial PNFI <span class="text-muted fw-normal small">({{ semestreActivo }})</span>
                                 </label>
-                                <select
+                                <SelectBuscable
                                     v-model="form.entr_id_cep"
-                                    class="form-select"
-                                >
-                                    <option value="">-- Ninguno / Entregable adicional --</option>
-                                    <option
-                                        v-for="cep in catalogoPnfi"
-                                        :key="cep.cep_id"
-                                        :value="cep.cep_id"
-                                    >
-                                        {{ cep.cep_nombre }} {{ cep.cep_es_obligatorio ? '★ (Obligatorio)' : '' }}
-                                    </option>
-                                </select>
+                                    :options="opcionesCatalogoPnfi"
+                                    placeholder="-- Ninguno / Entregable adicional --"
+                                />
                                 <div class="form-text small" style="color: var(--text-muted)">
-                                    Vincular al catálogo oficial actualiza la ruta crítica y el Enfoque de Gestión de Proyectos y Procesos del proyecto.
+                                    Vincular al catálogo oficial actualiza la ruta crítica y la Situación del Proyecto.
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -435,6 +418,8 @@ import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 import SidebarLider from "@/Components/SidebarLider.vue";
+import BannerComunidadPendiente from "@/Components/BannerComunidadPendiente.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 
 const props = defineProps({
     entregables: { type: Array, default: () => [] },
@@ -443,9 +428,25 @@ const props = defineProps({
     cartaAprobada: { type: Boolean, default: false },
     semestreActivo: { type: String, default: "Semestre 1" },
 });
+
+const opcionesTiposEntregable = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.tiposEntregable || []).map((t) => ({
+        value: t.tet_id,
+        label: t.tet_nombre,
+    })),
+]);
+
+const opcionesCatalogoPnfi = computed(() => [
+    { value: "", label: "-- Ninguno / Entregable adicional --" },
+    ...(props.catalogoPnfi || []).map((cep) => ({
+        value: cep.cep_id,
+        label: `${cep.cep_nombre}${cep.cep_es_obligatorio ? " ★ (Obligatorio)" : ""}`,
+    })),
+]);
 const page = usePage();
 const sidebarOpen = ref(false);
-const mostrarChecklist = ref(true);
+const mostrarListaVerificacion = ref(true);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
 const toggleTema = () => {
     tema.value = tema.value === "dark" ? "light" : "dark";

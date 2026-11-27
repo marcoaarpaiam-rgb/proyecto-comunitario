@@ -68,40 +68,35 @@
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <select
-                                v-model="equipoFiltro"
-                                class="form-select form-select-sm"
-                                style="max-width: 280px;"
-                            >
-                                <option value="">Todos los equipos</option>
-                                <option
-                                    v-for="eq in props.equipos"
-                                    :key="eq.equ_id"
-                                    :value="eq.equ_id"
-                                >
-                                    {{ eq.equ_codigo }} - {{ eq.equ_titulo?.substring(0, 22) }}...
-                                </option>
-                            </select>
+                            <div style="min-width: 240px;">
+                                <SelectBuscable
+                                    v-model="equipoFiltro"
+                                    :options="opcionesEquiposFiltro"
+                                    size="sm"
+                                    placeholder="Todos los equipos"
+                                    search-placeholder="Buscar equipo..."
+                                />
+                            </div>
                             <button
                                 class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold"
                                 @click="mostrarCatalogo = !mostrarCatalogo"
                             >
                                 <i class="bi bi-journal-bookmark me-1 text-primary"></i>
-                                {{ mostrarCatalogo ? 'Ocultar Checklist' : 'Ver Checklist PNFI' }}
+                                {{ mostrarCatalogo ? 'Ocultar Lista de Verificación' : 'Ver Lista de Verificación de Recaudos' }}
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Catálogo Oficial PNFI Desplegable con Checklist -->
+                <!-- Catálogo Oficial PNFI Desplegable con Lista de Verificación de Recaudos -->
                 <div v-if="mostrarCatalogo" class="sc mb-4 p-3" style="border-left: 4px solid #0d6efd;">
                     <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                         <div>
                             <h6 class="fw-bold mb-0 text-primary">
-                                <i class="bi bi-card-checklist me-2"></i>Checklist de Entregables Oficiales PNFI
+                                <i class="bi bi-card-checklist me-2"></i>Lista de Verificación de Recaudos Oficiales PNFI
                             </h6>
                             <p class="text-muted small mb-0">
-                                {{ equipoFiltro ? 'Mostrando estado de cumplimiento del equipo seleccionado' : 'Selecciona un equipo arriba para ver el checklist individualizado' }}
+                                {{ equipoFiltro ? 'Mostrando estado de cumplimiento del equipo seleccionado' : 'Selecciona un equipo arriba para ver la lista de verificación de recaudos individualizada' }}
                             </p>
                         </div>
                         <span class="badge bg-primary">{{ catalogoFiltrado.length }} entregables en catálogo</span>
@@ -473,6 +468,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import SidebarProfesor from "@/Components/SidebarProfesor.vue";
@@ -485,6 +481,13 @@ const props = defineProps({
 });
 const page = usePage();
 const sidebarOpen = ref(false);
+const opcionesEquiposFiltro = computed(() => [
+    { value: "", label: "Todos los equipos" },
+    ...(props.equipos || []).map((eq) => ({
+        value: eq.equ_id,
+        label: `${eq.equ_codigo} - ${(eq.equ_titulo || "").substring(0, 30)}`,
+    })),
+]);
 const mostrarCatalogo = ref(false);
 const equipoFiltro = ref("");
 const tabEntregables = ref("pendientes"); // "pendientes" | "archivados"

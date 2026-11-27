@@ -230,18 +230,19 @@
                                         <a
                                             v-if="soc.equipo?.equ_id"
                                             :href="'/coordinador/equipos/' + soc.equipo.equ_id + '/expediente'"
-                                            class="btn btn-sm btn-outline-secondary me-1"
+                                            class="btn btn-sm btn-outline-primary me-1"
                                             title="Ver Expediente del Equipo"
                                         >
                                             <i class="bi bi-file-earmark-person"></i>
                                         </a>
                                         <a
-                                            v-if="soc.equipo?.proyectoComunidad?.pco_id || soc.equipo?.proyecto_comunidad?.pco_id"
-                                            :href="'/evaluaciones/recorrido/' + (soc.equipo?.proyectoComunidad?.pco_id || soc.equipo?.proyecto_comunidad?.pco_id)"
-                                            class="btn btn-sm btn-outline-danger"
-                                            title="Evaluación 4 Actores"
+                                            v-if="soc.tipo_socializacion?.tso_orden === 2 && soc.equipo?.equ_id"
+                                            :href="'/evaluaciones/planilla-pdf/' + soc.equipo.equ_id"
+                                            target="_blank"
+                                            class="btn btn-sm btn-outline-primary"
+                                            title="Exportar Planilla de Evaluación (PDF)"
                                         >
-                                            <i class="bi bi-award-fill"></i>
+                                            <i class="bi bi-file-earmark-pdf"></i>
                                         </a>
                                     </td>
                                 </tr>
@@ -329,13 +330,13 @@
                             </div>
                         </div>
 
-                        <!-- Link Temporal de 12 Horas para Jurados y Vocero -->
+                        <!-- Link Temporal de 12 Horas para Jurados y Responsable de la Comunidad -->
                         <div class="card border mb-3">
                             <div class="card-header bg-dark text-white p-2 px-3 d-flex justify-content-between align-items-center">
                                 <span class="fw-bold small text-uppercase">
                                     <i class="bi bi-link-45deg text-warning me-1"></i> Link Temporal para Jurado (Vigencia 12 Horas)
                                 </span>
-                                <span class="badge bg-warning text-dark small">Exclusivo Jurado / Vocero</span>
+                                <span class="badge bg-warning text-dark small">Exclusivo Jurado / Resp. Comunidad</span>
                             </div>
                             <div class="card-body p-3">
                                 <!-- Si es pre-socialización -->
@@ -472,26 +473,14 @@
                                     </div>
 
                                     <!-- Planilla Vinculación Excel -->
-                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
+                                    <div class="col-sm-6" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
                                         <a
-                                            :href="'/inventario/excel/vinculacion/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
+                                            :href="'/excel/vinculacion/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
                                             target="_blank"
                                             class="btn btn-success btn-sm w-100 fw-bold p-2 text-truncate"
                                             title="Descargar Planilla de Vinculación Excel"
                                         >
                                             <i class="bi bi-file-earmark-excel-fill me-1"></i>Planilla Vinc. Excel
-                                        </a>
-                                    </div>
-
-                                    <!-- Inventario PST Sección Excel -->
-                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.equ_id_sec">
-                                        <a
-                                            :href="'/inventario/excel/libro-seccion/' + socSeleccionadaDetalle.equipo?.equ_id_sec"
-                                            target="_blank"
-                                            class="btn btn-outline-success btn-sm w-100 fw-bold p-2 text-truncate"
-                                            title="Descargar Inventario PST de la Sección Completa"
-                                        >
-                                            <i class="bi bi-file-spreadsheet me-1"></i>Inventario PST
                                         </a>
                                     </div>
                                 </div>

@@ -26,7 +26,6 @@ use App\Http\Controllers\Coordinador\SeccionDetalleController;
 use App\Http\Controllers\Coordinador\ConfiguracionController;
 use App\Http\Controllers\Coordinador\ExpedienteController;
 use App\Http\Controllers\EvaluacionTrayectoController;
-use App\Http\Controllers\InventarioPstExcelController;
 
 
 // Rutas públicas
@@ -230,52 +229,36 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ]);
     })->name('dashboard');
 
-    // Tablas maestras
+    // Tablas maestras (Coordinador: solo consulta)
     Route::resource('tipos-proyecto', MaestraController::class)
         ->parameters(['tipos-proyecto' => 'id'])
-        ->except(['create', 'show', 'edit']);
+        ->only(['index']);
 
     Route::resource('comunidades', ComunidadController::class)
         ->parameters(['comunidades' => 'id'])
-        ->except(['create', 'show', 'edit']);
+        ->only(['index']);
     Route::get('comunidades/{id}/radar-proyectos', [ComunidadController::class, 'radarProyectos'])
         ->name('comunidades.radar-proyectos');
 
     Route::resource('secciones', SeccionController::class)
         ->parameters(['secciones' => 'id'])
-        ->except(['create', 'show', 'edit']);
+        ->only(['index']);
 
-    
-
-    // Tablas maestras genéricas
+    // Tablas maestras genéricas (Coordinador: solo consulta)
     Route::get('maestras/{tabla}', [TablaMaestraController::class, 'index'])->name('maestras.index');
-    Route::post('maestras/{tabla}', [TablaMaestraController::class, 'store'])->name('maestras.store');
-    Route::put('maestras/{tabla}/{id}', [TablaMaestraController::class, 'update'])->name('maestras.update');
-    Route::delete('maestras/{tabla}/{id}', [TablaMaestraController::class, 'destroy'])->name('maestras.destroy');
-    Route::post('maestras/{tabla}/{id}/reactivar', [TablaMaestraController::class, 'reactivar'])->name('maestras.reactivar');
 
     
 
-   Route::resource('equipos', EquipoController::class)
-        ->parameters(['equipos' => 'id'])
-        ->except(['create', 'show', 'edit']);
-   Route::post('equipos/{id_equipo}/generar-link-jurado', [EvaluacionTrayectoController::class, 'generarLinkJurado'])
-        ->name('equipos.generar-link-jurado');
+    // Equipos y Proyectos (Coordinador: solo consulta, auditoría y fe pública)
+    Route::get('equipos', [EquipoController::class, 'index'])
+        ->name('equipos.index');
 
+    Route::get('proyectos', [ProyectoController::class, 'index'])
+        ->name('proyectos.index');
     
-
-    Route::resource('proyectos', ProyectoController::class)
-        ->parameters(['proyectos' => 'id'])
-        ->except(['edit','create','show']);
-    
-    // Resultados
+    // Resultados (solo consulta)
     Route::get('resultados', [ResultadoController::class, 'index'])
         ->name('resultados.index');
-    Route::post('resultados', [ResultadoController::class, 'store'])
-        ->name('resultados.store');
-    Route::post('resultados/{id}/habilitar-tardio',
-        [ResultadoController::class, 'habilitarTardio'])
-        ->name('resultados.habilitar-tardio');
 
     // Reportes
     Route::get('reportes', [ReporteController::class, 'index'])
@@ -309,9 +292,6 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     Route::get('socializaciones',
         [SocializacionCoordController::class, 'index'])
         ->name('socializaciones.index');
-    Route::post('socializaciones/programar-final',
-        [SocializacionController::class, 'programarFinal'])
-        ->name('socializaciones.programar-final');
     
 
     Route::get('secciones/{id}/detalle',
@@ -323,8 +303,6 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
     // Exportaciones Excel Oficiales UPTP
     Route::get('secciones/{id}/excel/vinculacion', [\App\Http\Controllers\ExcelExportController::class, 'descargarPlanillaVinculacion'])
         ->name('secciones.excel.vinculacion');
-    Route::get('secciones/{id}/excel/inventario', [\App\Http\Controllers\ExcelExportController::class, 'descargarInventarioPst'])
-        ->name('secciones.excel.inventario');
 
     // Expediente del Estudiante (Coordinador)
     Route::get('estudiantes/buscar', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'buscar'])
@@ -374,21 +352,7 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('reportes.exportar-general');
 
     
-    Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
-        ->name('equipos.disolver');
-
-    Route::delete('equipos/{equipoId}/integrantes/{integranteId}',
-        [EquipoController::class, 'removerIntegrante'])
-        ->name('equipos.integrantes.remover');
-
-    Route::post('equipos/{equipoId}/integrantes/{integranteId}/trasladar',
-        [EquipoController::class, 'trasladarIntegrante'])
-        ->name('equipos.integrantes.trasladar');
-
-    Route::post('equipos/{equipoId}/cambiar-lider',
-        [EquipoController::class, 'cambiarLider'])
-        ->name('equipos.cambiar-lider');
-
+    // Expediente y consulta de equipos (Coordinador solo lectura/auditoría)
     Route::get('equipos/{equipoId}/historial',
         [EquipoController::class, 'historial'])
         ->name('equipos.historial');
@@ -399,16 +363,13 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
 
     Route::get('equipos/{id}/expediente', [ExpedienteController::class, 'show'])
         ->name('equipos.expediente');
-    
+
     Route::get('/equipos/{id}/paquete-cierre', [EquipoController::class, 'generarPaqueteCierre'])
         ->name('equipos.paqueteCierre');
-    
+
     Route::post('configuracion/reset-lider',
         [ConfiguracionController::class, 'resetPasswordLider'])
         ->name('configuracion.reset-lider');
-
-    Route::post('/equipos/{id}/reactivar', [EquipoController::class, 'reactivar'])
-        ->name('equipos.reactivar');
     
 });
 
@@ -529,12 +490,12 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('secciones.index');
     Route::get('secciones/{id}/equipos', [EquipoController::class, 'seccionEquipos'])
         ->name('secciones.equipos');
+    Route::post('secciones/{id}/total-equipos', [EquipoController::class, 'actualizarTotalSeccion'])
+        ->name('secciones.total-equipos');
 
     // Exportaciones Excel Oficiales UPTP (Profesor)
     Route::get('secciones/{id}/excel/vinculacion', [\App\Http\Controllers\ExcelExportController::class, 'descargarPlanillaVinculacion'])
         ->name('secciones.excel.vinculacion');
-    Route::get('secciones/{id}/excel/inventario', [\App\Http\Controllers\ExcelExportController::class, 'descargarInventarioPst'])
-        ->name('secciones.excel.inventario');
 
     // Expediente del Estudiante (Profesor)
     Route::get('estudiantes/buscar', [\App\Http\Controllers\Shared\ExpedienteEstudianteController::class, 'buscar'])
@@ -555,8 +516,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('esquemas.clonar');
     Route::post('esquemas-evaluacion/asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'asignarSeccion'])
         ->name('esquemas.asignar');
-    // Equipos — Redirección al módulo de Mis Secciones para el rol profesor
-    Route::get('equipos', fn() => redirect('/profesor/secciones'))
+    // Equipos — Gestión autónoma del Docente de Proyecto por sección
+    Route::get('equipos', [EquipoController::class, 'index'])
         ->name('equipos.index');
     Route::post('equipos', [EquipoController::class, 'store'])
         ->name('equipos.store');
@@ -564,6 +525,10 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('equipos.update');
     Route::delete('equipos/{id}', [EquipoController::class, 'destroy'])
         ->name('equipos.destroy');
+    Route::post('equipos/{id}/aprobar-comunidad', [EquipoController::class, 'aprobarComunidad'])
+        ->name('equipos.aprobar-comunidad');
+    Route::post('equipos/{id}/rechazar-comunidad', [EquipoController::class, 'rechazarComunidad'])
+        ->name('equipos.rechazar-comunidad');
 
 
     Route::post('equipos/{id}/disolver', [EquipoController::class, 'disolver'])
@@ -608,6 +573,9 @@ Route::middleware(['auth', 'rol:lider'])
     Route::get('proyecto',
         [App\Http\Controllers\Lider\LiderController::class, 'miProyecto'])
         ->name('proyecto');
+    Route::post('proyecto/postular',
+        [App\Http\Controllers\Lider\LiderController::class, 'postularComunidad'])
+        ->name('proyecto.postular');
     Route::get('entregables',
         [App\Http\Controllers\Lider\LiderController::class, 'entregables'])
         ->name('entregables.index');
@@ -654,6 +622,9 @@ Route::middleware(['auth', 'rol:lider'])
     
     Route::post('/tutor', [LiderController::class, 'registrarTutor'])
         ->name('tutor.store');
+
+    Route::post('/cambiar-password', [LiderController::class, 'cambiarPassword'])
+        ->name('cambiar-password');
 });
 
 // =========================================================================
@@ -671,6 +642,7 @@ Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->grou
     Route::get('/evaluar/{id_recorrido}/{rol_evaluador}', [EvaluacionTrayectoController::class, 'evaluar'])->name('evaluar');
     Route::post('/guardar', [EvaluacionTrayectoController::class, 'guardarEvaluacion'])->name('guardar');
     Route::get('/pdf/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarActaPdf'])->name('pdf');
+    Route::get('/planilla-pdf/{id_equipo}', [EvaluacionTrayectoController::class, 'exportarPlanillaEvaluacionPdf'])->name('planilla-pdf');
     Route::post('/pin/{id_proyecto}', [EvaluacionTrayectoController::class, 'generarPin'])->name('pin.generar');
     Route::post('/socializacion-final/{id_proyecto}', [EvaluacionTrayectoController::class, 'guardarFechaSocializacion'])->name('socializacion.guardar');
     Route::post('/transicion/{id_equipo}', [EvaluacionTrayectoController::class, 'transicionSemestre'])->name('transicion.semestre');
@@ -680,6 +652,8 @@ Route::middleware(['auth'])->prefix('evaluaciones')->name('evaluaciones.')->grou
 // Portal temporal para Jurados y Voceros Comunitarios (Vigencia estricta de 12 horas)
 Route::get('/evaluacion-jurado/{token}', [EvaluacionTrayectoController::class, 'panelJurado'])
     ->name('evaluaciones.jurado.panel');
+Route::post('/evaluacion-jurado/{token}/verificar-pin', [EvaluacionTrayectoController::class, 'verificarPinJurado'])
+    ->name('evaluaciones.jurado.verificar-pin');
 Route::post('/evaluacion-jurado/{token}/calificar', [EvaluacionTrayectoController::class, 'guardarCalificacionJurado'])
     ->name('evaluaciones.jurado.calificar');
 
@@ -694,16 +668,10 @@ Route::get('/evaluaciones/verificar/{hash}', [EvaluacionTrayectoController::clas
     ->name('evaluaciones.verificar');
 
 // =========================================================================
-// EXPORTACIONES DINÁMICAS EN EXCEL (INVENTARIO PST Y VINCULACIÓN UPTP)
+// EXPORTACIÓN DINÁMICA EN EXCEL (PLANILLA DE VINCULACIÓN UPTP)
 // =========================================================================
-Route::prefix('inventario')->name('inventario.')->group(function () {
-    Route::get('/excel/punto-control/{id_puc}', [InventarioPstExcelController::class, 'exportarPuntoControl'])
-        ->name('excel.punto');
-    Route::get('/excel/libro-seccion/{id_sec}', [InventarioPstExcelController::class, 'exportarLibroCompleto'])
-        ->name('excel.libro');
-    Route::match(['get', 'post'], '/excel/vinculacion/{id_proyecto}', [InventarioPstExcelController::class, 'exportarPlanillaVinculacion'])
-        ->name('excel.vinculacion');
-});
+Route::match(['get', 'post'], '/excel/vinculacion/{id_proyecto}', [\App\Http\Controllers\ExcelExportController::class, 'exportarPlanillaVinculacionProyecto'])
+    ->name('excel.vinculacion');
 
 
 

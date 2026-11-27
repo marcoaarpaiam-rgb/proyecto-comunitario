@@ -272,112 +272,67 @@
                                 <label class="form-label small fw-bold"
                                     >Sección</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="filtros.sec_id"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">Todas</option>
-                                    <option
-                                        v-for="s in secciones"
-                                        :key="s.sec_id"
-                                        :value="s.sec_id"
-                                    >
-                                        {{ s.sec_codigo }} —
-                                        {{ s.trayecto?.tra_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesRepSeccionesTodas"
+                                    size="sm"
+                                    placeholder="Todas"
+                                />
                             </div>
                             <div class="col-md-4 col-6">
                                 <label class="form-label small fw-bold"
                                     >Trayecto</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="filtros.tra_id"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">Todos</option>
-                                    <option
-                                        v-for="t in trayectos"
-                                        :key="t.tra_id"
-                                        :value="t.tra_id"
-                                    >
-                                        {{ t.tra_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesRepTrayectos"
+                                    size="sm"
+                                    placeholder="Todos"
+                                />
                             </div>
                             <div class="col-md-4 col-6">
                                 <label class="form-label small fw-bold"
                                     >Comunidad</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="filtros.com_id"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">Todas</option>
-                                    <option
-                                        v-for="c in comunidades"
-                                        :key="c.com_id"
-                                        :value="c.com_id"
-                                    >
-                                        {{ c.com_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesRepComunidades"
+                                    size="sm"
+                                    placeholder="Todas"
+                                />
                             </div>
                             <div class="col-md-4 col-6">
                                 <label class="form-label small fw-bold"
                                     >Línea de Investigación</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="filtros.tpr_id"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">Todos</option>
-                                    <option
-                                        v-for="t in tiposProyecto"
-                                        :key="t.tpr_id"
-                                        :value="t.tpr_id"
-                                    >
-                                        {{ t.tpr_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesRepTiposProy"
+                                    size="sm"
+                                    placeholder="Todos"
+                                />
                             </div>
                             <div class="col-md-4 col-6">
                                 <label class="form-label small fw-bold"
                                     >Estado</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="filtros.estado"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">Todos</option>
-                                    <option value="Aprobado">Aprobado</option>
-                                    <option value="Aplazado">Aplazado</option>
-                                    <option value="No Presentado">
-                                        No Presentado
-                                    </option>
-                                    <option value="sin_resultado">
-                                        Sin Resultado
-                                    </option>
-                                </select>
+                                    :options="opcionesRepEstado"
+                                    size="sm"
+                                    placeholder="Todos"
+                                />
                             </div>
                             <div class="col-md-4 col-6">
                                 <label class="form-label small fw-bold"
                                     >Profesor</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="filtros.prof_id"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">Todos</option>
-                                    <option
-                                        v-for="p in profesores"
-                                        :key="p.usu_id"
-                                        :value="p.usu_id"
-                                    >
-                                        {{ p.usu_primer_nombre }}
-                                        {{ p.usu_primer_apellido }}
-                                    </option>
-                                </select>
+                                    :options="opcionesRepProfesores"
+                                    size="sm"
+                                    placeholder="Todos"
+                                />
                             </div>
                             <div class="col-md-3 col-6">
                                 <label class="form-label small fw-bold"
@@ -411,7 +366,7 @@
                                         class="form-check-label small fw-bold"
                                         for="chkVencidos"
                                     >
-                                        Solo vencidos
+                                        En Ruta Crítica / Por Vencer
                                     </label>
                                 </div>
                             </div>
@@ -597,22 +552,14 @@
                                     <td>
                                         <div v-if="c.proyectos && c.proyectos.length">
                                             <div class="d-flex align-items-center gap-2">
-                                                <select
-                                                    class="form-select form-select-sm"
-                                                    v-model="equipoSeleccionadoPorComunidad[c.com_id]"
-                                                    @dblclick="abrirModalEquipo(equipoSeleccionadoPorComunidad[c.com_id])"
-                                                    title="Haz doble clic para ver la información del equipo"
-                                                    style="cursor: pointer; max-width: 420px;"
-                                                >
-                                                    <option
-                                                        v-for="p in c.proyectos"
-                                                        :key="p.pco_id || p.codigo"
-                                                        :value="p"
-                                                        @dblclick.stop="abrirModalEquipo(p)"
-                                                    >
-                                                        {{ p.codigo_limpio || p.codigo }} — {{ p.titulo }} ({{ p.resultado }})
-                                                    </option>
-                                                </select>
+                                                <div style="min-width: 260px; max-width: 420px;" class="flex-grow-1">
+                                                    <SelectBuscable
+                                                        v-model="equipoSeleccionadoPorComunidad[c.com_id]"
+                                                        :options="c.proyectos.map((p) => ({ value: p, label: `${p.codigo_limpio || p.codigo} — ${p.titulo} (${p.resultado})` }))"
+                                                        size="sm"
+                                                        placeholder="Seleccionar equipo..."
+                                                    />
+                                                </div>
                                                 <button
                                                     type="button"
                                                     class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
@@ -625,7 +572,7 @@
                                                 </button>
                                             </div>
                                             <div class="form-text mt-1" style="font-size: 0.73rem; color: var(--text-muted);">
-                                                <i class="bi bi-cursor me-1"></i>Doble clic en el equipo o clic en <strong>Ver</strong> para abrir sus datos
+                                                <i class="bi bi-cursor me-1"></i>Selecciona un equipo y pulsa <strong>Ver</strong> para abrir sus datos
                                             </div>
                                         </div>
                                         <div v-else class="text-muted small fst-italic">
@@ -648,26 +595,16 @@
                     </div>
                     <div class="p-3">
                         <div class="d-flex gap-2 align-items-end mb-3">
-                            <div>
+                            <div style="min-width: 240px;">
                                 <label class="form-label small fw-bold"
                                     >Filtrar por sección</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="seccionEntregables"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">
-                                        Todas las secciones
-                                    </option>
-                                    <option
-                                        v-for="s in secciones"
-                                        :key="s.sec_id"
-                                        :value="s.sec_id"
-                                    >
-                                        {{ s.sec_codigo }} —
-                                        {{ s.trayecto?.tra_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesRepSeccionesTodasList"
+                                    size="sm"
+                                    placeholder="Todas las secciones"
+                                />
                             </div>
                             <button
                                 @click="cargarEntregables"
@@ -793,26 +730,16 @@
                     </div>
                     <div class="p-3">
                         <div class="d-flex gap-2 align-items-end mb-3">
-                            <div>
+                            <div style="min-width: 240px;">
                                 <label class="form-label small fw-bold"
                                     >Filtrar por sección</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="seccionPuntos"
-                                    class="form-select form-select-sm"
-                                >
-                                    <option value="">
-                                        Todas las secciones
-                                    </option>
-                                    <option
-                                        v-for="s in secciones"
-                                        :key="s.sec_id"
-                                        :value="s.sec_id"
-                                    >
-                                        {{ s.sec_codigo }} —
-                                        {{ s.trayecto?.tra_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesRepSeccionesTodasList"
+                                    size="sm"
+                                    placeholder="Todas las secciones"
+                                />
                             </div>
                             <button
                                 @click="cargarPuntos"
@@ -896,22 +823,11 @@
                                     style="color: var(--text-main)"
                                     >Seleccionar Sección</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="seccionSeleccionada"
-                                    class="form-select"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="sec in secciones"
-                                        :key="sec.sec_id"
-                                        :value="sec.sec_id"
-                                    >
-                                        {{ sec.sec_codigo }} —
-                                        {{ sec.trayecto?.tra_nombre }} ({{
-                                            sec.turno?.tur_nombre
-                                        }})
-                                    </option>
-                                </select>
+                                    :options="opcionesRepSolvencia"
+                                    placeholder="Seleccionar..."
+                                />
                             </div>
                             <div class="col-md-3">
                                 <button
@@ -1083,6 +999,7 @@
 </template>
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed } from "vue";
 import { router, usePage, Link } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -1117,6 +1034,53 @@ const logout = () => router.post("/logout");
 
 // ── Solvencia ────────────────────────────────────────────────────────
 const seccionSeleccionada = ref("");
+const opcionesRepSeccionesTodas = computed(() => [
+    { value: "", label: "Todas" },
+    ...(props.secciones || []).map((s) => ({
+        value: s.sec_id,
+        label: `${s.sec_codigo} — ${s.trayecto?.tra_nombre || ""}`,
+    })),
+]);
+const opcionesRepSeccionesTodasList = computed(() => [
+    { value: "", label: "Todas las secciones" },
+    ...(props.secciones || []).map((s) => ({
+        value: s.sec_id,
+        label: `${s.sec_codigo} — ${s.trayecto?.tra_nombre || ""}`,
+    })),
+]);
+const opcionesRepSolvencia = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.secciones || []).map((sec) => ({
+        value: sec.sec_id,
+        label: `${sec.sec_codigo} — ${sec.trayecto?.tra_nombre || ""} (${sec.turno?.tur_nombre || ""})`,
+    })),
+]);
+const opcionesRepTrayectos = computed(() => [
+    { value: "", label: "Todos" },
+    ...(props.trayectos || []).map((t) => ({ value: t.tra_id, label: t.tra_nombre })),
+]);
+const opcionesRepComunidades = computed(() => [
+    { value: "", label: "Todas" },
+    ...(props.comunidades || []).map((c) => ({ value: c.com_id, label: c.com_nombre })),
+]);
+const opcionesRepTiposProy = computed(() => [
+    { value: "", label: "Todos" },
+    ...(props.tiposProyecto || []).map((t) => ({ value: t.tpr_id, label: t.tpr_nombre })),
+]);
+const opcionesRepEstado = [
+    { value: "", label: "Todos" },
+    { value: "Aprobado", label: "Aprobado" },
+    { value: "Aplazado", label: "Aplazado" },
+    { value: "No Presentado", label: "No Presentado" },
+    { value: "sin_resultado", label: "Sin Resultado" },
+];
+const opcionesRepProfesores = computed(() => [
+    { value: "", label: "Todos" },
+    ...(props.profesores || []).map((p) => ({
+        value: p.usu_id,
+        label: `${p.usu_primer_nombre} ${p.usu_primer_apellido}`,
+    })),
+]);
 const generarSolvencia = () => {
     if (!seccionSeleccionada.value) return;
     router.get("/coordinador/reportes/solvencia", {

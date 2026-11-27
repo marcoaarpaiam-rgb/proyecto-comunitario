@@ -63,6 +63,18 @@
             </div>
 
             <div class="content">
+                <div v-if="$page.props.flash?.error" class="alert alert-danger py-2 px-3 small mb-3">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ $page.props.flash.error }}
+                </div>
+                <div v-if="$page.props.flash?.success" class="alert alert-success py-2 px-3 small mb-3">
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ $page.props.flash.success }}
+                </div>
+                <div v-if="Object.keys($page.props.errors || {}).length > 0" class="alert alert-danger py-2 px-3 small mb-3">
+                    <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ocurrió un error al procesar la solicitud:</div>
+                    <ul class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
+                </div>
                 <!-- Header del equipo -->
                 <div
                     class="sc mb-3"
@@ -278,7 +290,7 @@
                                             }}</span
                                         >
                                         <span
-                                            v-if="metricasIndividuales?.[int.usuario?.usu_id]?.nota_individual !== null && metricasIndividuales?.[int.usuario?.usu_id]?.nota_individual !== undefined"
+                                            v-if="esProfesor && metricasIndividuales?.[int.usuario?.usu_id]?.nota_individual !== null && metricasIndividuales?.[int.usuario?.usu_id]?.nota_individual !== undefined"
                                             class="badge"
                                             :class="metricasIndividuales[int.usuario.usu_id].aprobado_individual ? 'bg-success' : 'bg-danger'"
                                             style="font-size: 0.7rem"
@@ -301,6 +313,27 @@
 
                     <!-- Proyecto y comunidad -->
                     <div class="col-md-7">
+                        <div
+                            v-if="esProfesor && equipo.proyecto_comunidad && !equipo.proyecto_comunidad.pco_comunidad_aprobada && equipo.proyecto_comunidad.pco_id_com"
+                            class="alert alert-warning border-warning shadow-sm mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2"
+                        >
+                            <div>
+                                <div class="fw-bold">
+                                    <i class="bi bi-hourglass-split me-1"></i>Postulación Comunitaria Pendiente de Aprobación Docente
+                                </div>
+                                <div class="small">
+                                    El equipo postuló la comunidad <strong>{{ equipo.proyecto_comunidad.comunidad?.com_nombre }}</strong>. Apruébala para desbloquear entregables y Carta de Presentación.
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn btn-success btn-sm fw-bold rounded-pill px-3"
+                                @click="router.post(`/profesor/equipos/${equipo.equ_id}/aprobar-comunidad`, {}, { preserveScroll: true })"
+                            >
+                                <i class="bi bi-check2-circle me-1"></i>Aprobar Postulación
+                            </button>
+                        </div>
+
                         <div class="sc mb-3" v-if="equipo.proyecto_comunidad">
                             <div class="sh">
                                 <h6>
@@ -344,6 +377,15 @@
                                         equipo.proyecto_comunidad.modalidad
                                             ?.mpr_nombre
                                     }}</span>
+                                </div>
+                                <div class="info-row" v-if="responsableComunidad">
+                                    <span class="info-label">Responsable de la Comunidad</span>
+                                    <span>
+                                        <strong>{{ responsableComunidad.nombre }}</strong>
+                                        <span v-if="responsableComunidad.cedula" class="text-muted"> — C.I. {{ responsableComunidad.cedula }}</span>
+                                        <span v-if="responsableComunidad.telefono" class="text-muted"> · Tel: {{ responsableComunidad.telefono }}</span>
+                                        <span v-if="responsableComunidad.cargo" class="badge bg-light text-dark border ms-1">{{ responsableComunidad.cargo }}</span>
+                                    </span>
                                 </div>
                                 <div class="info-row">
                                     <span class="info-label">Fecha Límite</span
@@ -478,8 +520,8 @@
                         </div>
                     </div>
 
-                    <!-- Calificaciones y Recorrido de Evaluación por Semestre (Motor Oficial UPTP) -->
-                    <div class="col-12" v-if="evaluaciones?.length || actaFinal || equipo.proyecto_comunidad">
+                    <!-- Calificaciones y Recorrido de Evaluación por Semestre (Motor Oficial UPTP) — Solo visible para Docente, NO para Coordinador -->
+                    <div class="col-12" v-if="esProfesor && (evaluaciones?.length || actaFinal || equipo.proyecto_comunidad)">
                         <div class="sc mb-2">
                             <div class="sh d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <h6 class="m-0">
@@ -492,7 +534,7 @@
                                         target="_blank"
                                         class="btn btn-sm btn-warning text-dark fw-bold"
                                         style="font-size: 0.82rem; min-height: 44px; display: inline-flex; align-items: center;"
-                                        title="Abrir panel temporal de 12 horas para jurados y vocero comunitario"
+                                        title="Abrir panel temporal de 12 horas para jurados y responsable de la comunidad"
                                     >
                                         <i class="bi bi-link-45deg me-1"></i>Panel Jurado (12h)
                                     </a>
@@ -634,7 +676,7 @@
                                             <div class="d-flex align-items-center gap-2">
                                                 <i class="bi bi-key-fill text-danger fs-5"></i>
                                                 <div>
-                                                    <span class="small text-muted fw-bold d-block">PIN de Defensa Oficial (Jurado y Vocero Comunitario):</span>
+                                                    <span class="small text-muted fw-bold d-block">PIN de Defensa Oficial (Jurado y Responsable de la Comunidad):</span>
                                                     <span class="fs-5 fw-bold font-monospace text-dark tracking-wider">
                                                         {{ equipo.proyecto_comunidad?.pin_defensa || evaluaciones?.[0]?.pin_defensa }}
                                                     </span>
@@ -754,7 +796,7 @@
                                         <tr>
                                             <th class="ps-4">Punto</th>
                                             <th>Fecha Límite</th>
-                                            <th>Estado / Enfoque de Gestión de Proyectos y Procesos</th>
+                                            <th>Estado / Situación del Proyecto</th>
                                             <th>Avance</th>
                                             <th>Asistencias</th>
                                             <th>Acuerdos</th>
@@ -1209,6 +1251,25 @@ const rutaBase = computed(() => {
     return esProfesor.value ? "/profesor" : "/coordinador";
 });
 
+const responsableComunidad = computed(() => {
+    const resps =
+        props.equipo?.proyecto_comunidad?.comunidad?.responsables ||
+        props.equipo?.proyectoComunidad?.comunidad?.responsables ||
+        [];
+    const activo = resps.find((r) => r.rco_status !== false) || resps[0];
+    if (!activo) return null;
+    const u = activo.usuario;
+    if (!u) return null;
+    const nombre = `${u.usu_primer_nombre || ""} ${u.usu_primer_apellido || ""}`.trim();
+    const cargo = u.cargos?.[0]?.cgo_nombre || "Responsable de la Comunidad";
+    return {
+        nombre: nombre || "—",
+        cedula: u.usu_cedula || "",
+        telefono: u.usu_telefono || "",
+        cargo,
+    };
+});
+
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
@@ -1385,7 +1446,7 @@ const getSignificadoSemaforo = (tipo) => {
         case "no_viable":
             return "Cierre administrativo por falta de factibilidad.";
         default:
-            return "Enfoque de Gestión de Proyectos y Procesos";
+            return "Situación del Proyecto";
     }
 };
 </script>

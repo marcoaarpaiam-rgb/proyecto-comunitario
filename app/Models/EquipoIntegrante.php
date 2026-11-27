@@ -14,6 +14,7 @@ class EquipoIntegrante extends Model
         'ein_es_lider',
         'ein_fecha_ingreso',
         'ein_fecha_salida',
+        'ein_motivo_baja',
         'ein_status',
         'ein_created_at',
         'ein_updated_at',

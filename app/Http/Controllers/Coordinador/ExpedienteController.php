@@ -22,7 +22,7 @@ class ExpedienteController extends Controller
             'integrantes.usuario',
             'historial.tipoEvento',
             'historial' => fn($q) => $q->orderBy('heq_fecha_evento', 'desc'),
-            'proyectoComunidad.comunidad',
+            'proyectoComunidad.comunidad.responsables' => fn($q) => $q->where('rco_status', true)->with(['usuario.cargos' => fn($c) => $c->where('pca_status', true)]),
             'proyectoComunidad.tipoProyecto',
             'proyectoComunidad.modalidad',
             'puntosControl.seguimiento.tipoEncuentro',

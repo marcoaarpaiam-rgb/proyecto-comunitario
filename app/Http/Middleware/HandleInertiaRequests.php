@@ -73,6 +73,11 @@ class HandleInertiaRequests extends Middleware
 
                 return $roles[0] ?? null;
             },
+            'debeCambiarPassword' => function () use ($request) {
+                $user = $request->user();
+                if (!$user || !$user->esLider()) return false;
+                return \Illuminate\Support\Facades\Hash::check((string) $user->usu_cedula, (string) $user->usu_password);
+            },
         ],
         'flash' => [
             'success' => fn() => $request->session()->get('success'),
@@ -100,6 +105,27 @@ class HandleInertiaRequests extends Middleware
             ];
         },
         'googleMapsApiKey' => config('services.google_maps.key', ''),
+        'liderComunidadStatus' => function () use ($request) {
+            $user = $request->user();
+            if (!$user || !$user->esLider()) {
+                return null;
+            }
+            $integrante = \App\Models\EquipoIntegrante::where('ein_id_usu', $user->usu_id)
+                ->where('ein_es_lider', true)
+                ->where('ein_status', true)
+                ->first();
+            if (!$integrante) {
+                return null;
+            }
+            $pco = \App\Models\ProyectoComunidad::where('pco_id_equ', $integrante->ein_id_equ)
+                ->where('pco_status', true)
+                ->first();
+            return [
+                'aprobada'           => (bool) ($pco && ($pco->pco_comunidad_aprobada || $pco->pco_fecha_aprobacion)),
+                'estado_postulacion' => $pco?->pco_estado_postulacion ?? ($pco?->pco_id_com ? 'aprobada' : 'sin_postular'),
+                'tiene_comunidad'    => (bool) $pco?->pco_id_com,
+            ];
+        },
     ];
 }
 }

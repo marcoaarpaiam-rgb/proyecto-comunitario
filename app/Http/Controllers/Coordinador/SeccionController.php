@@ -24,15 +24,16 @@ class SeccionController extends Controller
     }
 
     /**
-     * Valida que el código numérico de sección pertenezca a la centena del trayecto.
-     * Ej: Trayecto 1 → 100-199, Trayecto 2 → 200-299, etc.
+     * Valida que el código numérico de sección pertenezca a alguno de los dos semestres del trayecto.
+     * Ej: Trayecto 1 → 100-299, Trayecto 2 → 300-499, Trayecto 3 → 500-699, Trayecto 4 → 700-899.
      */
     private function validarCentena(string $codigo, int $traNumero): bool
     {
         if (!ctype_digit($codigo)) return true; // códigos no numéricos se omiten
         $num = (int) $codigo;
-        if ($num < 100 || $num > 499) return false;
-        return (int) floor($num / 100) === $traNumero;
+        if ($num < 100 || $num > 899) return false;
+        $centena = (int) floor($num / 100);
+        return (int) ceil($centena / 2) === $traNumero;
     }
 
     public function index()
@@ -78,8 +79,8 @@ class SeccionController extends Controller
 
         // Validación de centena del código
         if ($trayecto && !$this->validarCentena($request->sec_codigo, (int) $trayecto->tra_numero)) {
-            $min = $trayecto->tra_numero * 100;
-            $max = $min + 99;
+            $min = (($trayecto->tra_numero * 2) - 1) * 100;
+            $max = ($trayecto->tra_numero * 2) * 100 + 99;
             return back()->withErrors([
                 'sec_codigo' => "El código de la sección debe estar en el rango {$min}–{$max} para {$trayecto->tra_nombre}.",
             ])->withInput();
@@ -130,8 +131,8 @@ class SeccionController extends Controller
 
         // Validación de centena del código
         if ($trayecto && !$this->validarCentena($request->sec_codigo, (int) $trayecto->tra_numero)) {
-            $min = $trayecto->tra_numero * 100;
-            $max = $min + 99;
+            $min = (($trayecto->tra_numero * 2) - 1) * 100;
+            $max = ($trayecto->tra_numero * 2) * 100 + 99;
             return back()->withErrors([
                 'sec_codigo' => "El código de la sección debe estar en el rango {$min}–{$max} para {$trayecto->tra_nombre}.",
             ])->withInput();

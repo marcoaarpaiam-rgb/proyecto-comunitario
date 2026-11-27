@@ -63,22 +63,15 @@
                                 Sin profesor asignado
                             </div>
                         </div>
-                        <select
-                            v-model="profesorSel"
-                            class="form-select form-select-sm"
-                            style="max-width: 260px"
-                        >
-                            <option value="">Seleccionar profesor...</option>
-                            <option
-                                v-for="p in profesores"
-                                :key="p.usu_id"
-                                :value="p.usu_id"
-                            >
-                                {{ p.usu_primer_nombre }}
-                                {{ p.usu_primer_apellido }} (C.I.
-                                {{ p.usu_cedula }})
-                            </option>
-                        </select>
+                        <div style="min-width: 260px;">
+                            <SelectBuscable
+                                v-model="profesorSel"
+                                :options="opcionesProfesoresDetalle"
+                                size="sm"
+                                placeholder="Seleccionar profesor..."
+                                search-placeholder="Buscar profesor o C.I...."
+                            />
+                        </div>
                         <button
                             class="btn btn-sm btn-danger fw-bold"
                             :disabled="!profesorSel || loadingAsignar"
@@ -99,9 +92,6 @@
                         <span class="text-muted small fw-bold"><i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> Formatos Excel Oficiales UPTP:</span>
                         <a :href="`/coordinador/secciones/${seccion.sec_id}/excel/vinculacion`" class="btn btn-sm btn-outline-success fw-bold rounded-pill px-3">
                             <i class="bi bi-download me-1"></i> Planilla de Vinculación (.xlsx)
-                        </a>
-                        <a :href="`/coordinador/secciones/${seccion.sec_id}/excel/inventario`" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3">
-                            <i class="bi bi-download me-1"></i> Inventario PST Semanas 6, 10, 14, 18 (.xlsx)
                         </a>
                     </div>
                 </div>
@@ -137,13 +127,13 @@
                     </div>
                 </div>
 
-                <!-- Diagnóstico y Enfoque de Gestión de Proyectos y Procesos de Equipos (Filtros Compactos) -->
+                <!-- Diagnóstico y Situación del Proyecto de Equipos (Filtros Compactos) -->
                 <div v-if="diagnosticosEquipos && Object.keys(diagnosticosEquipos).length > 0" class="card border-0 shadow-sm p-3 mb-3 bg-white">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                         <div class="d-flex align-items-center gap-2">
                             <span class="fs-5">🧭</span>
                             <div>
-                                <h6 class="fw-bold mb-0 text-dark">Ruta Crítica y Enfoque de Gestión de Proyectos y Procesos</h6>
+                                <h6 class="fw-bold mb-0 text-dark">Ruta Crítica y Situación del Proyecto</h6>
                                 <small class="text-muted" style="font-size: 0.75rem">Semana {{ semanaActual }} &bull; Haz clic en los filtros para filtrar equipos</small>
                             </div>
                         </div>
@@ -198,7 +188,7 @@
                         style="color: var(--text-muted)"
                     >
                         <i class="bi bi-people fs-1 d-block mb-3"></i>No hay
-                        equipos {{ filtroSemaforo ? 'con el Enfoque de Gestión seleccionado' : 'en esta sección' }}
+                        equipos {{ filtroSemaforo ? 'con la Situación del Proyecto seleccionada' : 'en esta sección' }}
                     </div>
                 </div>
 
@@ -424,6 +414,14 @@ const equiposFiltrados = computed(() => {
 });
 
 const profesorSel = ref("");
+const opcionesProfesoresDetalle = computed(() => [
+    { value: "", label: "Seleccionar profesor..." },
+    ...(props.profesores || []).map((p) => ({
+        value: p.usu_id,
+        label: `${p.usu_primer_nombre} ${p.usu_primer_apellido}`,
+        sublabel: `C.I. ${p.usu_cedula}`,
+    })),
+]);
 const loadingAsignar = ref(false);
 const mensajeAsignado = ref("");
 const asignarProfesor = () => {

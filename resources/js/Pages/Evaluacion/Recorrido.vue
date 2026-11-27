@@ -33,6 +33,14 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <a
+                        v-if="!esImpar && proyecto?.id_equipo"
+                        :href="`/evaluaciones/planilla-pdf/${proyecto.id_equipo}`"
+                        target="_blank"
+                        class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                    >
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Exportar Planilla de Evaluación (PDF)
+                    </a>
                     <Link
                         href="/evaluaciones"
                         class="btn btn-outline-secondary btn-sm rounded-pill px-3"
@@ -214,7 +222,7 @@
                                     El PIN de Defensa y la Evaluación Final están temporalmente inactivos
                                 </h5>
                                 <p class="text-muted small mb-3" style="line-height: 1.6;">
-                                    Por directriz institucional del PNFI y control estricto de auditoría académica, el <strong>PIN de defensa</strong> para jurados y vocero comunitario, así como el <strong>registro de notas de la Socialización Final</strong> (Semestre 2), <strong>solo se habilitan cuando se haya programado y guardado la Fecha y Lugar</strong> del acto de defensa.
+                                    Por directriz institucional del PNFI y control estricto de auditoría académica, el <strong>PIN de defensa</strong> para jurados y responsable de la comunidad, así como el <strong>registro de notas de la Socialización Final</strong> (Semestre 2), <strong>solo se habilitan cuando se haya programado y guardado la Fecha y Lugar</strong> del acto de defensa.
                                 </p>
 
                                 <!-- Formulario Contextual para Registrar Fecha y Lugar -->
@@ -384,11 +392,11 @@
                                                 </template>
                                             </div>
                                         </div>
-                                        <div>
+                                        <div v-if="!esCoordinador">
                                             <Link
                                                 :href="`/evaluaciones/evaluar/${sem.id_recorrido}/docente_proyecto`"
                                                 class="btn btn-sm rounded-pill px-3"
-                                                :class="(getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? 'btn-outline-secondary' : 'btn-danger'"
+                                                :class="(getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? 'btn-outline-warning' : 'btn-danger'"
                                             >
                                                 <i class="bi" :class="(getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? 'bi-pencil' : 'bi-clipboard-check'"></i>
                                                 {{ (getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? ' Modificar' : ' Evaluar Rúbrica' }}
@@ -400,7 +408,7 @@
                                     <div class="p-3 rounded border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
                                         <div>
                                             <div class="fw-bold text-dark">
-                                                <i class="bi bi-people text-danger me-2"></i>Vocero Comunitario
+                                                <i class="bi bi-people text-danger me-2"></i>Responsable de la Comunidad
                                                 <span class="badge bg-light text-dark border ms-1 small">Peso: 40%</span>
                                             </div>
                                             <div class="small text-muted mt-1">
@@ -414,11 +422,11 @@
                                                 </template>
                                             </div>
                                         </div>
-                                        <div>
+                                        <div v-if="!esCoordinador">
                                             <Link
                                                 :href="`/evaluaciones/evaluar/${sem.id_recorrido}/comunidad`"
                                                 class="btn btn-sm rounded-pill px-3"
-                                                :class="getEval(sem, 'comunidad') ? 'btn-outline-secondary' : 'btn-danger'"
+                                                :class="getEval(sem, 'comunidad') ? 'btn-outline-warning' : 'btn-danger'"
                                             >
                                                 <i class="bi" :class="getEval(sem, 'comunidad') ? 'bi-pencil' : 'bi-clipboard-check'"></i>
                                                 {{ getEval(sem, 'comunidad') ? ' Modificar' : ' Evaluar Rúbrica' }}
@@ -473,11 +481,11 @@
                                                     </template>
                                                 </div>
                                             </div>
-                                            <div>
+                                            <div v-if="!esCoordinador">
                                                 <Link
                                                     :href="`/evaluaciones/evaluar/${sem.id_recorrido}/docente_proyecto`"
                                                     class="btn btn-sm rounded-pill px-3"
-                                                    :class="(getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? 'btn-outline-secondary' : 'btn-danger'"
+                                                    :class="(getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? 'btn-outline-warning' : 'btn-danger'"
                                                 >
                                                     <i class="bi" :class="(getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? 'bi-pencil' : 'bi-clipboard-check'"></i>
                                                     {{ (getEval(sem, 'docente_proyecto') || getEval(sem, 'tutor')) ? ' Modificar' : ' Evaluar Rúbrica' }}
@@ -503,11 +511,11 @@
                                                     </template>
                                                 </div>
                                             </div>
-                                            <div>
+                                            <div v-if="!esCoordinador">
                                                 <Link
                                                     :href="`/evaluaciones/evaluar/${sem.id_recorrido}/jurado`"
                                                     class="btn btn-sm rounded-pill px-3"
-                                                    :class="getEval(sem, 'jurado') ? 'btn-outline-secondary' : 'btn-danger'"
+                                                    :class="getEval(sem, 'jurado') ? 'btn-outline-warning' : 'btn-danger'"
                                                 >
                                                     <i class="bi" :class="getEval(sem, 'jurado') ? 'bi-pencil' : 'bi-clipboard-check'"></i>
                                                     {{ getEval(sem, 'jurado') ? ' Modificar' : ' Evaluar Rúbrica' }}
@@ -533,11 +541,11 @@
                                                     </template>
                                                 </div>
                                             </div>
-                                            <div>
+                                            <div v-if="!esCoordinador">
                                                 <Link
                                                     :href="`/evaluaciones/evaluar/${sem.id_recorrido}/comunidad`"
                                                     class="btn btn-sm rounded-pill px-3"
-                                                    :class="getEval(sem, 'comunidad') ? 'btn-outline-secondary' : 'btn-danger'"
+                                                    :class="getEval(sem, 'comunidad') ? 'btn-outline-warning' : 'btn-danger'"
                                                 >
                                                     <i class="bi" :class="getEval(sem, 'comunidad') ? 'bi-pencil' : 'bi-clipboard-check'"></i>
                                                     {{ getEval(sem, 'comunidad') ? ' Modificar' : ' Evaluar Rúbrica' }}
@@ -563,11 +571,11 @@
                                                     </template>
                                                 </div>
                                             </div>
-                                            <div>
+                                            <div v-if="!esCoordinador">
                                                 <Link
                                                     :href="`/evaluaciones/evaluar/${sem.id_recorrido}/estudiante`"
                                                     class="btn btn-sm rounded-pill px-3"
-                                                    :class="getEval(sem, 'estudiante') ? 'btn-outline-secondary' : 'btn-success'"
+                                                    :class="getEval(sem, 'estudiante') ? 'btn-outline-warning' : 'btn-success'"
                                                 >
                                                     <i class="bi" :class="getEval(sem, 'estudiante') ? 'bi-pencil' : 'bi-clipboard-check'"></i>
                                                     {{ getEval(sem, 'estudiante') ? ' Modificar' : ' Cargar Autoevaluación' }}
@@ -739,7 +747,7 @@
 
                                     <!-- Exportar Planilla de Vinculación -->
                                     <a
-                                        :href="`/inventario/excel/vinculacion/${proyecto.id_proyecto}`"
+                                        :href="`/excel/vinculacion/${proyecto.id_proyecto}`"
                                         class="btn btn-outline-success fw-bold rounded-pill"
                                     >
                                         <i class="bi bi-file-earmark-excel-fill me-1"></i> Exportar Planilla de Vinculación (.xlsx)
@@ -772,7 +780,7 @@
                             </p>
                             <div class="d-inline-flex gap-2">
                                 <a
-                                    :href="`/inventario/excel/vinculacion/${proyecto.id_proyecto}`"
+                                    :href="`/excel/vinculacion/${proyecto.id_proyecto}`"
                                     class="btn btn-sm btn-outline-success rounded-pill"
                                 >
                                     <i class="bi bi-file-earmark-excel me-1"></i> Descargar Planilla de Vinculación Preliminar

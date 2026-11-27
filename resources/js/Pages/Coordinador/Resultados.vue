@@ -29,12 +29,6 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button
-                        class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
-                        @click="abrirModal()"
-                    >
-                        <i class="bi bi-plus-lg me-1"></i>Registrar
-                    </button>
                     <button class="tb-btn" @click="toggleTema">
                         <i
                             class="bi"
@@ -80,20 +74,14 @@
 
                     <!-- Filtros: Sección y Búsqueda -->
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <select
-                            v-model="filtroSeccion"
-                            class="form-select form-select-sm"
-                            style="min-width: 200px; max-width: 260px;"
-                        >
-                            <option value="">Todas las secciones</option>
-                            <option
-                                v-for="sec in secciones"
-                                :key="sec.sec_id"
-                                :value="sec.sec_id"
-                            >
-                                Sección {{ sec.sec_codigo }} — {{ sec.trayecto?.tra_nombre }} ({{ sec.turno?.tur_nombre }})
-                            </option>
-                        </select>
+                        <div style="min-width: 240px;">
+                            <SelectBuscable
+                                v-model="filtroSeccion"
+                                :options="opcionesSeccionesRes"
+                                size="sm"
+                                placeholder="Todas las secciones"
+                            />
+                        </div>
 
                         <div class="srch">
                             <i class="bi bi-search"></i>
@@ -178,17 +166,7 @@
                                             class="bs bw"
                                             >Habilitado</span
                                         >
-                                        <button
-                                            v-else
-                                            class="btn btn-sm btn-outline-warning fw-semibold"
-                                            style="
-                                                font-size: 0.75rem;
-                                                padding: 3px 8px;
-                                            "
-                                            @click="habilitarTardio(rpr)"
-                                        >
-                                            Habilitar tardío
-                                        </button>
+                                        <span v-else class="text-muted small">No habilitado</span>
                                     </td>
                                     <td
                                         style="
@@ -202,7 +180,7 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <button
-                                            class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 rounded-pill px-2.5 py-1"
+                                            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 rounded-pill px-2.5 py-1"
                                             @click="verHistorialEquipo(rpr)"
                                             title="Ver historial académico e información del equipo"
                                         >
@@ -237,26 +215,15 @@
                                     >Proyecto
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.rpr_id_pco"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.rpr_id_pco,
-                                    }"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="pco in proyectos"
-                                        :key="pco.pco_id"
-                                        :value="pco.pco_id"
-                                    >
-                                        {{ pco.equipo?.equ_codigo }} —
-                                        {{ pco.comunidad?.com_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesProyectosRes"
+                                    :has-error="!!errores.rpr_id_pco"
+                                    placeholder="Seleccionar..."
+                                />
                                 <div
                                     v-if="errores.rpr_id_pco"
-                                    class="invalid-feedback"
+                                    class="invalid-feedback d-block"
                                 >
                                     {{ errores.rpr_id_pco }}
                                 </div>
@@ -266,25 +233,15 @@
                                     >Estado Final
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.rpr_id_epr"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.rpr_id_epr,
-                                    }"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="est in estados"
-                                        :key="est.epr_id"
-                                        :value="est.epr_id"
-                                    >
-                                        {{ est.epr_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesEstadosRes"
+                                    :has-error="!!errores.rpr_id_epr"
+                                    placeholder="Seleccionar..."
+                                />
                                 <div
                                     v-if="errores.rpr_id_epr"
-                                    class="invalid-feedback"
+                                    class="invalid-feedback d-block"
                                 >
                                     {{ errores.rpr_id_epr }}
                                 </div>
@@ -294,25 +251,15 @@
                                     >Trayecto
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.rpr_id_tra"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.rpr_id_tra,
-                                    }"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="tra in trayectos"
-                                        :key="tra.tra_id"
-                                        :value="tra.tra_id"
-                                    >
-                                        {{ tra.tra_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesTrayectosRes"
+                                    :has-error="!!errores.rpr_id_tra"
+                                    placeholder="Seleccionar..."
+                                />
                                 <div
                                     v-if="errores.rpr_id_tra"
-                                    class="invalid-feedback"
+                                    class="invalid-feedback d-block"
                                 >
                                     {{ errores.rpr_id_tra }}
                                 </div>
@@ -705,6 +652,7 @@
 </template>
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -791,6 +739,28 @@ const confirmarTardio = () => {
 // ── Filtro y Búsqueda ────────────────────────────────────────────────
 const filtroSeccion = ref("");
 const busqueda = ref("");
+const opcionesSeccionesRes = computed(() => [
+    { value: "", label: "Todas las secciones" },
+    ...(props.secciones || []).map((sec) => ({
+        value: sec.sec_id,
+        label: `Sección ${sec.sec_codigo} — ${sec.trayecto?.tra_nombre || ""} (${sec.turno?.tur_nombre || ""})`,
+    })),
+]);
+const opcionesProyectosRes = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.proyectos || []).map((pco) => ({
+        value: pco.pco_id,
+        label: `${pco.equipo?.equ_codigo || ""} — ${pco.comunidad?.com_nombre || ""}`,
+    })),
+]);
+const opcionesEstadosRes = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.estados || []).map((est) => ({ value: est.epr_id, label: est.epr_nombre })),
+]);
+const opcionesTrayectosRes = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.trayectos || []).map((tra) => ({ value: tra.tra_id, label: tra.tra_nombre })),
+]);
 
 const cleanCodigo = (cod) => {
     if (!cod) return "—";

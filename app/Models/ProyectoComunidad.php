@@ -21,6 +21,8 @@ class ProyectoComunidad extends Model
         'pco_fecha_limite',
         'pco_entregado_a_tiempo',
         'pco_fecha_aprobacion',
+        'pco_comunidad_aprobada',
+        'pco_estado_postulacion',
         'pco_status',
         'pco_created_at',
         'pco_updated_at',
@@ -32,6 +34,12 @@ class ProyectoComunidad extends Model
         'pco_id_usu_aprobado',
         'pco_id_usu_created',
         'pco_id_usu_updated',
+    ];
+
+    protected $casts = [
+        'pco_comunidad_aprobada' => 'boolean',
+        'pco_status'             => 'boolean',
+        'pco_entregado_a_tiempo' => 'boolean',
     ];
 
     public function equipo()

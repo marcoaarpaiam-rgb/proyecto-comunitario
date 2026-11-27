@@ -84,17 +84,48 @@
                                 <p class="text-muted small mb-3">{{ esq.esq_descripcion || 'Sin descripción adicional.' }}</p>
 
                                 <!-- Criterios -->
-                                <div v-if="esq.esq_criterios && esq.esq_criterios.length" class="mb-3">
+                                <div v-if="extraerCriterios(esq.esq_criterios).length" class="mb-3">
                                     <div class="small fw-semibold text-muted mb-2">Criterios de evaluación y pesos:</div>
                                     <div class="d-flex flex-column gap-1">
                                         <div
-                                            v-for="(crit, idx) in esq.esq_criterios"
+                                            v-for="(crit, idx) in extraerCriterios(esq.esq_criterios)"
                                             :key="idx"
                                             class="d-flex justify-content-between align-items-center p-2 rounded small criterio-item"
                                         >
                                             <span>{{ crit.nombre }}</span>
                                             <span class="badge bg-dark">{{ crit.peso }}%</span>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- Baremo Literal (Semestre Impar) -->
+                                <div v-if="esq.esq_modo === 'cualitativo_respaldado' && extraerBaremo(esq.esq_criterios).length" class="mb-3">
+                                    <div class="small fw-semibold text-primary mb-2">
+                                        <i class="bi bi-table me-1"></i>Baremo Literal (Semestre Impar):
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0" style="font-size: 0.78rem;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Letra</th>
+                                                    <th>Nivel de Logro</th>
+                                                    <th>Ref.</th>
+                                                    <th>Condición</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="(b, bIdx) in extraerBaremo(esq.esq_criterios)" :key="bIdx">
+                                                    <td class="fw-bold text-center">{{ b.letra }}</td>
+                                                    <td>{{ b.nivel }}</td>
+                                                    <td class="font-monospace">{{ b.rango }}</td>
+                                                    <td>
+                                                        <span class="badge" :class="b.aprobado ? 'bg-success' : 'bg-danger'">
+                                                            {{ b.aprobado ? 'Aprobado' : 'No Aprobado' }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
 
@@ -204,10 +235,7 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Modo de Evaluación</label>
-                                    <select v-model="form.esq_modo" class="form-select" required>
-                                        <option value="cuantitativo">Cuantitativo (Escala Numérica)</option>
-                                        <option value="cualitativo_respaldado">Cualitativo Respaldado</option>
-                                    </select>
+                                    <SelectBuscable v-model="form.esq_modo" :options="opcionesModoEsq" placeholder="Modo..." />
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Escala Mín / Máx</label>
@@ -231,7 +259,7 @@
                                         <i class="bi bi-plus-circle me-1"></i> Agregar Criterio
                                     </button>
                                 </div>
-                                <div v-for="(crit, idx) in form.esq_criterios" :key="idx" class="row g-2 mb-2 align-items-center">
+                                <div v-for="(crit, idx) in criteriosList" :key="idx" class="row g-2 mb-2 align-items-center">
                                     <div class="col-8">
                                         <input v-model="crit.nombre" type="text" class="form-control form-control-sm" placeholder="Nombre del criterio..." required />
                                     </div>
@@ -249,6 +277,55 @@
                                 </div>
                                 <div class="small fw-semibold mt-1" :class="totalPeso === 100 ? 'text-success' : 'text-danger'">
                                     Total suma de pesos: {{ totalPeso }}% {{ totalPeso !== 100 ? '(Debe sumar 100%)' : '✅' }}
+                                </div>
+                            </div>
+
+                            <!-- Baremo Literal Configurable (Semestre Impar) -->
+                            <div v-if="form.esq_modo === 'cualitativo_respaldado'" class="border rounded p-3 bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <label class="form-label fw-bold text-primary mb-0">
+                                            <i class="bi bi-table me-1"></i>Tabla de Equivalencias / Baremo Literal (Semestre Impar)
+                                        </label>
+                                        <div class="small text-muted">Configura las letras, niveles de logro, rangos referenciales y si aprueba la evaluación formativa.</div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @click="agregarBaremoFila">
+                                        <i class="bi bi-plus-circle me-1"></i>Agregar Letra
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0 bg-white">
+                                        <thead class="small text-muted">
+                                            <tr>
+                                                <th style="width: 75px;">Letra</th>
+                                                <th>Nivel de Logro Descriptivo</th>
+                                                <th style="width: 115px;">Rango Ref.</th>
+                                                <th style="width: 135px;">Condición</th>
+                                                <th style="width: 40px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(fila, idx) in baremoList" :key="idx">
+                                                <td>
+                                                    <input v-model="fila.letra" type="text" maxlength="4" class="form-control form-control-sm text-center fw-bold text-uppercase" placeholder="A" required />
+                                                </td>
+                                                <td>
+                                                    <input v-model="fila.nivel" type="text" class="form-control form-control-sm" placeholder="Ej: Excelente" required />
+                                                </td>
+                                                <td>
+                                                    <input v-model="fila.rango" type="text" class="form-control form-control-sm font-monospace" placeholder="19-20" required />
+                                                </td>
+                                                <td>
+                                                    <SelectBuscable v-model="fila.aprobado" :options="opcionesCondicionBaremo" size="sm" />
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" @click="eliminarBaremoFila(idx)" :disabled="baremoList.length <= 2">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -278,23 +355,19 @@
                             </p>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Sección</label>
-                                <select v-model="formAsignar.esq_sec_id_sec" class="form-select" required>
-                                    <option value="" disabled>Seleccione una sección...</option>
-                                    <option v-for="sec in secciones" :key="sec.sec_id" :value="sec.sec_id">
-                                        {{ sec.sec_nombre || ('Sección ' + sec.sec_codigo + (sec.trayecto ? ' - ' + sec.trayecto.tra_nombre : '') + (sec.turno ? ' (' + sec.turno.tur_nombre + ')' : '')) }}
-                                    </option>
-                                </select>
+                                <SelectBuscable
+                                    v-model="formAsignar.esq_sec_id_sec"
+                                    :options="opcionesSeccionesAsignar"
+                                    placeholder="Seleccione una sección..."
+                                    search-placeholder="Buscar sección..."
+                                />
                                 <div v-if="secciones.length === 0" class="text-danger small mt-1">
-                                    <i class="bi bi-exclamation-triangle me-1"></i> No hay secciones disponibles para asignar.
+                                    <i class="bi bi-exclamation-triangle me-1"></i> No tienes secciones asignadas disponibles.
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Lapso / Semestre</label>
-                                <select v-model="formAsignar.esq_sec_lapso" class="form-select">
-                                    <option value="semestre_1">Semestre 1</option>
-                                    <option value="semestre_2">Semestre 2</option>
-                                    <option value="anual">Completo / Anual</option>
-                                </select>
+                                <SelectBuscable v-model="formAsignar.esq_sec_lapso" :options="opcionesLapsoAsignar" placeholder="Seleccione lapso..." />
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -315,6 +388,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
 import bootstrap from 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import SidebarProfesor from "@/Components/SidebarProfesor.vue"
+import SelectBuscable from "@/Components/SelectBuscable.vue"
 
 const props = defineProps({
     esquemas: { type: Array, default: () => [] },
@@ -322,6 +396,32 @@ const props = defineProps({
     esCoordinador: { type: Boolean, default: false },
     usuarioActual: { type: Object, default: () => ({}) },
 })
+
+const opcionesModoEsq = [
+    { value: "cuantitativo", label: "Cuantitativo (Escala Numérica)" },
+    { value: "cualitativo_respaldado", label: "Cualitativo Respaldado" },
+]
+
+const opcionesCondicionBaremo = [
+    { value: true, label: "Aprobado" },
+    { value: false, label: "No Aprobado" },
+]
+
+const opcionesLapsoAsignar = [
+    { value: "semestre_1", label: "Semestre 1" },
+    { value: "semestre_2", label: "Semestre 2" },
+    { value: "anual", label: "Completo / Anual" },
+]
+
+const opcionesSeccionesAsignar = computed(() => [
+    { value: "", label: "Seleccione una sección..." },
+    ...(props.secciones || []).map((sec) => ({
+        value: sec.sec_id,
+        label:
+            sec.sec_nombre ||
+            `Sección ${sec.sec_codigo}${sec.trayecto ? " - " + sec.trayecto.tra_nombre : ""}${sec.turno ? " (" + sec.turno.tur_nombre + ")" : ""}`,
+    })),
+])
 
 const page = usePage()
 const sidebarOpen = ref(false)
@@ -344,6 +444,33 @@ const editando = ref(false)
 const esquemaEditId = ref(null)
 const esquemaSeleccionado = ref(null)
 
+const BAREMO_INICIAL = () => [
+    { letra: 'A', nivel: 'Excelente', rango: '19-20', aprobado: true },
+    { letra: 'B', nivel: 'Bueno / Aprobado', rango: '16-18', aprobado: true },
+    { letra: 'C', nivel: 'En Proceso / Nivelación', rango: '12-15', aprobado: false },
+    { letra: 'D', nivel: 'Deficiente', rango: '01-11', aprobado: false },
+]
+
+const CRITERIOS_INICIAL = () => [
+    { nombre: 'Informe Técnico', peso: 40 },
+    { nombre: 'Avance Práctico', peso: 30 },
+    { nombre: 'Participación y Puntualidad', peso: 30 },
+]
+
+const extraerCriterios = (raw) => {
+    if (Array.isArray(raw)) return raw
+    if (raw && Array.isArray(raw.criterios)) return raw.criterios
+    return []
+}
+
+const extraerBaremo = (raw) => {
+    if (raw && Array.isArray(raw.baremo)) return raw.baremo
+    return []
+}
+
+const criteriosList = ref(CRITERIOS_INICIAL())
+const baremoList = ref(BAREMO_INICIAL())
+
 const form = useForm({
     esq_nombre: '',
     esq_descripcion: '',
@@ -351,11 +478,7 @@ const form = useForm({
     esq_escala_min: 1,
     esq_escala_max: 20,
     esq_nota_aprobatoria: 16,
-    esq_criterios: [
-        { nombre: 'Informe Técnico', peso: 40 },
-        { nombre: 'Avance Práctico', peso: 30 },
-        { nombre: 'Participación y Puntualidad', peso: 30 },
-    ],
+    esq_criterios: CRITERIOS_INICIAL(),
 })
 
 const formAsignar = useForm({
@@ -366,15 +489,25 @@ const formAsignar = useForm({
 })
 
 const totalPeso = computed(() => {
-    return (form.esq_criterios || []).reduce((acc, curr) => acc + (Number(curr.peso) || 0), 0)
+    return (criteriosList.value || []).reduce((acc, curr) => acc + (Number(curr.peso) || 0), 0)
 })
 
 const agregarCriterio = () => {
-    form.esq_criterios.push({ nombre: '', peso: 0 })
+    criteriosList.value.push({ nombre: '', peso: 0 })
 }
 
 const eliminarCriterio = (idx) => {
-    form.esq_criterios.splice(idx, 1)
+    criteriosList.value.splice(idx, 1)
+}
+
+const agregarBaremoFila = () => {
+    baremoList.value.push({ letra: '', nivel: '', rango: '', aprobado: false })
+}
+
+const eliminarBaremoFila = (idx) => {
+    if (baremoList.value.length > 2) {
+        baremoList.value.splice(idx, 1)
+    }
 }
 
 let modalEsquemaInstance = null
@@ -401,11 +534,8 @@ const abrirModalCrear = () => {
     editando.value = false
     esquemaEditId.value = null
     form.reset()
-    form.esq_criterios = [
-        { nombre: 'Informe Técnico', peso: 40 },
-        { nombre: 'Avance Práctico', peso: 30 },
-        { nombre: 'Participación y Puntualidad', peso: 30 },
-    ]
+    criteriosList.value = CRITERIOS_INICIAL()
+    baremoList.value = BAREMO_INICIAL()
     modalEsquemaInstance?.show()
 }
 
@@ -418,7 +548,10 @@ const abrirModalEditar = (esq) => {
     form.esq_escala_min = Number(esq.esq_escala_min)
     form.esq_escala_max = Number(esq.esq_escala_max)
     form.esq_nota_aprobatoria = Number(esq.esq_nota_aprobatoria)
-    form.esq_criterios = esq.esq_criterios ? JSON.parse(JSON.stringify(esq.esq_criterios)) : []
+    const crits = extraerCriterios(esq.esq_criterios)
+    criteriosList.value = crits.length ? JSON.parse(JSON.stringify(crits)) : CRITERIOS_INICIAL()
+    const bar = extraerBaremo(esq.esq_criterios)
+    baremoList.value = bar.length ? JSON.parse(JSON.stringify(bar)) : BAREMO_INICIAL()
     modalEsquemaInstance?.show()
 }
 
@@ -431,11 +564,18 @@ const personalizarPlantilla = (esq) => {
     form.esq_escala_min = Number(esq.esq_escala_min)
     form.esq_escala_max = Number(esq.esq_escala_max)
     form.esq_nota_aprobatoria = Number(esq.esq_nota_aprobatoria)
-    form.esq_criterios = esq.esq_criterios ? JSON.parse(JSON.stringify(esq.esq_criterios)) : []
+    const crits = extraerCriterios(esq.esq_criterios)
+    criteriosList.value = crits.length ? JSON.parse(JSON.stringify(crits)) : CRITERIOS_INICIAL()
+    const bar = extraerBaremo(esq.esq_criterios)
+    baremoList.value = bar.length ? JSON.parse(JSON.stringify(bar)) : BAREMO_INICIAL()
     modalEsquemaInstance?.show()
 }
 
 const guardarEsquema = () => {
+    form.esq_criterios = form.esq_modo === 'cualitativo_respaldado'
+        ? { criterios: criteriosList.value, baremo: baremoList.value }
+        : criteriosList.value
+
     if (editando.value) {
         form.put(`/profesor/esquemas-evaluacion/${esquemaEditId.value}`, {
             onSuccess: () => modalEsquemaInstance?.hide(),

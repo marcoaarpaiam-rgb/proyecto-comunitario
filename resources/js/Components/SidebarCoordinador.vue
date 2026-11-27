@@ -92,13 +92,6 @@
                     <i class="bi bi-mic"></i> Socializaciones
                 </Link>
                 <Link
-                    href="/evaluaciones"
-                    class="sb-lnk"
-                    :class="{ active: currentPath.startsWith('/evaluaciones') }"
-                >
-                    <i class="bi bi-journal-check"></i> Rúbricas Oficiales
-                </Link>
-                <Link
                     href="/coordinador/resultados"
                     class="sb-lnk"
                     :class="{ active: currentPath.startsWith('/coordinador/resultados') }"

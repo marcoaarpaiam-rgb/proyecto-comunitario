@@ -174,6 +174,12 @@ class LiderController extends Controller
             $idTet = $defaultTet ?: null;
         }
 
+        if (!$equipo->proyectoComunidad || (!$equipo->proyectoComunidad->pco_comunidad_aprobada && !$equipo->proyectoComunidad->pco_fecha_aprobacion)) {
+            return back()->withErrors([
+                'equipo' => 'Tu equipo debe postular los datos comunitarios y recibir la aprobación del docente antes de subir entregables.'
+            ]);
+        }
+
         // Verificar que la carta de presentación está aprobada
         $carta = \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad?->pco_id)
             ->whereNotNull('cpr_fecha_aprobacion')
@@ -182,12 +188,6 @@ class LiderController extends Controller
         if (!$carta) {
             return back()->withErrors([
                 'carta' => 'Debes tener la carta de presentación aprobada antes de subir entregables.'
-            ]);
-        }
-
-        if (!$equipo->proyectoComunidad?->pco_fecha_aprobacion) {
-            return back()->withErrors([
-                'equipo' => 'El profesor aún no ha aprobado la comunidad del proyecto.'
             ]);
         }
 
@@ -373,7 +373,7 @@ class LiderController extends Controller
             return redirect('/lider');
         }
         // Buscar responsable actual de la comunidad
-       $resp = $equipo->proyectoComunidad
+        $resp = ($equipo->proyectoComunidad && $equipo->proyectoComunidad->pco_id_com)
             ? \App\Models\ResponsableComunidad::with('usuario')
                 ->where('rco_id_com', $equipo->proyectoComunidad->pco_id_com)
                 ->where('rco_status', true)->latest('rco_id')->first()
@@ -381,18 +381,172 @@ class LiderController extends Controller
 
         $responsable = $resp ? [
             'rco_id'           => $resp->rco_id,
-            'rco_nombre'       => trim($resp->usuario->usu_primer_nombre . ' ' . $resp->usuario->usu_primer_apellido),
-            'rco_cedula'       => $resp->usuario->usu_cedula,
+            'rco_nombre'       => trim(($resp->usuario->usu_primer_nombre ?? '') . ' ' . ($resp->usuario->usu_primer_apellido ?? '')),
+            'rco_cedula'       => $resp->usuario?->usu_cedula,
             'rco_cargo'        => \App\Models\PersonaCargo::where('pca_id_usu', $resp->rco_id_usu)
                                     ->where('pca_status', true)->latest('pca_id')->value('pca_cargo'),
-            'rco_telefono'     => $resp->usuario->usu_telefono,
-            'rco_email'        => $resp->usuario->usu_email,
+            'rco_telefono'     => $resp->usuario?->usu_telefono,
+            'rco_email'        => $resp->usuario?->usu_email,
             'rco_fecha_inicio' => $resp->rco_fecha_inicio,
         ] : null;
+
         return Inertia::render('Lider/MiProyecto', [
-            'equipo' => $equipo,
-            'responsable' => $responsable,
+            'equipo'            => $equipo,
+            'responsable'       => $responsable,
+            'comunidades'       => \App\Models\Comunidad::where('com_status', true)
+                                    ->with(['tipoOrganizacion', 'proyectos.equipo'])
+                                    ->orderBy('com_nombre')->get(),
+            'tiposOrganizacion' => \App\Models\TipoOrganizacion::where('tor_status', true)->orderBy('tor_nombre')->get(),
+            'tiposProyecto'     => \App\Models\TipoProyecto::where('tpr_status', true)->orderBy('tpr_nombre')->get(),
+            'modalidades'       => \App\Models\ModalidadProyecto::where('mpr_status', true)->orderBy('mpr_nombre')->get(),
         ]);
+    }
+
+    public function postularComunidad(Request $request)
+    {
+        $lider = auth()->user();
+        $equipo = $this->getEquipo();
+        if (!$equipo) {
+            return back()->withErrors(['equipo' => 'No tienes equipo activo asignado como líder.']);
+        }
+
+        if ($equipo->proyectoComunidad && ($equipo->proyectoComunidad->pco_comunidad_aprobada || $equipo->proyectoComunidad->pco_fecha_aprobacion)) {
+            return back()->withErrors(['proyecto' => 'La vinculación comunitaria de tu equipo ya fue aprobada por el docente.']);
+        }
+
+        $request->validate([
+            'modo_comunidad'            => 'required|in:catalogo,nueva',
+            'pco_id_com'                => 'required_if:modo_comunidad,catalogo|nullable|exists:comunidad,com_id',
+            'nueva_comunidad_nombre'    => 'required_if:modo_comunidad,nueva|nullable|string|max:150',
+            'nueva_comunidad_ubicacion' => 'required_if:modo_comunidad,nueva|nullable|string|max:255',
+            'nueva_comunidad_tor'       => 'required_if:modo_comunidad,nueva|nullable|exists:tipo_organizacion,tor_id',
+            'rco_nombre'                => 'required|string|max:60',
+            'rco_apellido'              => 'nullable|string|max:60',
+            'rco_cedula'                => 'required|string|max:20',
+            'rco_telefono'              => 'required|string|max:25',
+            'rco_cargo'                 => 'required|string|max:100',
+            'pco_resumen'               => 'required|string|min:10|max:255',
+            'pco_area_comunidad'        => 'nullable|string|max:150',
+            'pco_id_tpr'                => 'required|exists:tipo_proyecto,tpr_id',
+            'pco_id_mpr'                => 'required|exists:modalidad_proyecto,mpr_id',
+            'pco_id_pco_previo'         => 'nullable|exists:proyecto_comunidad,pco_id',
+        ], [
+            'pco_id_com.required_if'                => 'Debes seleccionar una comunidad del catálogo.',
+            'nueva_comunidad_nombre.required_if'    => 'El nombre de la nueva comunidad es obligatorio.',
+            'nueva_comunidad_ubicacion.required_if' => 'La ubicación de la nueva comunidad es obligatoria.',
+            'nueva_comunidad_tor.required_if'       => 'El tipo de organización es obligatorio.',
+            'rco_nombre.required'                   => 'El nombre del responsable comunitario es obligatorio.',
+            'rco_cedula.required'                   => 'La cédula del responsable comunitario es obligatoria.',
+            'rco_telefono.required'                 => 'El teléfono del responsable comunitario es obligatorio.',
+            'rco_cargo.required'                    => 'El cargo del responsable comunitario es obligatorio.',
+            'pco_resumen.required'                  => 'El resumen del proyecto es obligatorio.',
+            'pco_resumen.min'                       => 'El resumen debe tener al menos 10 caracteres.',
+            'pco_id_tpr.required'                   => 'La línea de investigación es obligatoria.',
+            'pco_id_mpr.required'                   => 'La modalidad del proyecto es obligatoria.',
+        ]);
+
+        \DB::transaction(function () use ($request, $equipo, $lider) {
+            if ($request->modo_comunidad === 'nueva') {
+                $comunidad = \App\Models\Comunidad::create([
+                    'com_nombre'         => trim($request->nueva_comunidad_nombre),
+                    'com_ubicacion'      => trim($request->nueva_comunidad_ubicacion),
+                    'com_id_tor'         => $request->nueva_comunidad_tor,
+                    'com_status'         => true,
+                    'com_id_usu_created' => $lider->usu_id,
+                ]);
+                $comunidadId = $comunidad->com_id;
+            } else {
+                $comunidadId = (int) $request->pco_id_com;
+            }
+
+            // Registrar / actualizar vocero o responsable comunitario
+            $partesNombre = preg_split('/\s+/', trim($request->rco_nombre));
+            $primerNombre = $partesNombre[0] ?? trim($request->rco_nombre);
+            $primerApellido = trim($request->rco_apellido ?: ($partesNombre[1] ?? 'Comunitario'));
+
+            $persona = \App\Models\Usuario::firstOrCreate(
+                ['usu_cedula' => trim($request->rco_cedula)],
+                [
+                    'usu_primer_nombre'   => $primerNombre,
+                    'usu_primer_apellido' => $primerApellido,
+                    'usu_telefono'        => trim($request->rco_telefono),
+                    'usu_tiene_acceso'    => false,
+                    'usu_status'          => true,
+                    'usu_id_usu_created'  => $lider->usu_id,
+                ]
+            );
+
+            if ($persona->usu_telefono !== trim($request->rco_telefono)) {
+                $persona->update(['usu_telefono' => trim($request->rco_telefono)]);
+            }
+
+            \App\Models\ResponsableComunidad::where('rco_id_com', $comunidadId)
+                ->where('rco_status', true)
+                ->update(['rco_status' => false, 'rco_fecha_fin' => now()->toDateString()]);
+
+            \App\Models\ResponsableComunidad::create([
+                'rco_id_usu'         => $persona->usu_id,
+                'rco_id_com'         => $comunidadId,
+                'rco_fecha_inicio'   => now()->toDateString(),
+                'rco_status'         => true,
+                'rco_id_usu_created' => $lider->usu_id,
+            ]);
+
+            \App\Models\PersonaCargo::create([
+                'pca_cargo'          => trim($request->rco_cargo ?: 'Responsable de la Comunidad'),
+                'pca_fecha_inicio'   => now()->toDateString(),
+                'pca_status'         => true,
+                'pca_id_usu'         => $persona->usu_id,
+                'pca_id_usu_created' => $lider->usu_id,
+            ]);
+
+            // Crear o actualizar el proyecto del equipo como "Pendiente de Aprobación Docente"
+            $datosPco = [
+                'pco_id_com'             => $comunidadId,
+                'pco_id_tpr'             => $request->pco_id_tpr,
+                'pco_id_mpr'             => $request->pco_id_mpr,
+                'pco_id_pco_previo'      => $request->pco_id_pco_previo ?: null,
+                'pco_resumen'            => trim($request->pco_resumen),
+                'pco_area_comunidad'     => trim((string) ($request->pco_area_comunidad ?? '')),
+                'pco_fecha_limite'       => $equipo->proyectoComunidad?->pco_fecha_limite ?: now()->addMonths(6)->toDateString(),
+                'pco_comunidad_aprobada' => false,
+                'pco_estado_postulacion' => 'pendiente_aprobacion',
+                'pco_fecha_aprobacion'   => null,
+                'pco_id_usu_aprobado'    => null,
+                'pco_status'             => true,
+                'pco_id_usu_updated'     => $lider->usu_id,
+            ];
+
+            if ($equipo->proyectoComunidad) {
+                $equipo->proyectoComunidad->update($datosPco);
+            } else {
+                $datosPco['pco_id_equ'] = $equipo->equ_id;
+                $datosPco['pco_id_usu_created'] = $lider->usu_id;
+                \App\Models\ProyectoComunidad::create($datosPco);
+            }
+
+            // Notificar al Docente de Proyecto de la sección
+            if ($equipo->equ_id_sec) {
+                $profesoresIds = \App\Models\ProfesorSeccion::where('pse_id_sec', $equipo->equ_id_sec)
+                    ->where('pse_status', true)
+                    ->pluck('pse_id_usu');
+
+                $tipoNotif = \App\Models\TipoNotificacion::first()?->tno_id ?? 1;
+
+                foreach ($profesoresIds as $profId) {
+                    Notificacion::create([
+                        'not_id_usu'           => $profId,
+                        'not_id_tno'           => $tipoNotif,
+                        'not_id_equ'           => $equipo->equ_id,
+                        'not_mensaje'          => "El equipo {$equipo->equ_codigo} postuló sus datos comunitarios y espera tu aprobación para habilitar entregables y Carta de Presentación.",
+                        'not_leida'            => false,
+                        'not_fecha_generacion' => now(),
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Postulación comunitaria enviada exitosamente. Estado actual: Pendiente de Aprobación Docente.');
     }
     public function descargarCarta($id)
     {
@@ -595,5 +749,40 @@ class LiderController extends Controller
         return Inertia::render('Lider/HistorialAcademico', [
             'equipo' => $equipoCompleto,
         ]);
+    }
+
+    public function cambiarPassword(Request $request)
+    {
+        $user = auth()->user();
+        abort_unless($user && $user->esLider(), 403);
+
+        $request->validate([
+            'password_actual' => 'required|string',
+            'password'        => 'required|string|min:6|confirmed',
+        ], [
+            'password_actual.required' => 'Debes ingresar tu contraseña actual (por defecto tu cédula).',
+            'password.required'        => 'Debes ingresar la nueva contraseña.',
+            'password.min'             => 'La nueva contraseña debe tener al menos 6 caracteres.',
+            'password.confirmed'       => 'La confirmación de contraseña no coincide.',
+        ]);
+
+        if (!\Illuminate\Support\Facades\Hash::check($request->password_actual, $user->usu_password)) {
+            return back()->withErrors([
+                'password_actual' => 'La contraseña actual no es correcta.',
+            ]);
+        }
+
+        if (trim($request->password) === trim((string) $user->usu_cedula)) {
+            return back()->withErrors([
+                'password' => 'La nueva contraseña no puede ser igual a tu número de cédula.',
+            ]);
+        }
+
+        $user->update([
+            'usu_password'       => \Illuminate\Support\Facades\Hash::make($request->password),
+            'usu_id_usu_updated' => $user->usu_id,
+        ]);
+
+        return back()->with('success', 'Contraseña actualizada correctamente.');
     }
 }

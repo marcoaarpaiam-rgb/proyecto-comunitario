@@ -70,15 +70,28 @@
                                 margin-top: 2px;
                             "
                         >
-                            Gestión académica del PNF Informática &bull; Inicio en Semestre Impar y Cierre en Semestre Par
+                            Consulta académica del PNF Informática &bull; Inicio en Semestre Impar y Cierre en Semestre Par
                         </p>
                     </div>
-                    <button
-                        class="btn btn-danger fw-bold rounded-pill px-4"
-                        @click="abrirModal()"
-                    >
-                        <i class="bi bi-plus-lg me-2"></i>Nueva Sección
-                    </button>
+                </div>
+
+                <div
+                    v-if="$page.props.flash?.error || Object.keys($page.props.errors || {}).length"
+                    class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-3"
+                >
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span v-if="$page.props.flash?.error">{{ $page.props.flash.error }}</span>
+                    <ul v-else class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div
+                    v-if="$page.props.flash?.success"
+                    class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3"
+                >
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ $page.props.flash.success }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
 
                 <div class="sc">
@@ -284,34 +297,12 @@
                                         ></a>
                                         <a
                                             :href="`/coordinador/secciones/${sec.sec_id}/excel/vinculacion`"
-                                            class="btn btn-sm btn-outline-success me-1"
+                                            class="btn btn-sm btn-outline-success"
                                             title="Descargar Planilla de Vinculación oficial (.xlsx)"
                                             ><i
                                                 class="bi bi-file-earmark-spreadsheet"
                                             ></i
                                         ></a>
-                                        <a
-                                            :href="`/coordinador/secciones/${sec.sec_id}/excel/inventario`"
-                                            class="btn btn-sm btn-outline-primary me-1"
-                                            title="Descargar Inventario PST (.xlsx)"
-                                            ><i
-                                                class="bi bi-file-earmark-excel"
-                                            ></i
-                                        ></a>
-                                        <button
-                                            class="btn btn-sm btn-outline-primary me-1"
-                                            @click="abrirModal(sec)"
-                                            title="Editar sección y profesor"
-                                        >
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-sm btn-outline-danger"
-                                            @click="desactivar(sec)"
-                                            title="Desactivar sección"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -413,25 +404,15 @@
                                             >*</span
                                         ></label
                                     >
-                                    <select
+                                    <SelectBuscable
                                         v-model="form.sec_id_tra"
-                                        class="form-select"
-                                        :class="{
-                                            'is-invalid': errores.sec_id_tra,
-                                        }"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option
-                                            v-for="tra in trayectos"
-                                            :key="tra.tra_id"
-                                            :value="tra.tra_id"
-                                        >
-                                            {{ tra.tra_nombre }}
-                                        </option>
-                                    </select>
+                                        :options="opcionesTrayectosSec"
+                                        :has-error="!!errores.sec_id_tra"
+                                        placeholder="Seleccionar..."
+                                    />
                                     <div
                                         v-if="errores.sec_id_tra"
-                                        class="invalid-feedback"
+                                        class="invalid-feedback d-block"
                                     >
                                         {{ errores.sec_id_tra }}
                                     </div>
@@ -440,35 +421,11 @@
                                     <label class="form-label fw-semibold"
                                         >Semestre</label
                                     >
-                                    <select
+                                    <SelectBuscable
                                         v-model="form.sec_semestre"
-                                        class="form-select"
-                                    >
-                                        <option :value="1">
-                                            Semestre 1 (Cualitativo)
-                                        </option>
-                                        <option :value="2">
-                                            Semestre 2 (Cuantitativo)
-                                        </option>
-                                        <option :value="3">
-                                            Semestre 3 (Cualitativo)
-                                        </option>
-                                        <option :value="4">
-                                            Semestre 4 (Cuantitativo)
-                                        </option>
-                                        <option :value="5">
-                                            Semestre 5 (Cualitativo)
-                                        </option>
-                                        <option :value="6">
-                                            Semestre 6 (Cuantitativo)
-                                        </option>
-                                        <option :value="7">
-                                            Semestre 7 (Cualitativo)
-                                        </option>
-                                        <option :value="8">
-                                            Semestre 8 (Cuantitativo)
-                                        </option>
-                                    </select>
+                                        :options="opcionesSemestresSec"
+                                        placeholder="Semestre..."
+                                    />
                                 </div>
                             </div>
 
@@ -476,45 +433,23 @@
                                 <label class="form-label fw-semibold"
                                     >Profesor de Proyecto</label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.pse_id_usu"
-                                    class="form-select"
-                                >
-                                    <option value="">
-                                        Sin profesor asignado...
-                                    </option>
-                                    <option
-                                        v-for="p in profesores"
-                                        :key="p.usu_id"
-                                        :value="p.usu_id"
-                                    >
-                                        {{ p.usu_primer_nombre }}
-                                        {{ p.usu_primer_apellido }} (C.I.
-                                        {{ p.usu_cedula }})
-                                    </option>
-                                </select>
+                                    :options="opcionesProfesoresSec"
+                                    placeholder="Sin profesor asignado..."
+                                />
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Turno
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.sec_id_tur"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.sec_id_tur,
-                                    }"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="tur in turnos"
-                                        :key="tur.tur_id"
-                                        :value="tur.tur_id"
-                                    >
-                                        {{ tur.tur_nombre }}
-                                    </option>
-                                </select>
+                                    :options="opcionesTurnosSec"
+                                    :has-error="!!errores.sec_id_tur"
+                                    placeholder="Seleccionar..."
+                                />
                                 <div
                                     v-if="errores.sec_id_tur"
                                     class="invalid-feedback"
@@ -595,6 +530,7 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
@@ -695,6 +631,32 @@ const semestreDeSeccion = (sec) => {
     }
     return sec.sec_id_tra || 1;
 };
+
+const opcionesTrayectosSec = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.trayectos || []).map((tra) => ({ value: tra.tra_id, label: tra.tra_nombre })),
+]);
+const opcionesSemestresSec = [
+    { value: 1, label: "Semestre 1 (Cualitativo)" },
+    { value: 2, label: "Semestre 2 (Cuantitativo)" },
+    { value: 3, label: "Semestre 3 (Cualitativo)" },
+    { value: 4, label: "Semestre 4 (Cuantitativo)" },
+    { value: 5, label: "Semestre 5 (Cualitativo)" },
+    { value: 6, label: "Semestre 6 (Cuantitativo)" },
+    { value: 7, label: "Semestre 7 (Cualitativo)" },
+    { value: 8, label: "Semestre 8 (Cuantitativo)" },
+];
+const opcionesProfesoresSec = computed(() => [
+    { value: "", label: "Sin profesor asignado..." },
+    ...(props.profesores || []).map((p) => ({
+        value: p.usu_id,
+        label: `${p.usu_primer_nombre} ${p.usu_primer_apellido} (C.I. ${p.usu_cedula})`,
+    })),
+]);
+const opcionesTurnosSec = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.turnos || []).map((tur) => ({ value: tur.tur_id, label: tur.tur_nombre })),
+]);
 
 const abrirModal = (sec = null) => {
     editando.value = sec;

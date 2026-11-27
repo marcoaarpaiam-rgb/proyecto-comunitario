@@ -80,7 +80,7 @@
                                 <div class="alert alert-light border d-flex align-items-start gap-3 mb-3">
                                     <i class="bi bi-info-circle-fill text-danger fs-4 mt-1"></i>
                                     <div class="small">
-                                        <strong>Configuración Institucional de Lapsos:</strong> El lapso académico activo seleccionado aquí se inyecta de forma dinámica en todo el sistema y en los encabezados oficiales de los reportes descargables en Excel (<strong>INVENTARIO PST</strong> y <strong>PLANILLA DE VINCULACIÓN</strong>).
+                                        <strong>Configuración Institucional de Lapsos:</strong> El lapso académico activo seleccionado aquí se inyecta de forma dinámica en todo el sistema y en los encabezados oficiales de la <strong>PLANILLA DE VINCULACIÓN</strong> y demás reportes.
                                     </div>
                                 </div>
 
@@ -105,15 +105,13 @@
                                             <label class="form-label fw-bold">
                                                 Tipo de Semestre <span class="text-danger">*</span>
                                             </label>
-                                            <select
+                                            <SelectBuscable
                                                 v-model="formLapso.tipo_semestre"
-                                                class="form-select"
-                                                :class="{ 'is-invalid': erroresLapso.tipo_semestre }"
-                                            >
-                                                <option value="Impar">Semestre Impar (Cualitativo)</option>
-                                                <option value="Par">Semestre Par (Cuantitativo / Socialización Final)</option>
-                                            </select>
-                                            <div v-if="erroresLapso.tipo_semestre" class="invalid-feedback">
+                                                :options="opcionesTipoSemestre"
+                                                :has-error="!!erroresLapso.tipo_semestre"
+                                                placeholder="Tipo de Semestre..."
+                                            />
+                                            <div v-if="erroresLapso.tipo_semestre" class="invalid-feedback d-block">
                                                 {{ erroresLapso.tipo_semestre }}
                                             </div>
                                         </div>
@@ -172,7 +170,7 @@
                                                     <th>Lapso</th>
                                                     <th>Tipo</th>
                                                     <th>Período de Fechas</th>
-                                                    <th>Estatus</th>
+                                                    <th>Estado</th>
                                                     <th class="text-end">Acción</th>
                                                 </tr>
                                             </thead>
@@ -534,26 +532,17 @@
                                     como contraseña inicial.
                                 </p>
                                 <div class="d-flex gap-2">
-                                    <select
-                                        v-model="liderId"
-                                        class="form-select form-select-sm"
-                                    >
-                                        <option value="">
-                                            Seleccionar líder...
-                                        </option>
-                                        <option
-                                            v-for="lid in lideres"
-                                            :key="lid.usu_id"
-                                            :value="lid.usu_id"
-                                        >
-                                            {{ lid.usu_primer_nombre }}
-                                            {{ lid.usu_primer_apellido }} ({{
-                                                lid.usu_cedula
-                                            }})
-                                        </option>
-                                    </select>
+                                    <div class="flex-grow-1">
+                                        <SelectBuscable
+                                            v-model="liderId"
+                                            :options="opcionesLideresReset"
+                                            size="sm"
+                                            placeholder="Seleccionar líder..."
+                                            search-placeholder="Nombre o cédula..."
+                                        />
+                                    </div>
                                     <button
-                                        class="btn btn-sm btn-danger fw-bold"
+                                        class="btn btn-sm btn-danger fw-bold flex-shrink-0"
                                         :disabled="!liderId"
                                         @click="resetLider"
                                     >
@@ -570,6 +559,7 @@
 </template>
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
@@ -616,6 +606,20 @@ const loadingPass = ref(false);
 const loadingFirma = ref(false);
 const firmaFile = ref(null);
 const liderId = ref("");
+
+const opcionesTipoSemestre = [
+    { value: "Impar", label: "Semestre Impar (Cualitativo)" },
+    { value: "Par", label: "Semestre Par (Cuantitativo / Socialización Final)" },
+];
+
+const opcionesLideresReset = computed(() => [
+    { value: "", label: "Seleccionar líder..." },
+    ...(props.lideres || []).map((lid) => ({
+        value: lid.usu_id,
+        label: `${lid.usu_primer_nombre} ${lid.usu_primer_apellido}`,
+        sublabel: `C.I. ${lid.usu_cedula}`,
+    })),
+]);
 
 // Lapso Académico
 const formLapso = ref({

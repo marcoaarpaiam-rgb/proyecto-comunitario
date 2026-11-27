@@ -90,15 +90,14 @@
                                 placeholder="Buscar..."
                             />
                         </div>
-                        <select
-                            v-model="filtroAprobacion"
-                            class="form-select form-select-sm"
-                            style="width: 170px"
-                        >
-                            <option value="">Todos</option>
-                            <option value="aprobado">Aprobados</option>
-                            <option value="pendiente">Pendientes</option>
-                        </select>
+                        <div style="min-width: 170px;">
+                            <SelectBuscable
+                                v-model="filtroAprobacion"
+                                :options="opcionesFiltroAprobacion"
+                                size="sm"
+                                placeholder="Todos"
+                            />
+                        </div>
                         <span
                             class="ms-auto"
                             style="
@@ -193,20 +192,14 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="d-inline-flex gap-1 align-items-center">
-                                            <a
-                                                :href="'/evaluaciones/recorrido/' + pco.pco_id"
-                                                class="btn btn-sm btn-danger text-white d-inline-flex align-items-center"
-                                                title="Evaluación Cualitativa / Cuantitativa (Semestres 1 y 2)"
+                                            <Link
+                                                v-if="pco.pco_id_equ"
+                                                :href="`/coordinador/equipos/${pco.pco_id_equ}/expediente`"
+                                                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
+                                                title="Consultar Expediente del Equipo"
                                             >
-                                                <i class="bi bi-award-fill me-1"></i> Evaluar S1/S2
-                                            </a>
-                                            <button
-                                                class="btn btn-sm btn-outline-danger"
-                                                title="Desactivar"
-                                                @click="desactivar(pco)"
-                                            >
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                                <i class="bi bi-eye me-1"></i> Consultar Expediente
+                                            </Link>
                                         </div>
                                     </td>
                                 </tr>
@@ -410,24 +403,13 @@
                                             >*</span
                                         ></label
                                     >
-                                    <select
+                                    <SelectBuscable
                                         v-model="form.pco_id_tpr"
-                                        class="form-select"
-                                        :class="{
-                                            'is-invalid': errores.pco_id_tpr,
-                                        }"
+                                        :options="opcionesTiposInvProy"
+                                        :has-error="!!errores.pco_id_tpr"
+                                        placeholder="Seleccionar..."
                                         @change="verificarOtroTipoInv"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option
-                                            v-for="t in listaTiposInvestigacion"
-                                            :key="t.tpr_id"
-                                            :value="t.tpr_id"
-                                        >
-                                            {{ t.tpr_nombre }}
-                                        </option>
-                                        <option value="__OTRO__">➕ Otro (Crear nueva Línea de Investigación...)</option>
-                                    </select>
+                                    />
                                     <div v-if="creandoOtroTipoInv" class="mt-2 p-2 rounded border bg-light">
                                         <label class="small fw-bold text-danger mb-1">Nombre de la nueva Línea de Investigación:</label>
                                         <div class="input-group input-group-sm">
@@ -470,24 +452,13 @@
                                             >*</span
                                         ></label
                                     >
-                                    <select
+                                    <SelectBuscable
                                         v-model="form.pco_id_mpr"
-                                        class="form-select"
-                                        :class="{
-                                            'is-invalid': errores.pco_id_mpr,
-                                        }"
+                                        :options="opcionesModalidadesProy"
+                                        :has-error="!!errores.pco_id_mpr"
+                                        placeholder="Seleccionar..."
                                         @change="verificarOtraModalidad"
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option
-                                            v-for="m in listaModalidades"
-                                            :key="m.mpr_id"
-                                            :value="m.mpr_id"
-                                        >
-                                            {{ m.mpr_nombre }}
-                                        </option>
-                                        <option value="__OTRO__">➕ Otro (Crear nueva Modalidad...)</option>
-                                    </select>
+                                    />
                                     <div v-if="creandoOtraModalidad" class="mt-2 p-2 rounded border bg-light">
                                         <label class="small fw-bold text-danger mb-1">Nombre de la nueva Modalidad:</label>
                                         <div class="input-group input-group-sm">
@@ -638,23 +609,12 @@
                                         class="row g-2 mb-2 align-items-center"
                                     >
                                         <div class="col-md-7">
-                                            <select
+                                            <SelectBuscable
                                                 v-model="ben.tbe_id"
-                                                class="form-select form-select-sm"
-                                                required
-                                            >
-                                                <option value="">
-                                                    Selecciona tipo de
-                                                    beneficiario...
-                                                </option>
-                                                <option
-                                                    v-for="tb in beneficiarios"
-                                                    :key="tb.tbe_id"
-                                                    :value="tb.tbe_id"
-                                                >
-                                                    {{ tb.tbe_nombre }}
-                                                </option>
-                                            </select>
+                                                :options="opcionesBeneficiariosProy"
+                                                size="sm"
+                                                placeholder="Selecciona tipo de beneficiario..."
+                                            />
                                         </div>
                                         <div class="col-md-4">
                                             <div
@@ -786,6 +746,7 @@
 
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
@@ -840,6 +801,25 @@ const radarData = ref(null);
 const loadingRadar = ref(false);
 
 const listaTiposInvestigacion = ref([...(props.tipos || [])]);
+const opcionesFiltroAprobacion = [
+    { value: "", label: "Todos" },
+    { value: "aprobado", label: "Aprobados" },
+    { value: "pendiente", label: "Pendientes" },
+];
+const opcionesTiposInvProy = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...listaTiposInvestigacion.value.map((t) => ({ value: t.tpr_id, label: t.tpr_nombre })),
+    { value: "__OTRO__", label: "➕ Otro (Crear nueva Línea de Investigación...)" },
+]);
+const opcionesModalidadesProy = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(listaModalidades?.value || props.modalidades || []).map((m) => ({ value: m.mpr_id, label: m.mpr_nombre })),
+    { value: "__OTRO__", label: "➕ Otro (Crear nueva Modalidad...)" },
+]);
+const opcionesBeneficiariosProy = computed(() => [
+    { value: "", label: "Selecciona tipo de beneficiario..." },
+    ...(props.beneficiarios || []).map((tb) => ({ value: tb.tbe_id, label: tb.tbe_nombre })),
+]);
 const creandoOtroTipoInv = ref(false);
 const nuevoTipoInvNombre = ref("");
 const guardandoTipoInv = ref(false);

@@ -105,39 +105,20 @@
 
                                 <!-- Filtro por Sección -->
                                 <div class="col-12 col-sm-6 col-md-4">
-                                    <div class="input-group">
-                                        <span class="input-group-text" style="background: var(--bg-th); color: var(--text-muted); border-color: var(--border);">
-                                            <i class="bi bi-collection"></i>
-                                        </span>
-                                        <select
-                                            v-model="filtroSeccion"
-                                            class="form-select"
-                                            style="background: var(--bg-card); color: var(--text-main); border-color: var(--border);"
-                                        >
-                                            <option value="">Todas las secciones asignadas</option>
-                                            <option v-for="sec in secciones" :key="sec.sec_id" :value="sec.sec_id">
-                                                Sección {{ sec.sec_codigo }} {{ sec.trayecto?.tra_nombre ? '(' + sec.trayecto.tra_nombre + ')' : '' }}
-                                            </option>
-                                        </select>
-                                    </div>
+                                    <SelectBuscable
+                                        v-model="filtroSeccion"
+                                        :options="opcionesSeccionesExpEst"
+                                        placeholder="Todas las secciones asignadas"
+                                    />
                                 </div>
 
-                                <!-- Filtro por Estatus de Equipo -->
+                                <!-- Filtro por Estado de Equipo -->
                                 <div class="col-12 col-sm-6 col-md-3">
-                                    <div class="input-group">
-                                        <span class="input-group-text" style="background: var(--bg-th); color: var(--text-muted); border-color: var(--border);">
-                                            <i class="bi bi-funnel"></i>
-                                        </span>
-                                        <select
-                                            v-model="filtroEquipo"
-                                            class="form-select"
-                                            style="background: var(--bg-card); color: var(--text-main); border-color: var(--border);"
-                                        >
-                                            <option value="todos">Todos los equipos</option>
-                                            <option value="con_equipo">Con equipo asignado</option>
-                                            <option value="sin_equipo">Sin equipo asignado</option>
-                                        </select>
-                                    </div>
+                                    <SelectBuscable
+                                        v-model="filtroEquipo"
+                                        :options="opcionesFiltroEquipoEst"
+                                        placeholder="Todos los equipos"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -577,7 +558,7 @@
                                                 <th>Fecha y Lugar</th>
                                                 <th>Equipo</th>
                                                 <th>Asistencia Estudiante</th>
-                                                <th>Estatus / Veredicto</th>
+                                                <th>Condición / Veredicto</th>
                                                 <th>Justificación / Observaciones</th>
                                             </tr>
                                         </thead>
@@ -637,6 +618,7 @@ import { Link, router, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
 import SidebarProfesor from "@/Components/SidebarProfesor.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 
 const props = defineProps({
     estudiante: Object,
@@ -657,6 +639,19 @@ const tabActiva = ref("equipos");
 const filtroTexto = ref("");
 const filtroSeccion = ref("");
 const filtroEquipo = ref("todos");
+
+const opcionesSeccionesExpEst = computed(() => [
+    { value: "", label: "Todas las secciones asignadas" },
+    ...(props.secciones || []).map((sec) => ({
+        value: sec.sec_id,
+        label: `Sección ${sec.sec_codigo}${sec.trayecto?.tra_nombre ? " (" + sec.trayecto.tra_nombre + ")" : ""}`,
+    })),
+]);
+const opcionesFiltroEquipoEst = [
+    { value: "todos", label: "Todos los equipos" },
+    { value: "con_equipo", label: "Con equipo asignado" },
+    { value: "sin_equipo", label: "Sin equipo asignado" },
+];
 
 // Búsqueda rápida superior cuando hay un estudiante seleccionado
 const busquedaInput = ref("");

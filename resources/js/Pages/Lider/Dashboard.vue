@@ -134,6 +134,7 @@
             </div>
 
             <div class="content-lid">
+                <BannerComunidadPendiente />
                 <!-- BANNER -->
                 <div class="banner-lid" v-if="equipo">
                     <div>
@@ -591,6 +592,7 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 import SidebarLider from "@/Components/SidebarLider.vue";
+import BannerComunidadPendiente from "@/Components/BannerComunidadPendiente.vue";
 
 const props = defineProps({
     equipo: { type: Object, default: null },
@@ -718,7 +720,7 @@ const pasos = computed(() => {
     const socs = props.socializaciones ?? [];
 
     const tieneEquipo = !!e;
-    const tieneProyecto = !!e?.proyecto_comunidad?.pco_fecha_aprobacion;
+    const tieneProyecto = !!(e?.proyecto_comunidad?.pco_comunidad_aprobada || e?.proyecto_comunidad?.pco_fecha_aprobacion);
     const tieneCartaAprobada = !!c?.cpr_fecha_aprobacion;
     const tienePuntos = pcs.length > 0;
     const tieneEntregables = ents.some((en) => en.entr_aprobado === 1);

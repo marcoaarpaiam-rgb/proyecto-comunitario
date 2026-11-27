@@ -65,15 +65,9 @@
                                 margin-top: 2px;
                             "
                         >
-                            Catálogo de líneas de investigación disponibles
+                            Catálogo de líneas de investigación disponibles (Modo Consulta)
                         </p>
                     </div>
-                    <button
-                        class="btn btn-danger fw-bold rounded-pill px-4"
-                        @click="abrirModal()"
-                    >
-                        <i class="bi bi-plus-lg me-2"></i>Nueva Línea
-                    </button>
                 </div>
 
                 <div class="sc">
@@ -150,18 +144,7 @@
                                         >
                                     </td>
                                     <td class="text-end pe-4">
-                                        <button
-                                            class="btn btn-sm btn-outline-primary me-1"
-                                            @click="abrirModal(t)"
-                                        >
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-sm btn-outline-danger"
-                                            @click="desactivar(t)"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <span class="badge bg-secondary-subtle text-secondary">Solo consulta</span>
                                     </td>
                                 </tr>
                             </tbody>

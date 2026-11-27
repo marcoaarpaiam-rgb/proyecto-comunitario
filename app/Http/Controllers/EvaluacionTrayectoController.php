@@ -252,6 +252,10 @@ class EvaluacionTrayectoController extends Controller
      */
     public function evaluar(int $id_recorrido, string $rol_evaluador)
     {
+        $user = auth()->user();
+        if ($user && $user->esCoordinador() && !$user->esProfesor() && !$user->esLider()) {
+            abort(403, 'El rol Coordinador es de supervisión, consulta y fe pública; no puede alterar ni forzar notas de cortes o rúbricas.');
+        }
         $recorrido = DB::table('recorrido_evaluacion_semestral as r')
             ->join('proyecto_comunidad as p', 'p.pco_id', '=', 'r.id_proyecto')
             ->join('equipo as e', 'e.equ_id', '=', 'r.id_equipo')
@@ -346,6 +350,10 @@ class EvaluacionTrayectoController extends Controller
      */
     public function guardarEvaluacion(Request $request)
     {
+        $user = auth()->user();
+        if ($user && $user->esCoordinador() && !$user->esProfesor() && !$user->esLider()) {
+            abort(403, 'El rol Coordinador es de supervisión y auditoría; no puede emitir o alterar calificaciones.');
+        }
         $request->validate([
             'id_recorrido'            => 'required|integer|exists:recorrido_evaluacion_semestral,id_recorrido',
             'id_proyecto'             => 'required|integer|exists:proyecto_comunidad,pco_id',
@@ -781,11 +789,44 @@ class EvaluacionTrayectoController extends Controller
             ->where('token_usado', $token)
             ->get();
 
+        // Rúbrica estructurada por criterios e indicadores desagregados para Semestre 2
+        $rubricaJurado = DB::table('rubricas')
+            ->where('id_trayecto', $equipo->equ_id_tra)
+            ->where('semestre', 'Semestre 2')
+            ->where('rol_evaluador', 'jurado')
+            ->where('activo', true)
+            ->first();
+
+        $criteriosRubrica = $rubricaJurado
+            ? DB::table('criterios_rubrica')
+                ->where('id_rubrica', $rubricaJurado->id_rubrica)
+                ->orderBy('orden')
+                ->get()
+            : collect([]);
+
+        if ($criteriosRubrica->isEmpty()) {
+            $criteriosRubrica = collect([
+                (object) ['id_criterio' => 1, 'nombre_criterio' => 'Presentación y Dominio Técnico del Proyecto', 'puntaje_maximo' => 5.00, 'indicadores' => ['Claridad expositiva y uso de vocabulario técnico', 'Manejo de preguntas del jurado']],
+                (object) ['id_criterio' => 2, 'nombre_criterio' => 'Calidad Metodológica e Informe Técnico', 'puntaje_maximo' => 5.00, 'indicadores' => ['Coherencia metodológica e IAPT', 'Documentación técnica y redacción']],
+                (object) ['id_criterio' => 3, 'nombre_criterio' => 'Funcionamiento del Producto / Sistema Sociotecnológico', 'puntaje_maximo' => 6.00, 'indicadores' => ['Operatividad y pruebas del sistema', 'Seguridad y arquitectura implementada']],
+                (object) ['id_criterio' => 4, 'nombre_criterio' => 'Impacto y Pertinencia Comunitaria', 'puntaje_maximo' => 4.00, 'indicadores' => ['Solución efectiva al problema diagnosticado', 'Transferencia tecnológica a la comunidad']],
+            ]);
+        }
+
+        $socFinalActiva = $socializaciones->firstWhere('tso_orden', 2);
+        $fechaSocFinal = $socFinalActiva?->soc_fecha;
+        $esDiaDeSocializacion = !$fechaSocFinal || now()->toDateString() >= Carbon::parse($fechaSocFinal)->toDateString();
+        $pinVerificado = empty($proyecto->pin_defensa) || session("jurado_pin_ok_{$token}") === true;
+
         return Inertia::render('Evaluacion/PanelJurado', [
             'token'                   => $token,
             'tiempo_restante_texto'   => $tiempoRestanteTexto,
             'minutos_restantes'       => $minutosRestantes,
             'expira_formateado'       => $expiraAt->format('d/m/Y h:i A'),
+            'pin_verificado'          => $pinVerificado,
+            'es_dia_socializacion'    => $esDiaDeSocializacion,
+            'fecha_socializacion'     => $fechaSocFinal,
+            'criterios_rubrica'       => $criteriosRubrica,
             'equipo'                  => $equipo,
             'proyecto'                => $proyecto,
             'tutor'                   => $tutor,
@@ -798,6 +839,83 @@ class EvaluacionTrayectoController extends Controller
             'integrantes_detalles'    => $integrantesDetalles,
             'evaluaciones_token'      => $evaluacionesToken,
         ]);
+    }
+
+    /**
+     * Desbloquea el acceso del jurado mediante el PIN de 6 dígitos el día fijado.
+     */
+    public function verificarPinJurado(Request $request, string $token)
+    {
+        $request->validate([
+            'pin' => 'required|string|size:6',
+        ], [
+            'pin.required' => 'Debe ingresar el PIN de 6 dígitos.',
+            'pin.size'     => 'El PIN debe tener exactamente 6 dígitos.',
+        ]);
+
+        $proyecto = DB::table('proyecto_comunidad')->where('token_jurado', $token)->first();
+        if (!$proyecto) {
+            return back()->withErrors(['pin' => 'Enlace inválido.']);
+        }
+
+        if (trim((string) $request->pin) !== trim((string) $proyecto->pin_defensa)) {
+            return back()->withErrors(['pin' => 'El PIN ingresado es incorrecto. Verifica con el Docente de Proyecto.']);
+        }
+
+        session(["jurado_pin_ok_{$token}" => true]);
+
+        return back()->with('success', 'Acceso desbloqueado correctamente. Ya puede consignar su evaluación.');
+    }
+
+    /**
+     * Exporta la Planilla Oficial de Evaluación en blanco (PDF) para respaldo híbrido / firma autógrafa.
+     */
+    public function exportarPlanillaEvaluacionPdf(int $id_equipo)
+    {
+        $equipo = Equipo::with([
+            'seccion.trayecto',
+            'seccion.turno',
+            'trayecto',
+            'integrantes.usuario',
+            'proyectoComunidad.comunidad',
+            'socializaciones.tipoSocializacion',
+        ])->findOrFail($id_equipo);
+
+        $socFinal = $equipo->socializaciones->first(fn($s) => $s->tipoSocializacion?->tso_orden === 2);
+
+        $rubrica = DB::table('rubricas')
+            ->where('id_trayecto', $equipo->equ_id_tra)
+            ->where('semestre', 'Semestre 2')
+            ->where('rol_evaluador', 'jurado')
+            ->where('activo', true)
+            ->first();
+
+        $criterios = $rubrica
+            ? DB::table('criterios_rubrica')->where('id_rubrica', $rubrica->id_rubrica)->orderBy('orden')->get()
+            : collect([
+                (object) ['nombre_criterio' => 'Presentación y Dominio Técnico del Proyecto', 'puntaje_maximo' => 5.00],
+                (object) ['nombre_criterio' => 'Calidad Metodológica e Informe Técnico', 'puntaje_maximo' => 5.00],
+                (object) ['nombre_criterio' => 'Funcionamiento del Producto / Sistema Sociotecnológico', 'puntaje_maximo' => 6.00],
+                (object) ['nombre_criterio' => 'Impacto y Pertinencia Comunitaria', 'puntaje_maximo' => 4.00],
+            ]);
+
+        $docente = DB::table('profesor_seccion as ps')
+            ->join('usuario as u', 'u.usu_id', '=', 'ps.pse_id_usu')
+            ->where('ps.pse_id_sec', $equipo->equ_id_sec)
+            ->where('ps.pse_status', true)
+            ->select('u.usu_primer_nombre', 'u.usu_primer_apellido', 'u.usu_cedula')
+            ->first();
+
+        $pdf = Pdf::loadView('pdf.planilla_evaluacion_jurado', [
+            'equipo'    => $equipo,
+            'proyecto'  => $equipo->proyectoComunidad,
+            'socFinal'  => $socFinal,
+            'criterios' => $criterios,
+            'docente'   => $docente,
+        ])->setPaper('letter', 'portrait');
+
+        $nombre = 'Planilla_Evaluacion_PST_' . $equipo->codigo_archivo . '.pdf';
+        return $pdf->stream($nombre);
     }
 
     /**

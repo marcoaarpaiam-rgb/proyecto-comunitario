@@ -14,6 +14,8 @@ class Equipo extends Model
         'equ_codigo',
         'equ_titulo',
         'equ_justificacion_duplicidad',
+        'equ_justificacion_cupo',
+        'equ_justificacion_cupo_motivo',
         'equ_status',
         'equ_created_at',
         'equ_updated_at',
@@ -24,7 +26,8 @@ class Equipo extends Model
     ];
 
     protected $casts = [
-        'equ_status' => 'boolean',
+        'equ_status'             => 'boolean',
+        'equ_justificacion_cupo' => 'boolean',
     ];
 
     public function seccion()

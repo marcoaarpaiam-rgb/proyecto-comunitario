@@ -28,7 +28,18 @@ class SeguimientoEquipo extends Model
         'seq_id_usu_updated',
         'seq_estado_semaforo',
         'seq_valoracion_avance',
+        'seq_valoracion_literal',
+        'seq_nivel_logro',
+        'seq_equivalencia_referencial',
+        'seq_aprobado_cualitativo',
         'seq_id_tipo_encuentro',
+    ];
+
+    protected $casts = [
+        'seq_cumplido'             => 'boolean',
+        'seq_cumplido_a_tiempo'    => 'boolean',
+        'seq_aprobado_cualitativo' => 'boolean',
+        'seq_status'               => 'boolean',
     ];
 
     public function tipoEncuentro()

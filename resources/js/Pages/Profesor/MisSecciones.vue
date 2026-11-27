@@ -7,98 +7,8 @@
             color: var(--text-main);
         "
     >
-        <div
-            class="sb-overlay"
-            :class="{ show: sidebarOpen }"
-            @click="sidebarOpen = false"
-        ></div>
-
-        <!-- SIDEBAR -->
-        <div class="sb-prof" :class="{ show: sidebarOpen }">
-            <div class="sb-brand">
-                <div
-                    style="
-                        width: 34px;
-                        height: 34px;
-                        background: #dc3545;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #fff;
-                        font-weight: 800;
-                        font-size: 1rem;
-                    "
-                >
-                    💻
-                </div>
-                <div>
-                    <div class="sb-title">UPTP — Proyectos</div>
-                    <div class="sb-sub">PNF Informática</div>
-                </div>
-                <button
-                    class="btn btn-sm text-white ms-auto fs-5 p-0 d-lg-none"
-                    @click="sidebarOpen = false"
-                >
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-            <div class="sb-user">
-                <div class="sb-avatar">{{ iniciales }}</div>
-                <div>
-                    <div class="sb-name">
-                        {{ $page.props.auth.user.usu_primer_nombre }}
-                        {{ $page.props.auth.user.usu_primer_apellido }}
-                    </div>
-                    <div class="sb-role">Profesor de Proyecto</div>
-                </div>
-            </div>
-            <div class="sb-nav">
-                <div class="sb-sec">Principal</div>
-                <Link href="/profesor" class="sb-link">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </Link>
-                <Link href="/profesor/secciones" class="sb-link active">
-                    <i class="bi bi-collection"></i> Mis Secciones
-                </Link>
-                <div class="sb-sec">Gestión</div>
-                <Link href="/profesor/puntos-control" class="sb-link">
-                    <i class="bi bi-flag"></i> Puntos de Control
-                </Link>
-                <Link href="/profesor/esquemas-evaluacion" class="sb-link">
-                    <i class="bi bi-sliders"></i> Esquemas de Evaluación
-                </Link>
-                <Link href="/evaluaciones" class="sb-link">
-                    <i class="bi bi-journal-check"></i> Rúbricas Oficiales
-                </Link>
-                <Link href="/profesor/socializaciones" class="sb-link">
-                    <i class="bi bi-mic"></i> Socializaciones
-                </Link>
-                <Link href="/profesor/entregables" class="sb-link">
-                    <i class="bi bi-file-earmark-check"></i> Entregables
-                </Link>
-                <Link href="/profesor/estudiantes/buscar" class="sb-link">
-                    <i class="bi bi-person-badge"></i> Expediente Estudiantes
-                </Link>
-
-                <div style="padding: 0.75rem 1.4rem; margin-top: auto">
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="sb-link w-100 text-start border-0 p-0"
-                            style="
-                                color: #ff8591;
-                                font-weight: 700;
-                                background: none;
-                                font-size: 0.88rem;
-                            "
-                        >
-                            <i class="bi bi-box-arrow-left"></i> Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- SIDEBAR PROFESOR ESTANDARIZADO -->
+        <SidebarProfesor :sidebar-open="sidebarOpen" @close="sidebarOpen = false" />
 
         <!-- MAIN -->
         <div class="main-prof">
@@ -235,9 +145,22 @@
                             Selecciona una sección para ver el seguimiento unificado de sus equipos, estudiantes y resultados
                         </p>
                     </div>
-                    <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill fs-7 fw-bold">
+                    <div class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill small fw-bold">
                         <i class="bi bi-journal-bookmark me-1"></i> {{ (secciones || []).length }} sección(es)
                     </div>
+                </div>
+
+                <div v-if="$page.props.flash?.error" class="alert alert-danger py-2 px-3 small mb-3">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ $page.props.flash.error }}
+                </div>
+                <div v-if="$page.props.flash?.success" class="alert alert-success py-2 px-3 small mb-3">
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ $page.props.flash.success }}
+                </div>
+                <div v-if="Object.keys($page.props.errors || {}).length > 0" class="alert alert-danger py-2 px-3 small mb-3">
+                    <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ocurrió un error al procesar la solicitud:</div>
+                    <ul class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
                 </div>
 
                 <!-- Sin secciones -->
@@ -320,12 +243,9 @@
                                 <i class="bi bi-arrow-right"></i>
                             </Link>
 
-                            <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top" style="border-color: var(--border) !important;">
-                                <a :href="`/profesor/secciones/${sec.sec_id}/excel/vinculacion`" class="btn btn-sm btn-outline-success w-50 py-1 small fw-bold" title="Descargar Planilla de Vinculación oficial UPTP">
-                                    <i class="bi bi-download me-1"></i> Vinculación (.xlsx)
-                                </a>
-                                <a :href="`/profesor/secciones/${sec.sec_id}/excel/inventario`" class="btn btn-sm btn-outline-primary w-50 py-1 small fw-bold" title="Descargar Inventario PST (Semanas 6, 10, 14, 18)">
-                                    <i class="bi bi-download me-1"></i> Inventario (.xlsx)
+                            <div class="mt-2 pt-2 border-top" style="border-color: var(--border) !important;">
+                                <a :href="`/profesor/secciones/${sec.sec_id}/excel/vinculacion`" class="btn btn-sm btn-outline-success w-100 py-1 small fw-bold text-nowrap" title="Descargar Planilla de Vinculación oficial UPTP">
+                                    <i class="bi bi-download me-1"></i>Planilla de Vinculación (.xlsx)
                                 </a>
                             </div>
                         </div>
@@ -352,6 +272,7 @@
 import { ref, computed, onMounted } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
 const props = defineProps({
     secciones: {
@@ -448,112 +369,6 @@ onMounted(() => {
     --border-side: rgba(220, 53, 69, 0.5);
 }
 
-.sb-prof {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 250px;
-    height: 100vh;
-    background: var(--bg-sidebar);
-    display: flex;
-    flex-direction: column;
-    z-index: 1040;
-    box-shadow: 3px 0 15px rgba(0, 0, 0, 0.15);
-    border-right: 2px solid var(--border-side);
-    transition: transform 0.3s;
-}
-.sb-brand {
-    padding: 1.3rem 1.4rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.sb-title {
-    font-weight: 800;
-    font-size: 1rem;
-    color: #fff;
-}
-.sb-sub {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #ff4d5e;
-}
-.sb-user {
-    padding: 1rem 1.4rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.sb-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #dc3545;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-weight: 800;
-    font-size: 0.85rem;
-    flex-shrink: 0;
-}
-.sb-name {
-    color: #fff;
-    font-size: 0.88rem;
-    font-weight: 700;
-}
-.sb-role {
-    color: #94a3b8;
-    font-size: 0.73rem;
-    font-weight: 600;
-    margin-top: 1px;
-}
-.sb-nav {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.4rem 0;
-    scrollbar-width: none;
-}
-.sb-nav::-webkit-scrollbar {
-    display: none;
-}
-.sb-sec {
-    padding: 0.8rem 1.4rem 0.25rem;
-    color: #64748b;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 700;
-}
-.sb-link {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0.65rem 1.4rem;
-    color: #cbd5e1;
-    text-decoration: none;
-    font-size: 0.88rem;
-    font-weight: 500;
-    border-left: 3px solid transparent;
-    transition: all 0.15s;
-}
-.sb-link:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
-}
-.sb-link.active {
-    background: rgba(220, 53, 69, 0.18);
-    color: #fff;
-    border-left-color: #dc3545;
-    font-weight: 700;
-}
-.sb-link i {
-    font-size: 1rem;
-    width: 20px;
-    text-align: center;
-}
 .main-prof {
     transition: margin-left 0.3s;
 }
@@ -748,9 +563,6 @@ onMounted(() => {
     display: none;
 }
 @media (min-width: 992px) {
-    .sb-prof {
-        transform: translateX(0) !important;
-    }
     .main-prof {
         margin-left: 250px;
     }
@@ -759,17 +571,8 @@ onMounted(() => {
     }
 }
 @media (max-width: 991.98px) {
-    .sb-prof {
-        transform: translateX(-100%);
-    }
     .main-prof {
         margin-left: 0;
-    }
-    .sb-prof.show {
-        transform: translateX(0);
-    }
-    .sb-overlay.show {
-        display: block !important;
     }
     .content-prof {
         padding: 1rem;

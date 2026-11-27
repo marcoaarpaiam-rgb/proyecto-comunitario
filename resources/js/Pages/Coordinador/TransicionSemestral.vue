@@ -102,12 +102,13 @@
                                     placeholder="Buscar por código de sección, equipo o comunidad..."
                                 />
                             </div>
-                            <select v-model="filtroSeccion" class="form-select" style="min-width: 180px;">
-                                <option value="">Todas las Secciones Impares</option>
-                                <option v-for="sec in seccionesImpares" :key="sec.sec_id" :value="sec.sec_id">
-                                    Sección {{ sec.sec_codigo }} ({{ sec.total_equipos }} equipos)
-                                </option>
-                            </select>
+                            <div style="min-width: 240px;">
+                                <SelectBuscable
+                                    v-model="filtroSeccion"
+                                    :options="opcionesSeccionesImpares"
+                                    placeholder="Todas las Secciones Impares"
+                                />
+                            </div>
                         </div>
                         <div class="text-muted fw-bold small">
                             Secciones impares activas: <strong>{{ seccionesFiltradas.length }}</strong>
@@ -402,11 +403,20 @@ import { ref, computed } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 
 const props = defineProps({
     seccionesImpares: { type: Array, default: () => [] },
     seccionesPares:   { type: Array, default: () => [] },
 });
+
+const opcionesSeccionesImpares = computed(() => [
+    { value: "", label: "Todas las Secciones Impares" },
+    ...(props.seccionesImpares || []).map((sec) => ({
+        value: sec.sec_id,
+        label: `Sección ${sec.sec_codigo} (${sec.total_equipos} equipos)`,
+    })),
+]);
 
 const page = usePage();
 const sidebarOpen = ref(false);

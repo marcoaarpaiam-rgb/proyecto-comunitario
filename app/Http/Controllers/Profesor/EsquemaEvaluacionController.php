@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Profesor;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\AutorizaPorSeccion;
 use App\Models\EsquemaEvaluacion;
 use App\Models\Seccion;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Inertia\Inertia;
 
 class EsquemaEvaluacionController extends Controller
 {
+    use AutorizaPorSeccion;
+
     /**
      * Listar esquemas del profesor autenticado + plantillas globales.
      */
@@ -28,7 +31,7 @@ class EsquemaEvaluacionController extends Controller
             ->where('pse_status', true)
             ->pluck('pse_id_sec');
 
-        // Secciones disponibles para asignación
+        // Secciones disponibles para asignación (el profesor solo ve las secciones que tiene asignadas)
         if ($esCoordinador) {
             $secciones = Seccion::where('sec_status', true)
                 ->with(['trayecto', 'turno'])
@@ -40,15 +43,6 @@ class EsquemaEvaluacionController extends Controller
                 ->with(['trayecto', 'turno'])
                 ->orderBy('sec_codigo')
                 ->get();
-
-            // Si el profesor no tiene secciones asignadas aún en la tabla de asignaciones,
-            // cargamos las secciones activas institucionales para no bloquear su gestión
-            if ($secciones->isEmpty()) {
-                $secciones = Seccion::where('sec_status', true)
-                    ->with(['trayecto', 'turno'])
-                    ->orderBy('sec_codigo')
-                    ->get();
-            }
         }
 
         // Esquemas propios del profesor + plantillas globales (coordinador ve todos)
@@ -63,9 +57,12 @@ class EsquemaEvaluacionController extends Controller
             })
             ->with([
                 'creador:usu_id,usu_primer_nombre,usu_primer_apellido',
-                'secciones' => function ($q) {
-                    $q->wherePivot('esq_sec_activo', true)
-                      ->with(['trayecto', 'turno']);
+                'secciones' => function ($q) use ($esCoordinador, $idsSecciones) {
+                    $q->wherePivot('esq_sec_activo', true);
+                    if (!$esCoordinador) {
+                        $q->whereIn('seccion.sec_id', $idsSecciones);
+                    }
+                    $q->with(['trayecto', 'turno']);
                 }
             ])
             ->orderBy('esq_es_plantilla', 'desc')
@@ -237,6 +234,13 @@ class EsquemaEvaluacionController extends Controller
             'esq_sec_lapso'  => 'nullable|string|max:20',
             'accion'         => 'required|in:asignar,desasignar',
         ]);
+
+        $esCoordinador = Auth::user()->roles()
+            ->whereIn('rol_nombre', ['coordinador', 'admin'])
+            ->exists();
+        if (!$esCoordinador) {
+            $this->autorizarSeccionId($request->esq_sec_id_sec);
+        }
 
         if ($request->accion === 'asignar') {
             // Evitar duplicados

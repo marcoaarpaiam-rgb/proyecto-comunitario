@@ -77,6 +77,19 @@
                         </p>
                     </div>
                 </div>
+
+                <div v-if="$page.props.flash?.error" class="alert alert-danger py-2 px-3 small mb-3">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ $page.props.flash.error }}
+                </div>
+                <div v-if="$page.props.flash?.success" class="alert alert-success py-2 px-3 small mb-3">
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ $page.props.flash.success }}
+                </div>
+                <div v-if="Object.keys($page.props.errors || {}).length > 0" class="alert alert-danger py-2 px-3 small mb-3">
+                    <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Corrige los siguientes errores:</div>
+                    <ul class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
+                </div>
                 <!-- MÓDULOS SEPARADOS: 1. PRE-SOCIALIZACIÓN VS 2. SOCIALIZACIÓN FINAL -->
                 <div class="card border-0 shadow-sm p-2 mb-3 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
                     <ul class="nav nav-pills gap-2 flex-wrap" role="tablist">
@@ -334,6 +347,15 @@
                                             >
                                                 <i class="bi bi-award-fill me-1"></i>Evaluación 4 Actores
                                             </a>
+                                            <a
+                                                v-if="soc.equipo?.equ_id"
+                                                :href="'/evaluaciones/planilla-pdf/' + soc.equipo.equ_id"
+                                                target="_blank"
+                                                class="btn btn-sm btn-outline-primary me-1"
+                                                title="Exportar Planilla de Evaluación en blanco (PDF) para respaldo físico"
+                                            >
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>Planilla PDF
+                                            </a>
                                             <span
                                                 v-else-if="!soc.soc_fecha"
                                                 class="badge bg-warning text-dark border px-2 py-1 me-1"
@@ -397,20 +419,13 @@
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Sección</label>
-                                <select
+                                <SelectBuscable
                                     v-model="seccionSeleccionadaModal"
-                                    class="form-select form-select-sm"
+                                    :options="opcionesSeccionesModal"
+                                    size="sm"
+                                    placeholder="Todas las secciones..."
                                     @change="onSeccionModalChange"
-                                >
-                                    <option value="">Todas las secciones...</option>
-                                    <option
-                                        v-for="sec in secciones"
-                                        :key="sec.sec_id"
-                                        :value="sec.sec_id"
-                                    >
-                                        Sección {{ sec.sec_codigo }}
-                                    </option>
-                                </select>
+                                />
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">
@@ -460,26 +475,15 @@
                                     >Tipo
                                     <span class="text-danger">*</span></label
                                 >
-                                <select
+                                <SelectBuscable
                                     v-model="form.soc_id_tso"
-                                    class="form-select"
-                                    :class="{
-                                        'is-invalid': errores.soc_id_tso,
-                                    }"
-                                >
-                                    <option value="">Seleccionar...</option>
-                                    <option
-                                        v-for="tipo in tiposSocializacion"
-                                        :key="tipo.tso_id"
-                                        :value="tipo.tso_id"
-                                        :disabled="esEquipoSemestreImpar && tipo.tso_orden === 2"
-                                    >
-                                        {{ tipo.tso_nombre }} {{ esEquipoSemestreImpar && tipo.tso_orden === 2 ? '(No aplica en semestre impar)' : '' }}
-                                    </option>
-                                </select>
+                                    :options="opcionesTiposSocializacion"
+                                    :has-error="!!errores.soc_id_tso"
+                                    placeholder="Seleccionar..."
+                                />
                                 <div
                                     v-if="errores.soc_id_tso"
-                                    class="invalid-feedback"
+                                    class="invalid-feedback d-block"
                                 >
                                     {{ errores.soc_id_tso }}
                                 </div>
@@ -634,6 +638,24 @@
                                             style="color: #dc3545"
                                             >No apto</label
                                         >
+                                    </div>
+                                    <div
+                                        v-if="formRes.soc_apto === false"
+                                        class="mt-3 p-3 rounded border border-danger bg-danger-subtle"
+                                    >
+                                        <label class="form-label fw-bold text-danger small mb-1">
+                                            <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                                            Observaciones Obligatorias por Dictamen "No Apto" <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea
+                                            v-model="formRes.soc_observaciones_no_apto"
+                                            :disabled="modoSoloLecturaRes"
+                                            class="form-control form-control-sm"
+                                            rows="3"
+                                            minlength="5"
+                                            required
+                                            placeholder="Describa las debilidades o requisitos que el equipo debe subsanar antes de habilitar la Transición Semestral..."
+                                        ></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -857,13 +879,13 @@
                             </div>
                         </div>
 
-                        <!-- Link Temporal de 12 Horas para Jurados y Vocero -->
+                        <!-- Link Temporal de 12 Horas para Jurados y Responsable de la Comunidad -->
                         <div class="card border mb-3">
                             <div class="card-header bg-dark text-white p-2 px-3 d-flex justify-content-between align-items-center">
                                 <span class="fw-bold small text-uppercase">
                                     <i class="bi bi-link-45deg text-warning me-1"></i> Link Temporal para Jurado (Vigencia 12 Horas)
                                 </span>
-                                <span class="badge bg-warning text-dark small">Exclusivo Jurado / Vocero</span>
+                                <span class="badge bg-warning text-dark small">Exclusivo Jurado / Resp. Comunidad</span>
                             </div>
                             <div class="card-body p-3">
                                 <!-- Si es pre-socialización -->
@@ -907,6 +929,14 @@
                                                 class="btn btn-sm btn-dark text-white fw-bold"
                                             >
                                                 <i class="bi bi-box-arrow-up-right me-1"></i>Abrir Panel de Jurado
+                                            </a>
+                                            <a
+                                                v-if="socSeleccionadaDetalle.equipo?.equ_id"
+                                                :href="`/evaluaciones/planilla-pdf/${socSeleccionadaDetalle.equipo.equ_id}`"
+                                                target="_blank"
+                                                class="btn btn-sm btn-outline-primary fw-bold"
+                                            >
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>Exportar Planilla de Evaluación (PDF)
                                             </a>
                                             <button
                                                 type="button"
@@ -1000,26 +1030,14 @@
                                     </div>
 
                                     <!-- Planilla Vinculación Excel -->
-                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
+                                    <div class="col-sm-6" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
                                         <a
-                                            :href="'/inventario/excel/vinculacion/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
+                                            :href="'/excel/vinculacion/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
                                             target="_blank"
                                             class="btn btn-success btn-sm w-100 fw-bold p-2 text-truncate"
                                             title="Descargar Planilla de Vinculación Excel"
                                         >
                                             <i class="bi bi-file-earmark-excel-fill me-1"></i>Planilla Vinc. Excel
-                                        </a>
-                                    </div>
-
-                                    <!-- Inventario PST Sección Excel -->
-                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.equ_id_sec">
-                                        <a
-                                            :href="'/inventario/excel/libro-seccion/' + socSeleccionadaDetalle.equipo?.equ_id_sec"
-                                            target="_blank"
-                                            class="btn btn-outline-success btn-sm w-100 fw-bold p-2 text-truncate"
-                                            title="Descargar Inventario PST de la Sección Completa"
-                                        >
-                                            <i class="bi bi-file-spreadsheet me-1"></i>Inventario PST
                                         </a>
                                     </div>
                                 </div>
@@ -1043,6 +1061,7 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
 import SelectBuscableEquipo from "@/Components/SelectBuscableEquipo.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
 const props = defineProps({
@@ -1051,6 +1070,23 @@ const props = defineProps({
     secciones: { type: Array, default: () => [] },
     tiposSocializacion: Array,
 });
+
+const opcionesSeccionesModal = computed(() => [
+    { value: "", label: "Todas las secciones..." },
+    ...(props.secciones || []).map((sec) => ({
+        value: sec.sec_id,
+        label: `Sección ${sec.sec_codigo}`,
+    })),
+]);
+
+const opcionesTiposSocializacion = computed(() => [
+    { value: "", label: "Seleccionar..." },
+    ...(props.tiposSocializacion || []).map((tipo) => ({
+        value: tipo.tso_id,
+        label: `${tipo.tso_nombre}${esEquipoSemestreImpar.value && tipo.tso_orden === 2 ? " (No aplica en semestre impar)" : ""}`,
+        disabled: Boolean(esEquipoSemestreImpar.value && tipo.tso_orden === 2),
+    })),
+]);
 
 const equipoSeleccionado = computed(() => {
     return props.equipos?.find(e => e.equ_id == form.value.soc_id_equ) || null;
@@ -1097,7 +1133,7 @@ const copiarLinkJuradoSoc = (token) => {
     if (!token) return;
     const url = window.location.origin + '/evaluacion-jurado/' + token;
     navigator.clipboard.writeText(url);
-    alert('¡Enlace copiado exitosamente al portapapeles!\n\n' + url + '\n\nComparte este link con el Jurado Evaluador y Vocero Comunitario (Vigencia: 12 Horas).');
+    alert('¡Enlace copiado exitosamente al portapapeles!\n\n' + url + '\n\nComparte este link con el Jurado Evaluador y Responsable de la Comunidad (Vigencia: 12 Horas).');
 };
 
 let mDetalle = null;
@@ -1245,6 +1281,7 @@ const formRes = ref({
     soc_apto: null,
     soc_aprobado: null,
     soc_observaciones: "",
+    soc_observaciones_no_apto: "",
 });
 const socActual = ref(null);
 let mSoc = null;
@@ -1352,6 +1389,7 @@ const abrirResultado = (soc, soloLectura = false) => {
         soc_apto: soc.soc_apto,
         soc_aprobado: soc.soc_aprobado,
         soc_observaciones: soc.soc_observaciones || "",
+        soc_observaciones_no_apto: soc.soc_observaciones_no_apto || "",
         integrantes: ints.map(i => ({
             usu_id: i.ein_id_usu,
             nombre: `${i.usuario?.usu_primer_nombre || ''} ${i.usuario?.usu_primer_apellido || ''}`,
@@ -1369,6 +1407,10 @@ const guardarResultado = () => {
     if (!socActual.value || modoSoloLecturaRes.value || estaEvaluada(socActual.value)) return;
     if (socActual.value?.tipo_socializacion?.tso_orden === 1 && (formRes.value.soc_apto === null || formRes.value.soc_apto === undefined)) {
         alert("Debes indicar si el equipo es APTO o NO APTO antes de registrar el resultado.");
+        return;
+    }
+    if (socActual.value?.tipo_socializacion?.tso_orden === 1 && formRes.value.soc_apto === false && (!formRes.value.soc_observaciones_no_apto || formRes.value.soc_observaciones_no_apto.trim().length < 5)) {
+        alert("Al dictaminar 'No Apto' es obligatorio ingresar observaciones de subsanación (mínimo 5 caracteres).");
         return;
     }
     if (socActual.value?.tipo_socializacion?.tso_orden !== 1 && (formRes.value.soc_aprobado === null || formRes.value.soc_aprobado === undefined)) {

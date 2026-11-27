@@ -16,6 +16,8 @@ class AsistenciaPuntoControl extends Model
         'apc_asistio',
         'apc_justificado',
         'apc_participo',
+        'apc_valoracion_literal',
+        'apc_nivel_logro',
         'apc_justificativo',
         'apc_observaciones',
         'apc_motivo_edicion',

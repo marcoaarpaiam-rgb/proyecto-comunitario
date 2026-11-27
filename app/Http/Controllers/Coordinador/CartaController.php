@@ -62,6 +62,9 @@ class CartaController extends Controller
         if (!$proyecto) {
             return back()->withErrors(['cpr_id_pco' => 'No tienes autorización para solicitar una carta para este proyecto o no eres el líder del equipo.']);
         }
+        if (!$proyecto->pco_comunidad_aprobada && !$proyecto->pco_fecha_aprobacion) {
+            return back()->withErrors(['cpr_id_pco' => 'Tu equipo debe postular los datos comunitarios y contar con la aprobación del Docente de Proyecto antes de solicitar la Carta de Presentación.']);
+        }
 
         $carta = CartaPresentacion::where('cpr_id_pco', $proyecto->pco_id)->first();
 
@@ -113,7 +116,7 @@ class CartaController extends Controller
             'proyectoComunidad.equipo.integrantes.usuario',
             'proyectoComunidad.equipo.seccion',
             'proyectoComunidad.equipo.trayecto',
-            'proyectoComunidad.comunidad',
+            'proyectoComunidad.comunidad.responsables' => fn($q) => $q->where('rco_status', true)->with(['usuario.cargos' => fn($c) => $c->where('pca_status', true)]),
         ])->findOrFail($id);
         if ($carta->cpr_fecha_aprobacion) {
             return back()->withErrors(['carta' => 'Esta carta ya fue aprobada anteriormente.']);
@@ -177,7 +180,7 @@ class CartaController extends Controller
             'proyectoComunidad.equipo.integrantes.usuario',
             'proyectoComunidad.equipo.seccion',
             'proyectoComunidad.equipo.trayecto',
-            'proyectoComunidad.comunidad',
+            'proyectoComunidad.comunidad.responsables' => fn($q) => $q->where('rco_status', true)->with(['usuario.cargos' => fn($c) => $c->where('pca_status', true)]),
         ])->findOrFail($id);
 
         $coordinador = Usuario::whereHas('usuarioRoles', fn($q) =>
@@ -187,12 +190,8 @@ class CartaController extends Controller
 
         $proyecto = $carta->proyectoComunidad;
         $pdf = Pdf::loadView('pdf.carta_presentacion', [
-            'carta'       => $carta->load([
-                'proyectoComunidad.equipo.seccion',
-                'proyectoComunidad.equipo.trayecto',
-                'proyectoComunidad.comunidad',
-            ]),
-            'proyecto'    => $carta->proyectoComunidad,
+            'carta'       => $carta,
+            'proyecto'    => $proyecto,
             'coordinador' => $coordinador,
         ])->setPaper('letter', 'portrait');
 

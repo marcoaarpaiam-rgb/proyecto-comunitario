@@ -34,6 +34,24 @@ class TransicionSemestralService
                 throw new \Exception("El equipo ya se encuentra en un Semestre Par (Sección {$codigoActual}).");
             }
 
+            // Validar Pre-Socialización aprobada (dictamen Apto obligatorio en Semestre Impar)
+            $preSoc = DB::table('socializacion as s')
+                ->join('tipo_socializacion as ts', 'ts.tso_id', '=', 's.soc_id_tso')
+                ->where('s.soc_id_equ', $equipo->equ_id)
+                ->where('ts.tso_orden', 1)
+                ->where('s.soc_status', true)
+                ->orderByDesc('s.soc_id')
+                ->select('s.soc_apto', 's.soc_observaciones_no_apto')
+                ->first();
+
+            if (!$preSoc || $preSoc->soc_apto === null) {
+                throw new \Exception("El equipo {$equipo->equ_codigo} debe contar con el dictamen 'Apto' en la Pre-Socialización antes de promoverse al Semestre Par.");
+            }
+            if (!$preSoc->soc_apto) {
+                $obs = $preSoc->soc_observaciones_no_apto ? " Observaciones por subsanar: {$preSoc->soc_observaciones_no_apto}" : '';
+                throw new \Exception("No se puede promover al equipo {$equipo->equ_codigo}: su dictamen en Pre-Socialización es 'No Apto'.{$obs}");
+            }
+
             // Calcular código de sección del semestre par (+1 al primer dígito)
             // Ej: 131 -> 231, 331 -> 431, 531 -> 631, 731 -> 831
             $nuevoPrimerDigito = $primerDigito + 1;
@@ -134,14 +152,15 @@ class TransicionSemestralService
 
                 if ($recorridoS1) {
                     $notaS1 = (float) $recorridoS1->nota_cuantitativa_semestre;
-                    // Asegurar que el Semestre 1 quede congelado y marcado como Culminado
+                    // Asegurar que el Semestre 1 quede congelado con 40% de ponderación y marcado como Culminado
                     DB::table('recorrido_evaluacion_semestral')
                         ->where('id_recorrido', $recorridoS1->id_recorrido)
                         ->update([
-                            'id_equipo'       => $equipo->equ_id,
-                            'id_trayecto'     => $equipo->equ_id_tra,
-                            'estado_semestre' => 'Culminado',
-                            'updated_at'      => now(),
+                            'id_equipo'        => $equipo->equ_id,
+                            'id_trayecto'      => $equipo->equ_id_tra,
+                            'peso_en_trayecto' => 40.00,
+                            'estado_semestre'  => 'Culminado',
+                            'updated_at'       => now(),
                         ]);
                 }
 

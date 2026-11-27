@@ -58,6 +58,25 @@
                     </p>
                 </div>
 
+                <div
+                    v-if="$page.props.flash?.error || Object.keys($page.props.errors || {}).length"
+                    class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-3"
+                >
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span v-if="$page.props.flash?.error">{{ $page.props.flash.error }}</span>
+                    <ul v-else class="mb-0 ps-3">
+                        <li v-for="(err, k) in $page.props.errors" :key="k">{{ err }}</li>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div
+                    v-if="$page.props.flash?.success"
+                    class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3"
+                >
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ $page.props.flash.success }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
                 <div class="row g-3">
                     <!-- Solicitudes pendientes -->
                     <div class="col-12">
@@ -77,20 +96,14 @@
                                     <label class="small text-muted mb-0 fw-semibold d-none d-sm-inline">
                                         <i class="bi bi-funnel me-1"></i>Filtrar por Sección:
                                     </label>
-                                    <select
-                                        v-model="filtroSeccion"
-                                        class="form-select form-select-sm"
-                                        style="width: 190px;"
-                                    >
-                                        <option value="">Todas las secciones</option>
-                                        <option
-                                            v-for="sec in secciones"
-                                            :key="sec.sec_id"
-                                            :value="sec.sec_id"
-                                        >
-                                            Sección {{ sec.sec_codigo }}
-                                        </option>
-                                    </select>
+                                    <div style="min-width: 190px;">
+                                        <SelectBuscable
+                                            v-model="filtroSeccion"
+                                            :options="opcionesSeccionesCarta"
+                                            size="sm"
+                                            placeholder="Todas las secciones"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div
@@ -431,6 +444,7 @@ import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
@@ -456,6 +470,13 @@ const iniciales = computed(() => {
     );
 });
 const filtroSeccion = ref("");
+const opcionesSeccionesCarta = computed(() => [
+    { value: "", label: "Todas las secciones" },
+    ...(props.secciones || []).map((sec) => ({
+        value: sec.sec_id,
+        label: `Sección ${sec.sec_codigo}`,
+    })),
+]);
 const firmaFile = ref(null);
 const loadingFirma = ref(false);
 const cartaSeleccionada = ref(null);

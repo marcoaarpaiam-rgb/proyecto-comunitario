@@ -102,15 +102,47 @@
                         >
                             <span class="badge" :class="tabActiva === 'evaluacion' ? 'bg-white text-danger' : 'bg-danger text-white'">4</span>
                             <i class="bi bi-award-fill fs-5"></i>
-                            <span>Scorecard de Evaluación</span>
+                            <span>Ficha de Rendimiento de Evaluación</span>
                         </button>
                     </li>
                 </ul>
             </div>
         </nav>
 
+        <!-- ── PANTALLA DE DESBLOQUEO POR PIN DE 6 DÍGITOS ── -->
+        <main v-if="!pin_verificado" class="container py-5 flex-grow-1 d-flex align-items-center justify-content-center">
+            <div class="card border-0 shadow-lg rounded-4 bg-white p-4 p-md-5 text-center" style="max-width: 480px; width: 100%;">
+                <div class="mb-3">
+                    <span class="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-bold">
+                        <i class="bi bi-shield-lock-fill me-1"></i>Control de Acceso — Socialización Final
+                    </span>
+                </div>
+                <h4 class="fw-bold text-dark mb-2">Desbloquear Panel de Jurado</h4>
+                <p class="small text-muted mb-4">
+                    Ingresa el PIN de seguridad de 6 dígitos suministrado por el Docente de Proyecto para acceder a la ficha técnica y la rúbrica de evaluación.
+                </p>
+                <div v-if="$page.props.errors?.pin" class="alert alert-danger py-2 small mb-3">
+                    {{ $page.props.errors.pin }}
+                </div>
+                <form @submit.prevent="verificarPin">
+                    <input
+                        v-model="pinInput"
+                        type="text"
+                        maxlength="6"
+                        class="form-control form-control-lg text-center font-monospace fw-bold fs-3 tracking-widest mb-3"
+                        placeholder="••••••"
+                        required
+                    />
+                    <button type="submit" class="btn btn-danger btn-lg w-100 fw-bold rounded-pill" :disabled="verificandoPin || pinInput.length !== 6">
+                        <span v-if="verificandoPin" class="spinner-border spinner-border-sm me-2"></span>
+                        <i v-else class="bi bi-unlock-fill me-2"></i>Desbloquear Acceso
+                    </button>
+                </form>
+            </div>
+        </main>
+
         <!-- ── CONTENIDO PRINCIPAL ── -->
-        <main class="container py-4 flex-grow-1">
+        <main v-else class="container py-4 flex-grow-1">
             <!-- Alertas Flash -->
             <div v-if="$page.props.flash?.success" class="alert alert-success alert-dismissible fade show p-3 rounded-4 shadow-sm mb-4 border-2 border-success" role="alert">
                 <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -191,7 +223,7 @@
                                 </p>
                                 <div v-if="responsable_comunidad" class="alert alert-light border rounded-3 p-3 mb-0">
                                     <strong class="text-dark d-block mb-1">
-                                        <i class="bi bi-person-badge-fill text-danger me-1"></i> Vocero / Contacto Comunitario:
+                                        <i class="bi bi-person-badge-fill text-danger me-1"></i> Responsable de la Comunidad:
                                     </strong>
                                     <div>{{ responsable_comunidad.rco_nombre }} &bull; C.I. {{ responsable_comunidad.rco_cedula }}</div>
                                     <div class="small text-muted" v-if="responsable_comunidad.rco_telefono">Teléfono de contacto: {{ responsable_comunidad.rco_telefono }}</div>
@@ -398,7 +430,7 @@
                 <div class="alert alert-dark p-3 rounded-4 mb-4 d-flex align-items-center justify-content-between border-0 shadow-sm">
                     <div>
                         <i class="bi bi-person-lines-fill text-danger me-2 fs-5"></i>
-                        <strong>Expediente Individual de Integrantes:</strong> Seleccione a cada estudiante para consultar su récord de asistencia, estatus reglamentario y antecedentes académicos.
+                        <strong>Expediente Individual de Integrantes:</strong> Seleccione a cada estudiante para consultar su récord de asistencia, estado reglamentario y antecedentes académicos.
                     </div>
                 </div>
 
@@ -517,9 +549,9 @@
                                     </table>
                                 </div>
 
-                                <!-- Estatus en Pre-Socialización -->
+                                <!-- Condición en Pre-Socialización -->
                                 <h6 class="fw-bold text-dark mb-2">
-                                    <i class="bi bi-signpost-split text-danger me-1"></i> Estatus en Pre-Socialización (Semestre Impar):
+                                    <i class="bi bi-signpost-split text-danger me-1"></i> Condición en Pre-Socialización (Semestre Impar):
                                 </h6>
                                 <div class="p-3 bg-light rounded-3 border mb-4">
                                     <div v-if="estudianteSeleccionado.pre_socializacion">
@@ -583,13 +615,23 @@
                             <div class="card-header bg-dark text-white p-4 border-bottom border-danger border-4">
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                                     <div>
-                                        <span class="badge bg-danger text-uppercase px-2 py-1 small">Scorecard Oficial UPTP</span>
+                                        <span class="badge bg-danger text-uppercase px-2 py-1 small">Ficha de Rendimiento Oficial UPTP</span>
                                         <h3 class="h4 fw-bold text-white mb-0 mt-1">Calificación de la Socialización Final</h3>
                                         <p class="text-white-50 small mb-0">Escala Oficial PNF: 1 a 20 puntos &bull; Calificación mínima aprobatoria: <strong>16.00 pts</strong></p>
                                     </div>
-                                    <div class="bg-black p-3 rounded-4 border border-secondary text-end font-monospace text-warning shadow-sm">
-                                        <small class="d-block text-white-50" style="font-size: 0.72rem; letter-spacing: 0.5px;">PROMEDIO DEL EQUIPO</small>
-                                        <span class="fs-3 fw-bold">{{ promedioCalculado }} <small class="fs-6 text-white-50">pts</small></span>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <a
+                                            v-if="equipo?.equ_id"
+                                            :href="`/evaluaciones/planilla-pdf/${equipo.equ_id}`"
+                                            target="_blank"
+                                            class="btn btn-outline-light btn-sm rounded-pill px-3"
+                                        >
+                                            <i class="bi bi-file-earmark-pdf me-1"></i>Exportar Planilla PDF
+                                        </a>
+                                        <div class="bg-black p-3 rounded-4 border border-secondary text-end font-monospace text-warning shadow-sm">
+                                            <small class="d-block text-white-50" style="font-size: 0.72rem; letter-spacing: 0.5px;">PROMEDIO DEL EQUIPO</small>
+                                            <span class="fs-3 fw-bold">{{ promedioCalculado }} <small class="fs-6 text-white-50">pts</small></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -603,10 +645,7 @@
                                 <div class="row g-3 mb-4">
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold text-dark small">Rol del Evaluador <span class="text-danger">*</span></label>
-                                        <select v-model="formCalif.rol_evaluador" class="form-select form-select-lg" required>
-                                            <option value="jurado">Jurado Evaluador (Ponderación 30%)</option>
-                                            <option value="comunidad">Vocero Comunitario (Ponderación 20%)</option>
-                                        </select>
+                                        <SelectBuscable v-model="formCalif.rol_evaluador" :options="opcionesRolJurado" placeholder="Seleccionar rol..." />
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold text-dark small">Nombre y Apellido <span class="text-danger">*</span></label>
@@ -639,9 +678,65 @@
                                     </div>
                                 </div>
 
-                                <!-- 2. Calificación Individualizada por Estudiante -->
+                                <!-- 2. Rúbrica Estructurada por Criterios e Indicadores -->
+                                <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <span>
+                                        <i class="bi bi-list-check text-danger me-1"></i> 2. Rúbrica Estructurada por Criterios e Indicadores
+                                    </span>
+                                    <span class="badge bg-dark fs-6 px-3 py-2 font-monospace">
+                                        Total Rúbrica: {{ totalRubricaCalculada }} / 20.00 pts
+                                    </span>
+                                </h5>
+                                <div class="row g-3 mb-3">
+                                    <div v-for="(crit, cIdx) in criteriosEstado" :key="crit.id_criterio || cIdx" class="col-md-6">
+                                        <div class="p-3 rounded-3 border bg-light h-100">
+                                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                                <div class="fw-bold text-dark small">
+                                                    {{ cIdx + 1 }}. {{ crit.nombre_criterio }}
+                                                </div>
+                                                <span class="badge bg-secondary flex-shrink-0">Máx. {{ crit.puntaje_maximo }} pts</span>
+                                            </div>
+                                            <ul v-if="crit.indicadores && crit.indicadores.length" class="small text-muted ps-3 mb-2">
+                                                <li v-for="(ind, iIdx) in crit.indicadores" :key="iIdx">{{ ind }}</li>
+                                            </ul>
+                                            <div class="d-flex align-items-center gap-2 mt-2">
+                                                <input
+                                                    v-model.number="crit.puntaje_asignado"
+                                                    type="range"
+                                                    min="0"
+                                                    :max="crit.puntaje_maximo"
+                                                    step="0.5"
+                                                    class="form-range flex-grow-1"
+                                                    @input="aplicarRubricaATodos"
+                                                />
+                                                <input
+                                                    v-model.number="crit.puntaje_asignado"
+                                                    type="number"
+                                                    min="0"
+                                                    :max="crit.puntaje_maximo"
+                                                    step="0.5"
+                                                    class="form-control form-control-sm text-center fw-bold"
+                                                    style="width: 75px;"
+                                                    @input="aplicarRubricaATodos"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mb-4">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"
+                                        @click="aplicarRubricaATodos"
+                                    >
+                                        <i class="bi bi-calculator me-1"></i>
+                                        Aplicar {{ totalRubricaCalculada }} pts a todos los integrantes (ajustable individualmente abajo)
+                                    </button>
+                                </div>
+
+                                <!-- 3. Calificación Individualizada por Estudiante -->
                                 <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2">
-                                    <i class="bi bi-mortarboard-fill text-danger"></i> 2. Calificación Individualizada por Estudiante (1 a 20 pts)
+                                    <i class="bi bi-mortarboard-fill text-danger"></i> 3. Calificación Individualizada por Estudiante (1 a 20 pts)
                                 </h5>
                                 <p class="text-muted small mb-3">
                                     Asigne la nota cuantitativa individual a cada estudiante en función de su defensa oral, dominio del tema y respuestas a las preguntas:
@@ -715,12 +810,7 @@
                                 <div class="row g-3 mb-4">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold text-dark small">Nivel de Logro Institucional <span class="text-danger">*</span></label>
-                                        <select v-model="formCalif.nivel_logro_cualitativo" class="form-select form-select-lg" required>
-                                            <option value="Logrado con Excelencia">Logrado con Excelencia (18 - 20 pts)</option>
-                                            <option value="Logrado">Logrado (16 - 17.99 pts)</option>
-                                            <option value="En Proceso">En Proceso (10 - 15.99 pts)</option>
-                                            <option value="No Logrado">No Logrado (&lt; 10 pts)</option>
-                                        </select>
+                                        <SelectBuscable v-model="formCalif.nivel_logro_cualitativo" :options="opcionesNivelLogroJurado" placeholder="Nivel de logro..." />
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label fw-bold text-dark small">
@@ -770,12 +860,15 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import SelectBuscable from '@/Components/SelectBuscable.vue';
 
 const props = defineProps({
     token: String,
     tiempo_restante_texto: String,
     minutos_restantes: Number,
     expira_formateado: String,
+    pin_verificado: { type: Boolean, default: true },
+    criterios_rubrica: { type: Array, default: () => [] },
     equipo: Object,
     proyecto: Object,
     tutor: Object,
@@ -788,6 +881,46 @@ const props = defineProps({
     integrantes_detalles: Array,
     evaluaciones_token: Array,
 });
+
+const pinInput = ref('');
+const verificandoPin = ref(false);
+const opcionesRolJurado = [
+    { value: "jurado", label: "Jurado Evaluador (Ponderación 30%)" },
+    { value: "comunidad", label: "Responsable de la Comunidad (Ponderación 20%)" },
+];
+const opcionesNivelLogroJurado = [
+    { value: "Logrado con Excelencia", label: "Logrado con Excelencia (18 - 20 pts)" },
+    { value: "Logrado", label: "Logrado (16 - 17.99 pts)" },
+    { value: "En Proceso", label: "En Proceso (10 - 15.99 pts)" },
+    { value: "No Logrado", label: "No Logrado (< 10 pts)" },
+];
+const verificarPin = () => {
+    verificandoPin.value = true;
+    router.post(`/evaluacion-jurado/${props.token}/verificar-pin`, { pin: pinInput.value }, {
+        onFinish: () => { verificandoPin.value = false; }
+    });
+};
+
+const criteriosEstado = ref(
+    (props.criterios_rubrica || []).map((c) => ({
+        ...c,
+        indicadores: Array.isArray(c.indicadores) ? c.indicadores : (c.descripcion ? [c.descripcion] : []),
+        puntaje_maximo: Number(c.puntaje_maximo || 5),
+        puntaje_asignado: Number(c.puntaje_maximo || 5),
+    })),
+);
+
+const totalRubricaCalculada = computed(() => {
+    const sum = criteriosEstado.value.reduce((acc, c) => acc + Math.min(Number(c.puntaje_maximo), Math.max(0, Number(c.puntaje_asignado) || 0)), 0);
+    return Math.min(20, Math.max(1, Number(sum.toFixed(2))));
+});
+
+const aplicarRubricaATodos = () => {
+    const val = totalRubricaCalculada.value;
+    Object.keys(formCalif.value.calificaciones).forEach((k) => {
+        formCalif.value.calificaciones[k] = val;
+    });
+};
 
 const tabActiva = ref('evaluacion');
 const estudianteSeleccionado = ref(props.integrantes_detalles?.[0] || null);

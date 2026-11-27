@@ -34,6 +34,7 @@
                 </button>
             </div>
             <div class="content">
+                <BannerComunidadPendiente />
                 <div style="margin-bottom: 1.25rem">
                     <h4
                         style="
@@ -148,18 +149,14 @@
                                             <i class="bi bi-check-circle me-1"></i>Historial Cumplido ({{ puntosCumplidos.length }})
                                         </button>
                                     </div>
-                                    <select
-                                        v-model="puntoControlSeleccionado"
-                                        class="form-select form-select-sm fw-semibold"
-                                        style="min-width: 250px; background: var(--bg-card); color: var(--text-main); border-color: var(--border);"
-                                    >
-                                        <option v-if="!puntosVisibles || puntosVisibles.length === 0" value="">
-                                            {{ tabPuntosLider === 'activos' ? 'Sin puntos pendientes en curso' : 'Sin puntos cumplidos en historial' }}
-                                        </option>
-                                        <option v-for="puc in puntosVisibles" :key="puc.puc_id" :value="puc.puc_id">
-                                            {{ puc.puc_nombre }} (Semana {{ puc.puc_semana }})
-                                        </option>
-                                    </select>
+                                    <div style="min-width: 260px;">
+                                        <SelectBuscable
+                                            v-model="puntoControlSeleccionado"
+                                            :options="opcionesPuntosVisibles"
+                                            size="sm"
+                                            :placeholder="tabPuntosLider === 'activos' ? 'Sin puntos pendientes en curso' : 'Sin puntos cumplidos en historial'"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -205,7 +202,7 @@
                                                 <i class="bi bi-hourglass-split me-1"></i>Pendiente de evaluación
                                             </span>
 
-                                            <!-- Enfoque de Gestión de Proyectos y Procesos -->
+                                            <!-- Situación del Proyecto -->
                                             <span
                                                 v-if="puntoActual.seguimiento?.seq_estado_semaforo"
                                                 :class="[
@@ -218,7 +215,7 @@
                                                 style="cursor: help;"
                                             >
                                                 <i class="bi bi-circle-fill me-1" style="font-size: 0.6rem;"></i>
-                                                Enfoque de Gestión de Proyectos y Procesos: {{ getEtiquetaEstado(puntoActual.seguimiento.seq_estado_semaforo) }}
+                                                Situación del Proyecto: {{ getEtiquetaEstado(puntoActual.seguimiento.seq_estado_semaforo) }}
                                             </span>
                                         </div>
                                     </div>
@@ -612,23 +609,15 @@
                                 <label class="form-label small fw-bold"
                                     >Selecciona el tutor</label
                                 >
-                                <select
-                                    class="form-select form-select-sm mb-3"
-                                    v-model="formTutor.tut_id_usu"
-                                >
-                                    <option value="">
-                                        — Seleccionar profesor —
-                                    </option>
-                                    <option
-                                        v-for="prof in profesoresDisponibles"
-                                        :key="prof.usu_id"
-                                        :value="prof.usu_id"
-                                    >
-                                        {{ prof.usu_primer_nombre }}
-                                        {{ prof.usu_primer_apellido }} (C.I.
-                                        {{ prof.usu_cedula }})
-                                    </option>
-                                </select>
+                                <div class="mb-3">
+                                    <SelectBuscable
+                                        v-model="formTutor.tut_id_usu"
+                                        :options="opcionesProfesoresTutor"
+                                        size="sm"
+                                        placeholder="— Seleccionar profesor —"
+                                        search-placeholder="Buscar profesor..."
+                                    />
+                                </div>
                                 <p
                                     class="small mb-3"
                                     style="color: var(--text-muted)"
@@ -681,6 +670,8 @@ import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 import SemaforoEquipo from "@/Components/SemaforoEquipo.vue";
 import SidebarLider from "@/Components/SidebarLider.vue";
+import BannerComunidadPendiente from "@/Components/BannerComunidadPendiente.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 
 const props = defineProps({
     equipo: Object,
@@ -693,6 +684,15 @@ const props = defineProps({
     asistenciasGrupo: { type: Array, default: () => [] },
     resumenIntegrantes: { type: Array, default: () => [] },
 });
+
+const opcionesProfesoresTutor = computed(() => [
+    { value: "", label: "— Seleccionar profesor —" },
+    ...(props.profesoresDisponibles || []).map((prof) => ({
+        value: prof.usu_id,
+        label: `${prof.usu_primer_nombre} ${prof.usu_primer_apellido}`,
+        sublabel: `C.I. ${prof.usu_cedula}`,
+    })),
+]);
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
@@ -719,6 +719,24 @@ const puntosVisibles = computed(() => {
     return tabPuntosLider.value === "activos"
         ? puntosActivos.value
         : puntosCumplidos.value;
+});
+
+const opcionesPuntosVisibles = computed(() => {
+    if (!puntosVisibles.value || puntosVisibles.value.length === 0) {
+        return [
+            {
+                value: "",
+                label:
+                    tabPuntosLider.value === "activos"
+                        ? "Sin puntos pendientes en curso"
+                        : "Sin puntos cumplidos en historial",
+            },
+        ];
+    }
+    return puntosVisibles.value.map((puc) => ({
+        value: puc.puc_id,
+        label: `${puc.puc_nombre} (Semana ${puc.puc_semana})`,
+    }));
 });
 
 const puntoControlSeleccionado = ref(
@@ -839,7 +857,7 @@ const getSignificadoEstado = (tipo) => {
         case "no_viable":
             return "Cierre administrativo por falta de factibilidad.";
         default:
-            return "Enfoque de Gestión de Proyectos y Procesos";
+            return "Situación del Proyecto";
     }
 };
 

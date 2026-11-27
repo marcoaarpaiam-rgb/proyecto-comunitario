@@ -35,6 +35,7 @@
                 </button>
             </div>
             <div class="content">
+                <BannerComunidadPendiente />
                 <div style="margin-bottom: 1.25rem">
                     <h4
                         style="
@@ -125,7 +126,7 @@
                                         >Estado comunidad</span
                                     >
                                     <span
-                                        v-if="proyecto.pco_fecha_aprobacion"
+                                        v-if="proyecto.pco_comunidad_aprobada || proyecto.pco_fecha_aprobacion"
                                         class="bs ba"
                                         >✓ Aprobada</span
                                     >
@@ -170,7 +171,7 @@
                                     class="btn btn-danger fw-bold rounded-pill px-4"
                                     @click="solicitar"
                                     :disabled="
-                                        !proyecto.pco_fecha_aprobacion ||
+                                        !(proyecto.pco_comunidad_aprobada || proyecto.pco_fecha_aprobacion) ||
                                         loading
                                     "
                                 >
@@ -182,14 +183,14 @@
                                     >Solicitar Carta de Presentación
                                 </button>
                                 <div
-                                    v-if="!proyecto.pco_fecha_aprobacion"
+                                    v-if="!(proyecto.pco_comunidad_aprobada || proyecto.pco_fecha_aprobacion)"
                                     style="
                                         font-size: 0.78rem;
                                         color: var(--text-muted);
                                         margin-top: 0.5rem;
                                     "
                                 >
-                                    La comunidad debe estar aprobada para
+                                    La comunidad debe estar aprobada por el docente para
                                     solicitar la carta.
                                 </div>
                             </div>
@@ -314,6 +315,7 @@ import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import SidebarLider from "@/Components/SidebarLider.vue";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
+import BannerComunidadPendiente from "@/Components/BannerComunidadPendiente.vue";
 
 const props = defineProps({ carta: Object, proyecto: Object, equipo: Object });
 const page = usePage();

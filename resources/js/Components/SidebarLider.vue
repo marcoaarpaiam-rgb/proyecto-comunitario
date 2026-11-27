@@ -94,6 +94,13 @@
                 >
                     <i class="bi bi-mortarboard"></i> Historial Académico
                 </Link>
+                <button
+                    type="button"
+                    class="sb-lnk w-100 text-start border-0 bg-transparent"
+                    @click="abrirCambioClave"
+                >
+                    <i class="bi bi-key"></i> Cambiar Contraseña
+                </button>
 
                 <div style="padding: 0.75rem 1.4rem; margin-top: auto">
                     <form @submit.prevent="logout">
@@ -113,12 +120,17 @@
                 </div>
             </div>
         </div>
+        <ModalCambioPasswordLider ref="modalClaveRef" />
     </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { ref, computed } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
+import ModalCambioPasswordLider from "@/Components/ModalCambioPasswordLider.vue";
+
+const modalClaveRef = ref(null);
+const abrirCambioClave = () => modalClaveRef.value?.abrir();
 
 defineProps({
     sidebarOpen: { type: Boolean, default: false },
