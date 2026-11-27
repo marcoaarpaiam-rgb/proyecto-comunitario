@@ -144,45 +144,6 @@
                             </tbody>
                         </table>
                     </div>
-                    <div
-                        v-if="totalPaginas > 1"
-                        style="
-                            padding: 0.75rem 1rem;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            border-top: 1px solid var(--border);
-                        "
-                    >
-                        <span style="font-size: 0.82rem; color: var(--text-muted)">
-                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, entregablesFiltrados.length) }} de {{ entregablesFiltrados.length }} (3 por página)
-                        </span>
-                        <div class="d-flex gap-1">
-                            <button
-                                class="btn btn-sm btn-outline-secondary"
-                                :disabled="paginaActual === 1"
-                                @click="paginaActual--"
-                            >
-                                <i class="bi bi-chevron-left"></i>
-                            </button>
-                            <button
-                                v-for="p in paginasV"
-                                :key="p"
-                                class="btn btn-sm"
-                                :class="p === paginaActual ? 'btn-danger' : 'btn-outline-secondary'"
-                                @click="paginaActual = p"
-                            >
-                                {{ p }}
-                            </button>
-                            <button
-                                class="btn btn-sm btn-outline-secondary"
-                                :disabled="paginaActual === totalPaginas"
-                                @click="paginaActual++"
-                            >
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- TABS DE NAVEGACIÓN: PENDIENTES VS ARCHIVADOS -->
@@ -407,7 +368,7 @@
                         "
                     >
                         <span style="font-size: 0.82rem; color: var(--text-muted)">
-                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, entregablesFiltrados.length) }} de {{ entregablesFiltrados.length }} (3 por página)
+                            {{ textoPaginacion }}
                         </span>
                         <div class="d-flex gap-1">
                             <button
@@ -544,7 +505,7 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { Modal } from "bootstrap";
@@ -552,10 +513,16 @@ import { Link } from "@inertiajs/vue3";
 import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
 const props = defineProps({
-    entregables: { type: Array, default: () => [] },
+    entregables: { type: [Array, Object], default: () => [] },
     catalogoPnfi: { type: Array, default: () => [] },
     equipos: { type: Array, default: () => [] },
-    semestreActivo: { type: String, default: "Semestre 1" },
+    semestreActivo: { type: [String, Number], default: "Semestre 1" },
+});
+
+const listaEntregables = computed(() => {
+    if (Array.isArray(props.entregables)) return props.entregables;
+    if (props.entregables?.data && Array.isArray(props.entregables.data)) return props.entregables.data;
+    return [];
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -571,11 +538,11 @@ const equipoFiltro = ref("");
 const tabEntregables = ref("pendientes"); // "pendientes" | "archivados"
 
 const totalPendientes = computed(
-    () => (props.entregables || []).filter((e) => e.entr_aprobado === null).length,
+    () => listaEntregables.value.filter((e) => e.entr_aprobado === null).length,
 );
 
 const totalArchivados = computed(
-    () => (props.entregables || []).filter((e) => e.entr_aprobado !== null).length,
+    () => listaEntregables.value.filter((e) => e.entr_aprobado !== null).length,
 );
 
 const catalogoFiltrado = computed(() => {
@@ -596,7 +563,7 @@ const catalogoFiltrado = computed(() => {
 });
 
 const getEstadoCatalogoEquipo = (cepId, eqId) => {
-    const entregablesAsociados = (props.entregables || []).filter(
+    const entregablesAsociados = listaEntregables.value.filter(
         (e) => e.entr_id_cep === cepId && (!eqId || e.entr_id_equ == eqId),
     );
     if (!entregablesAsociados.length)
@@ -609,7 +576,7 @@ const getEstadoCatalogoEquipo = (cepId, eqId) => {
 };
 
 const entregablesFiltrados = computed(() => {
-    let list = props.entregables || [];
+    let list = listaEntregables.value;
     if (tabEntregables.value === "pendientes") {
         list = list.filter((e) => e.entr_aprobado === null);
     } else {
@@ -630,6 +597,13 @@ const totalPaginas = computed(() => Math.ceil(entregablesFiltrados.value.length 
 const desde = computed(() => (paginaActual.value - 1) * porPagina);
 const hasta = computed(() => desde.value + porPagina);
 const entregablesPaginados = computed(() => entregablesFiltrados.value.slice(desde.value, hasta.value));
+const textoPaginacion = computed(() => {
+    const total = entregablesFiltrados.value?.length || 0;
+    if (total === 0) return "0 registros";
+    const start = desde.value + 1;
+    const end = Math.min(hasta.value, total);
+    return `Mostrando ${start}–${end} de ${total} (${porPagina} por página)`;
+});
 const paginasV = computed(() => {
     const t = totalPaginas.value,
         a = paginaActual.value,
@@ -652,9 +626,7 @@ const iniciales = computed(() => {
         (u?.usu_primer_nombre?.[0] || "") + (u?.usu_primer_apellido?.[0] || "")
     );
 });
-const pendientes = computed(
-    () => props.entregables.filter((e) => e.entr_aprobado === null).length,
-);
+const pendientes = computed(() => totalPendientes.value);
 const entSeleccionado = ref(null);
 const observacionRechazo = ref("");
 const intentoRechazar = ref(false);

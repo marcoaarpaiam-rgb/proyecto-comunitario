@@ -139,7 +139,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-if="registros.data.length === 0">
+                                <tr v-if="listaRegistros.length === 0">
                                     <td
                                         colspan="6"
                                         class="text-center py-5"
@@ -149,7 +149,7 @@
                                     </td>
                                 </tr>
                                 <tr
-                                    v-for="bit in registros.data"
+                                    v-for="bit in listaRegistros"
                                     :key="bit.bit_id"
                                 >
                                     <td
@@ -305,6 +305,12 @@ const props = defineProps({
     entidades: Array,
     usuarios: Array,
     filtros: Object,
+});
+
+const listaRegistros = computed(() => {
+    if (Array.isArray(props.registros?.data)) return props.registros.data;
+    if (Array.isArray(props.registros)) return props.registros;
+    return [];
 });
 const page = usePage();
 const sidebarOpen = ref(false);

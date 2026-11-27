@@ -577,7 +577,7 @@
                         "
                     >
                         <span style="font-size: 0.82rem; color: var(--text-muted)">
-                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, filtrados.length) }} de {{ filtrados.length }} (3 por página)
+                            {{ textoPaginacion }}
                         </span>
                         <div class="d-flex gap-1">
                             <button
@@ -911,7 +911,7 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
@@ -926,8 +926,8 @@ const modalPuntoRef = ref(null);
 const modalSegRef = ref(null);
 
 const props = defineProps({
-    puntosControl: Array,
-    equipos: Array,
+    puntosControl: { type: [Array, Object], default: () => [] },
+    equipos: { type: Array, default: () => [] },
     secciones: { type: Array, default: () => [] },
     diagnosticosEquipos: { type: Object, default: () => ({}) },
     semanaActual: { type: Number, default: 1 },
@@ -935,6 +935,12 @@ const props = defineProps({
     esquemasPorSeccion: { type: Object, default: () => ({}) },
     plantillasEsquemas: { type: Array, default: () => [] },
     tiposEntregable: { type: Array, default: () => [] },
+});
+
+const listaPuntosControl = computed(() => {
+    if (Array.isArray(props.puntosControl)) return props.puntosControl;
+    if (props.puntosControl?.data && Array.isArray(props.puntosControl.data)) return props.puntosControl.data;
+    return [];
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -1082,11 +1088,11 @@ const esConfirmado = (puc) => {
 };
 
 const totalPendientes = computed(() => {
-    return (props.puntosControl || []).filter((p) => !esConfirmado(p)).length;
+    return listaPuntosControl.value.filter((p) => !esConfirmado(p)).length;
 });
 
 const totalArchivados = computed(() => {
-    return (props.puntosControl || []).filter((p) => esConfirmado(p)).length;
+    return listaPuntosControl.value.filter((p) => esConfirmado(p)).length;
 });
 
 const esquemaActual = computed(() => {
@@ -1367,7 +1373,7 @@ const esCercano = (f) => {
     return diff > 0 && diff < 3 * 86400000;
 };
 const filtrados = computed(() => {
-    let list = props.puntosControl || [];
+    let list = listaPuntosControl.value;
     if (tabPuntos.value === 'pendientes') {
         list = list.filter((p) => !esConfirmado(p));
     } else {
@@ -1408,6 +1414,13 @@ const totalPaginas = computed(() => Math.ceil(filtrados.value.length / porPagina
 const desde = computed(() => (paginaActual.value - 1) * porPagina);
 const hasta = computed(() => desde.value + porPagina);
 const paginados = computed(() => filtrados.value.slice(desde.value, hasta.value));
+const textoPaginacion = computed(() => {
+    const total = filtrados.value?.length || 0;
+    if (total === 0) return "0 registros";
+    const start = desde.value + 1;
+    const end = Math.min(hasta.value, total);
+    return `Mostrando ${start}–${end} de ${total} (${porPagina} por página)`;
+});
 const paginasV = computed(() => {
     const t = totalPaginas.value,
         a = paginaActual.value,

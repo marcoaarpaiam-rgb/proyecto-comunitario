@@ -4518,9 +4518,12 @@ watch([busqueda, verDisueltos, filtroSemaforo], () => {
     pagina.value = 1;
 });
 
-const listaActual = computed(() =>
-    verDisueltos.value ? props.equiposDisueltos : props.equipos,
-);
+const listaActual = computed(() => {
+    const raw = verDisueltos.value ? props.equiposDisueltos : props.equipos;
+    if (Array.isArray(raw)) return raw;
+    if (raw?.data && Array.isArray(raw.data)) return raw.data;
+    return [];
+});
 const equiposFiltrados = computed(() => {
     let list = listaActual.value || [];
     if (busqueda.value.trim()) {

@@ -410,7 +410,7 @@
                         "
                     >
                         <span style="font-size: 0.82rem; color: var(--text-muted)">
-                            Mostrando {{ desde + 1 }}–{{ Math.min(hasta, socializacionesFiltradas.length) }} de {{ socializacionesFiltradas.length }} (3 por página)
+                            {{ textoPaginacion }}
                         </span>
                         <div class="d-flex gap-1">
                             <button
@@ -1095,7 +1095,7 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Modal } from "bootstrap";
 import { Link } from "@inertiajs/vue3";
@@ -1104,10 +1104,17 @@ import SelectBuscable from "@/Components/SelectBuscable.vue";
 import SidebarProfesor from "@/Components/SidebarProfesor.vue";
 
 const props = defineProps({
-    socializaciones: Array,
-    equipos: Array,
+    socializaciones: { type: [Array, Object], default: () => [] },
+    equipos: { type: Array, default: () => [] },
     secciones: { type: Array, default: () => [] },
-    tiposSocializacion: Array,
+    tiposSocializacion: { type: Array, default: () => [] },
+    tiposJurado: { type: Array, default: () => [] },
+});
+
+const listaSocializaciones = computed(() => {
+    if (Array.isArray(props.socializaciones)) return props.socializaciones;
+    if (props.socializaciones?.data && Array.isArray(props.socializaciones.data)) return props.socializaciones.data;
+    return [];
 });
 
 const opcionesSeccionesModal = computed(() => [
@@ -1383,7 +1390,7 @@ const estaEvaluada = (soc) => {
 };
 
 const listaPorModulo = computed(() => {
-    let list = props.socializaciones || [];
+    let list = listaSocializaciones.value;
     if (moduloActivo.value === "pre_socializacion") {
         return list.filter((s) => s.tipo_socializacion?.tso_orden === 1 || s.soc_id_tso == 1);
     } else {
@@ -1418,6 +1425,13 @@ const totalPaginas = computed(() => Math.ceil(socializacionesFiltradas.value.len
 const desde = computed(() => (paginaActual.value - 1) * porPagina);
 const hasta = computed(() => desde.value + porPagina);
 const socializacionesPaginadas = computed(() => socializacionesFiltradas.value.slice(desde.value, hasta.value));
+const textoPaginacion = computed(() => {
+    const total = socializacionesFiltradas.value?.length || 0;
+    if (total === 0) return "0 registros";
+    const start = desde.value + 1;
+    const end = Math.min(hasta.value, total);
+    return `Mostrando ${start}–${end} de ${total} (${porPagina} por página)`;
+});
 const paginasV = computed(() => {
     const t = totalPaginas.value,
         a = paginaActual.value,

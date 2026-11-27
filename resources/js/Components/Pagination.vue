@@ -1,16 +1,16 @@
 <template>
     <div
-        v-if="paginador && (paginador.total > 0 || (paginador.links && paginador.links.length > 3))"
+        v-if="mostrarPaginador"
         class="d-flex flex-wrap justify-content-between align-items-center py-2 px-3 border-top bg-light-subtle rounded-bottom"
     >
         <div class="text-muted small mb-2 mb-sm-0">
             Mostrando
-            <span class="fw-semibold">{{ paginador.from || 0 }}</span>
+            <span class="fw-semibold">{{ paginador?.from ?? (links.length > 0 ? 1 : 0) }}</span>
             a
-            <span class="fw-semibold">{{ paginador.to || 0 }}</span>
+            <span class="fw-semibold">{{ paginador?.to ?? (paginador?.total ?? links.length) }}</span>
             de
-            <span class="fw-semibold">{{ paginador.total || 0 }}</span>
-            registros ({{ paginador.per_page || 3 }} por página)
+            <span class="fw-semibold">{{ paginador?.total ?? links.length }}</span>
+            registros ({{ paginador?.per_page ?? 3 }} por página)
         </div>
 
         <nav aria-label="Navegación de páginas" v-if="links && links.length > 3">
@@ -68,15 +68,24 @@ const links = computed(() => {
     return [];
 });
 
+const mostrarPaginador = computed(() => {
+    if (props.paginador && typeof props.paginador === "object") {
+        if (Number(props.paginador.total) > 0) return true;
+        if (Array.isArray(props.paginador.links) && props.paginador.links.length > 3) return true;
+    }
+    return links.value && links.value.length > 3;
+});
+
 const limpiarEtiqueta = (label) => {
-    if (!label) return "";
-    if (label.includes("Previous") || label.includes("&laquo;")) {
+    if (label === null || label === undefined) return "";
+    const str = String(label);
+    if (str.includes("Previous") || str.includes("&laquo;")) {
         return '<i class="bi bi-chevron-left"></i> Anterior';
     }
-    if (label.includes("Next") || label.includes("&raquo;")) {
+    if (str.includes("Next") || str.includes("&raquo;")) {
         return 'Siguiente <i class="bi bi-chevron-right"></i>';
     }
-    return label;
+    return str;
 };
 </script>
 

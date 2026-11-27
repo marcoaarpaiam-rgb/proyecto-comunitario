@@ -581,12 +581,19 @@ onMounted(() => {
 watch(busqueda, () => {
     pagina.value = 1;
 });
+const listaComunidades = computed(() => {
+    if (Array.isArray(props.comunidades)) return props.comunidades;
+    if (props.comunidades?.data && Array.isArray(props.comunidades.data)) return props.comunidades.data;
+    return [];
+});
+
 const filtradas = computed(() => {
-    if (!busqueda.value.trim()) return props.comunidades;
+    const list = listaComunidades.value;
+    if (!busqueda.value.trim()) return list;
     const q = busqueda.value.toLowerCase();
-    return props.comunidades.filter(
+    return list.filter(
         (c) =>
-            c.com_nombre.toLowerCase().includes(q) ||
+            c.com_nombre?.toLowerCase().includes(q) ||
             c.com_ubicacion?.toLowerCase().includes(q),
     );
 });

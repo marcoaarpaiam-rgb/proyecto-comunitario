@@ -944,8 +944,14 @@ watch([busqueda, filtroAprobacion], () => {
     pagina.value = 1;
 });
 const estaVencido = (f) => f && new Date(f) < new Date();
+const listaProyectos = computed(() => {
+    if (Array.isArray(props.proyectos)) return props.proyectos;
+    if (props.proyectos?.data && Array.isArray(props.proyectos.data)) return props.proyectos.data;
+    return [];
+});
+
 const proyectosFiltrados = computed(() => {
-    let r = props.proyectos;
+    let r = listaProyectos.value;
     if (busqueda.value.trim()) {
         const q = busqueda.value.toLowerCase();
         r = r.filter(

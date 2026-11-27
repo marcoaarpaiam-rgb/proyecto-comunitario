@@ -225,7 +225,7 @@
                                 </table>
                             </div>
                             <div v-if="totalPaginasPuc > 1" class="d-flex justify-content-between align-items-center py-2 px-3 border-top">
-                                <small class="text-muted">Mostrando {{ (pagPuc - 1) * porPagina + 1 }}–{{ Math.min(pagPuc * porPagina, totalPuntos) }} de {{ totalPuntos }} (3 por página)</small>
+                                <small class="text-muted">{{ textoPaginacionPuc }}</small>
                                 <div class="d-flex gap-1">
                                     <button class="btn btn-sm btn-outline-secondary" :disabled="pagPuc === 1" @click="pagPuc--"><i class="bi bi-chevron-left"></i></button>
                                     <button v-for="p in totalPaginasPuc" :key="p" class="btn btn-sm" :class="p === pagPuc ? 'btn-danger' : 'btn-outline-secondary'" @click="pagPuc = p">{{ p }}</button>
@@ -298,7 +298,7 @@
                                 </table>
                             </div>
                             <div v-if="totalPaginasEnt > 1" class="d-flex justify-content-between align-items-center py-2 px-3 border-top">
-                                <small class="text-muted">Mostrando {{ (pagEnt - 1) * porPagina + 1 }}–{{ Math.min(pagEnt * porPagina, totalEntregables) }} de {{ totalEntregables }} (3 por página)</small>
+                                <small class="text-muted">{{ textoPaginacionEnt }}</small>
                                 <div class="d-flex gap-1">
                                     <button class="btn btn-sm btn-outline-secondary" :disabled="pagEnt === 1" @click="pagEnt--"><i class="bi bi-chevron-left"></i></button>
                                     <button v-for="p in totalPaginasEnt" :key="p" class="btn btn-sm" :class="p === pagEnt ? 'btn-danger' : 'btn-outline-secondary'" @click="pagEnt = p">{{ p }}</button>
@@ -450,8 +450,23 @@ const pagEnt = ref(1);
 const porPagina = 3;
 const totalPaginasPuc = computed(() => Math.ceil((props.equipo?.puntos_control?.length || 0) / porPagina));
 const pucPaginados = computed(() => (props.equipo?.puntos_control || []).slice((pagPuc.value - 1) * porPagina, pagPuc.value * porPagina));
+const textoPaginacionPuc = computed(() => {
+    const total = totalPuntos.value;
+    if (total === 0) return "0 registros";
+    const start = (pagPuc.value - 1) * porPagina + 1;
+    const end = Math.min(pagPuc.value * porPagina, total);
+    return `Mostrando ${start}–${end} de ${total} (${porPagina} por página)`;
+});
+
 const totalPaginasEnt = computed(() => Math.ceil((props.equipo?.entregables?.length || 0) / porPagina));
 const entPaginados = computed(() => (props.equipo?.entregables || []).slice((pagEnt.value - 1) * porPagina, pagEnt.value * porPagina));
+const textoPaginacionEnt = computed(() => {
+    const total = totalEntregables.value;
+    if (total === 0) return "0 registros";
+    const start = (pagEnt.value - 1) * porPagina + 1;
+    const end = Math.min(pagEnt.value * porPagina, total);
+    return `Mostrando ${start}–${end} de ${total} (${porPagina} por página)`;
+});
 
 const totalSocializaciones = computed(() => props.equipo?.socializaciones?.length || 0);
 const socializacionesAptas = computed(() => {
