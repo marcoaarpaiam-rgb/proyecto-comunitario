@@ -18,7 +18,14 @@ class AppServiceProvider extends ServiceProvider
     
     public function boot(): void
     {
-        if (app()->isProduction()) {
+        if (
+            app()->isProduction() ||
+            (!app()->runningInConsole() && (
+                request()->header('X-Forwarded-Proto') === 'https' ||
+                str_contains((string) request()->header('CF-Visitor'), '"https"') ||
+                str_ends_with((string) request()->getHost(), '.trycloudflare.com')
+            ))
+        ) {
             \URL::forceScheme('https');
         }
         $tempDir = storage_path('app/temp');

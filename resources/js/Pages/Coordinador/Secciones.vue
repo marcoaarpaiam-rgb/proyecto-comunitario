@@ -307,6 +307,14 @@
                                         >
                                             <i class="bi bi-cloud-arrow-up-fill text-danger me-1"></i>Cierre y Repositorio
                                         </a>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-warning text-dark me-1"
+                                            @click="abrirAsignarProfesor(sec)"
+                                            title="Asignar / Reasignar Profesor de Proyecto"
+                                        >
+                                            <i class="bi bi-person-plus-fill"></i>
+                                        </button>
                                         <a
                                             :href="`/coordinador/secciones/${sec.sec_id}/detalle`"
                                             class="btn btn-sm btn-outline-info me-1"
@@ -539,6 +547,70 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal Asignar / Reasignar Profesor a Sección -->
+        <div class="modal fade" id="mAsigProf" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="mh">
+                        <h5>
+                            <i class="bi bi-person-check-fill text-warning me-2"></i>
+                            Asignar Profesor — Sección {{ secAsigProf?.sec_codigo }}
+                        </h5>
+                        <button
+                            type="button"
+                            class="btn btn-sm text-white p-0 fs-5"
+                            data-bs-dismiss="modal"
+                        >
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <form @submit.prevent="confirmarAsignarProfesor">
+                        <div class="modal-body">
+                            <div
+                                v-if="secAsigProf?.profesor_actual?.usuario"
+                                class="alert alert-light border small py-2 px-3 mb-3"
+                            >
+                                <strong>Profesor actual:</strong>
+                                {{ secAsigProf.profesor_actual.usuario.usu_primer_nombre }}
+                                {{ secAsigProf.profesor_actual.usuario.usu_primer_apellido }}
+                            </div>
+                            <div v-if="errorAsigProf" class="alert alert-danger py-2 px-3 small mb-3">
+                                {{ errorAsigProf }}
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold small">
+                                    Profesor de Proyecto <span class="text-danger">*</span>
+                                </label>
+                                <SelectBuscable
+                                    v-model="profAsigId"
+                                    :options="opcionesProfesoresAsig"
+                                    placeholder="Seleccionar profesor..."
+                                    search-placeholder="Buscar por nombre o cédula..."
+                                />
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                class="btn btn-danger fw-bold"
+                                :disabled="!profAsigId || loadingAsigProf"
+                            >
+                                <span v-if="loadingAsigProf" class="spinner-border spinner-border-sm me-2"></span>
+                                Guardar Asignación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -560,6 +632,52 @@ const props = defineProps({
     profesores: { type: Array, default: () => [] },
 });
 const page = usePage();
+const secAsigProf = ref(null);
+const profAsigId = ref("");
+const loadingAsigProf = ref(false);
+const errorAsigProf = ref("");
+let modalAsigProf = null;
+
+const opcionesProfesoresAsig = computed(() => [
+    { value: "", label: "Seleccionar profesor..." },
+    ...(props.profesores || []).map((p) => ({
+        value: p.usu_id,
+        label: `${p.usu_primer_nombre} ${p.usu_primer_apellido}`,
+        sublabel: `C.I. ${p.usu_cedula}`,
+    })),
+]);
+
+const abrirAsignarProfesor = (sec) => {
+    secAsigProf.value = sec;
+    profAsigId.value = sec?.profesor_actual?.usuario?.usu_id || "";
+    errorAsigProf.value = "";
+    const el = document.getElementById("mAsigProf");
+    if (el) {
+        modalAsigProf = Modal.getInstance(el) || new Modal(el);
+        modalAsigProf.show();
+    }
+};
+
+const confirmarAsignarProfesor = () => {
+    if (!secAsigProf.value || !profAsigId.value) return;
+    loadingAsigProf.value = true;
+    errorAsigProf.value = "";
+    router.post(
+        `/coordinador/secciones/${secAsigProf.value.sec_id}/profesores`,
+        { pse_id_usu: profAsigId.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                loadingAsigProf.value = false;
+                modalAsigProf?.hide();
+            },
+            onError: (errs) => {
+                loadingAsigProf.value = false;
+                errorAsigProf.value = Object.values(errs)[0] || "No se pudo asignar el profesor.";
+            },
+        },
+    );
+};
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");
 const toggleTema = () => {
