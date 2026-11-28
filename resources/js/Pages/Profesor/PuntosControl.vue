@@ -889,12 +889,15 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold small text-uppercase text-muted">Trayecto PNFI *</label>
-                                <select v-model="formNuevoEntregable.trayecto" class="form-select">
+                                <select v-model="formNuevoEntregable.trayecto" class="form-select" disabled>
                                     <option :value="1">Trayecto I (Alfabetización Tecnológica)</option>
                                     <option :value="2">Trayecto II (Desarrollo de Software)</option>
                                     <option :value="3">Trayecto III (Desarrollo de Software)</option>
                                     <option :value="4">Trayecto IV (Desarrollo de Software / Grado)</option>
                                 </select>
+                                <div class="form-text small text-primary">
+                                    <i class="bi bi-lock-fill me-1"></i>Trayecto asignado automáticamente según la sección en curso.
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer border-0 bg-light p-3">
@@ -1012,9 +1015,13 @@ const formNuevoEntregable = ref({
 });
 
 const abrirModalNuevoEntregable = () => {
+    const secElegida = filtroSeccion.value
+        ? (props.secciones || []).find((s) => String(s.sec_id) === String(filtroSeccion.value))
+        : props.secciones?.[0];
+    const trayectoAuto = Number(secElegida?.sec_id_tra || secElegida?.trayecto?.tra_numero || 1);
     formNuevoEntregable.value = {
         nombre: "",
-        trayecto: 1,
+        trayecto: trayectoAuto,
     };
     errorNuevoEntregable.value = "";
     const el = document.getElementById("modalNuevoEntregableMaestro");
@@ -1050,6 +1057,9 @@ const guardarNuevoEntregableMaestro = async () => {
                 tet_status: 1,
             });
             modalNuevoEntregable.value?.hide();
+            window.dispatchEvent(new CustomEvent("siscon:feedback", {
+                detail: { type: "success", title: "Entregable registrado", message: res.data.message || "El nuevo tipo de entregable fue guardado en el catálogo maestro." }
+            }));
         } else {
             errorNuevoEntregable.value = res.data.message || "Error al registrar el entregable.";
         }

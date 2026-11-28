@@ -150,7 +150,7 @@ class EvaluacionTrayectoController extends Controller
     {
         $nuevoPin = $this->evaluacionService->generarPinDefensa($id_proyecto);
 
-        if (request()->wantsJson()) {
+        if (request()->wantsJson() && !request()->header('X-Inertia')) {
             return response()->json(['pin' => $nuevoPin, 'mensaje' => 'PIN de defensa generado exitosamente.']);
         }
 

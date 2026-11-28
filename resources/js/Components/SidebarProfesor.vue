@@ -81,16 +81,9 @@
                 <Link
                     href="/profesor/esquemas-evaluacion"
                     class="sb-lnk"
-                    :class="{ active: currentPath.startsWith('/profesor/esquemas-evaluacion') }"
+                    :class="{ active: currentPath.startsWith('/profesor/esquemas-evaluacion') || currentPath.startsWith('/evaluaciones') }"
                 >
-                    <i class="bi bi-sliders"></i> Esquemas de Evaluación
-                </Link>
-                <Link
-                    href="/evaluaciones"
-                    class="sb-lnk"
-                    :class="{ active: currentPath.startsWith('/evaluaciones') }"
-                >
-                    <i class="bi bi-journal-check"></i> Rúbricas Oficiales
+                    <i class="bi bi-sliders"></i> Evaluación y Rúbricas
                 </Link>
                 <Link
                     href="/profesor/socializaciones"

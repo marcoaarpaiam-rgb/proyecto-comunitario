@@ -98,6 +98,22 @@
                                 placeholder="Todos"
                             />
                         </div>
+                        <div style="min-width: 185px;">
+                            <SelectBuscable
+                                v-model="filtroSeccion"
+                                :options="opcionesFiltroSeccion"
+                                size="sm"
+                                placeholder="Todas las secciones"
+                            />
+                        </div>
+                        <div style="min-width: 170px;">
+                            <SelectBuscable
+                                v-model="filtroTrayecto"
+                                :options="opcionesFiltroTrayecto"
+                                size="sm"
+                                placeholder="Todos los trayectos"
+                            />
+                        </div>
                         <span
                             class="ms-auto"
                             style="
@@ -732,6 +748,8 @@ const menuSistema = ref(false);
 const props = defineProps({
     proyectos: Array,
     equipos: Array,
+    secciones: { type: Array, default: () => [] },
+    trayectos: { type: Array, default: () => [] },
     comunidades: Array,
     tipos: Array,
     modalidades: Array,
@@ -753,7 +771,24 @@ const iniciales = computed(() => {
 });
 const busqueda = ref("");
 const filtroAprobacion = ref("");
+const filtroSeccion = ref("");
+const filtroTrayecto = ref("");
 const pagina = ref(1);
+
+const opcionesFiltroSeccion = computed(() => [
+    { value: "", label: "Todas las secciones" },
+    ...(props.secciones || []).map((s) => ({
+        value: String(s.sec_id),
+        label: `Sección ${s.sec_codigo}${s.trayecto?.tra_nombre ? " — " + s.trayecto.tra_nombre : ""}`,
+    })),
+]);
+const opcionesFiltroTrayecto = computed(() => [
+    { value: "", label: "Todos los trayectos" },
+    ...(props.trayectos || []).map((t) => ({
+        value: String(t.tra_id),
+        label: t.tra_nombre,
+    })),
+]);
 const porPagina = 3;
 const form = ref({
     pco_id_equ: "",
@@ -966,6 +1001,10 @@ const proyectosFiltrados = computed(() => {
         r = r.filter((p) => !!p.pco_fecha_aprobacion);
     if (filtroAprobacion.value === "pendiente")
         r = r.filter((p) => !p.pco_fecha_aprobacion);
+    if (filtroSeccion.value)
+        r = r.filter((p) => String(p.equipo?.equ_id_sec || p.equipo?.seccion?.sec_id) === String(filtroSeccion.value));
+    if (filtroTrayecto.value)
+        r = r.filter((p) => String(p.equipo?.equ_id_tra || p.equipo?.trayecto?.tra_id || p.equipo?.seccion?.sec_id_tra) === String(filtroTrayecto.value));
     return r;
 });
 const totalPaginas = computed(() =>

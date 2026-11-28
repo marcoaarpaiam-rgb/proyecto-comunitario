@@ -525,6 +525,8 @@ Route::middleware(['auth', 'rol:coordinador'])->prefix('coordinador')->name('coo
         ->name('esquemas.asignar');
     Route::post('esquemas-evaluacion/auto-asignar', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'autoAsignarRecomendados'])
         ->name('esquemas.auto-asignar');
+    Route::put('rubricas/{id}', [\App\Http\Controllers\Profesor\EsquemaEvaluacionController::class, 'updateRubrica'])
+        ->name('rubricas.update');
     // Equipos — Gestión autónoma del Docente de Proyecto por sección
     Route::get('equipos', [EquipoController::class, 'index'])
         ->name('equipos.index');
@@ -579,6 +581,9 @@ Route::middleware(['auth', 'rol:lider'])
     Route::get('equipo',
         [App\Http\Controllers\Lider\LiderController::class, 'miEquipo'])
         ->name('equipo');
+    Route::get('equipo/paquete-cierre',
+        [App\Http\Controllers\Lider\LiderController::class, 'descargarPaqueteCierre'])
+        ->name('equipo.paquete-cierre');
     Route::get('proyecto',
         [App\Http\Controllers\Lider\LiderController::class, 'miProyecto'])
         ->name('proyecto');

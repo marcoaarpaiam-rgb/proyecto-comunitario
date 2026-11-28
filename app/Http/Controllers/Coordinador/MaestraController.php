@@ -52,7 +52,7 @@ class MaestraController extends Controller
             'tpr_id_usu_created' => auth()->id(),
         ]);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if (!$request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
             return response()->json([
                 'success'      => true,
                 'message'      => 'Línea de investigación creada correctamente.',

@@ -25,7 +25,6 @@
                         <i class="bi bi-arrow-left me-1"></i>Volver
                     </Link>
                     <div class="tb-title">
-                        <i class="bi bi-people-fill me-2 text-danger d-none d-sm-inline"></i>
                         <span v-if="seccion">
                             Equipos — Sección {{ seccion.sec_codigo }}
                         </span>
@@ -34,7 +33,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button
-                        v-if="puedeCrear"
+                        v-if="puedeCrear && seccion"
                         class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
                         @click="abrirNuevoEquipo"
                     >

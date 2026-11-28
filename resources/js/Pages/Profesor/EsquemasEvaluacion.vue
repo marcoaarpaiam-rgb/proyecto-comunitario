@@ -24,7 +24,7 @@
                     </button>
                     <div class="tb-title">
                         <i class="bi bi-sliders me-2 text-danger d-none d-sm-inline"></i>
-                        Esquemas de Evaluación Configurables
+                        Evaluación y Rúbricas
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -35,11 +35,19 @@
                         <i class="bi bi-file-earmark-plus me-1"></i>+ Nuevo Entregable
                     </button>
                     <button
+                        v-if="tabEvaluacion === 'esquemas'"
                         class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm"
                         @click="abrirModalCrear"
                     >
                         <i class="bi bi-plus-circle me-1"></i> Nuevo Esquema
                     </button>
+                    <Link
+                        v-else
+                        href="/evaluaciones"
+                        class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm"
+                    >
+                        <i class="bi bi-award me-1"></i> Calificar Proyectos
+                    </Link>
                 </div>
             </div>
 
@@ -54,6 +62,39 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
 
+                <!-- PESTAÑAS UNIFICADAS: ESQUEMA DEL SEMESTRE VS RÚBRICAS DE SOCIALIZACIÓN -->
+                <ul class="nav nav-pills gap-2 mb-4" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button
+                            type="button"
+                            class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                            :class="tabEvaluacion === 'esquemas' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                            @click="tabEvaluacion = 'esquemas'"
+                        >
+                            <i class="bi bi-sliders"></i>
+                            <span>1. Esquema del Semestre</span>
+                            <span class="badge rounded-pill" :class="tabEvaluacion === 'esquemas' ? 'bg-white text-danger' : 'bg-secondary text-white'">
+                                {{ esquemas.length }}
+                            </span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button
+                            type="button"
+                            class="nav-link fw-bold d-flex align-items-center gap-2 rounded-pill px-3 py-2"
+                            :class="tabEvaluacion === 'rubricas' ? 'active bg-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                            @click="tabEvaluacion = 'rubricas'"
+                        >
+                            <i class="bi bi-journal-check"></i>
+                            <span>2. Rúbricas de Socialización</span>
+                            <span class="badge rounded-pill" :class="tabEvaluacion === 'rubricas' ? 'bg-white text-danger' : 'bg-secondary text-white'">
+                                {{ rubricas.length }}
+                            </span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div v-if="tabEvaluacion === 'esquemas'">
                 <!-- ALERTA DE SECCIONES SIN ESQUEMA ASIGNADO -->
                 <div v-if="seccionesSinEsquema.length > 0" class="alert alert-warning border-warning shadow-sm rounded-3 p-3 mb-4">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -109,8 +150,11 @@
                                         {{ esq.esq_modo === 'cuantitativo' ? 'Cuantitativo (1-20)' : 'Cualitativo Respaldado' }}
                                     </span>
                                 </div>
-                                <span class="badge border badge-themed">
+                                <span v-if="esq.esq_modo === 'cuantitativo'" class="badge border badge-themed">
                                     Mín: {{ esq.esq_escala_min }} / Máx: {{ esq.esq_escala_max }} (Aprueba: {{ esq.esq_nota_aprobatoria }})
+                                </span>
+                                <span v-else class="badge border badge-themed">
+                                    Baremo Literal (A / B / C / D)
                                 </span>
                             </div>
                             <div class="card-body">
@@ -243,6 +287,81 @@
                 <div v-if="esquemas.length === 0" class="text-center py-5">
                     <p class="text-muted">No hay esquemas de evaluación registrados.</p>
                 </div>
+                </div>
+
+                <!-- PESTAÑA 2: RÚBRICAS DE SOCIALIZACIÓN -->
+                <div v-if="tabEvaluacion === 'rubricas'">
+                    <div class="card border-0 shadow-sm mb-4 card-themed">
+                        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="fs-1 text-danger">📋</span>
+                                <div>
+                                    <h5 class="fw-bold mb-1">Rúbricas Oficiales de Socialización (PNFI)</h5>
+                                    <p class="text-muted small mb-0">
+                                        Opcional al inicio del semestre, <strong>obligatorio antes de programar la defensa</strong>. Las rúbricas base del PNFI vienen precargadas y puedes ajustar sus criterios según tus secciones.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link href="/evaluaciones" class="btn btn-danger btn-sm fw-bold rounded-pill px-3 text-nowrap">
+                                <i class="bi bi-award me-1"></i> Ir a Evaluar Proyectos
+                            </Link>
+                        </div>
+                    </div>
+
+                    <div v-if="rubricas.length === 0" class="card border-0 shadow-sm p-5 text-center text-muted card-themed">
+                        <i class="bi bi-journal-x fs-1 d-block mb-2"></i>
+                        No hay rúbricas cargadas para tus trayectos.
+                    </div>
+
+                    <div class="row g-3">
+                        <div v-for="rub in rubricas" :key="rub.id_rubrica" class="col-12 col-lg-6">
+                            <div class="card border-0 shadow-sm h-100 card-themed">
+                                <div class="card-header border-bottom-0 pt-3 pb-0 d-flex justify-content-between align-items-center bg-transparent flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="badge bg-danger">{{ rub.tra_nombre || ('Trayecto ' + rub.id_trayecto) }}</span>
+                                        <span class="badge bg-dark">{{ rub.semestre }}</span>
+                                        <span class="badge bg-primary text-capitalize">{{ formatearRolRubrica(rub.rol_evaluador) }}</span>
+                                    </div>
+                                    <span class="badge border badge-themed">
+                                        Peso: {{ Number(rub.peso_porcentual).toFixed(0) }}%
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="fw-bold text-danger mb-3">{{ rub.titulo }}</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-0" style="font-size: 0.8rem;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Criterio de Evaluación</th>
+                                                    <th class="text-center">Tipo</th>
+                                                    <th class="text-end">Pts Máx</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="c in (rub.criterios || [])" :key="c.id_criterio">
+                                                    <td>{{ c.nombre_criterio }}</td>
+                                                    <td class="text-center">
+                                                        <span class="badge" :class="c.tipo_criterio === 'cuantitativo' ? 'bg-info text-dark' : 'bg-success'">
+                                                            {{ c.tipo_criterio }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-end fw-bold">
+                                                        {{ c.tipo_criterio === 'cuantitativo' ? Number(c.puntaje_maximo).toFixed(1) : 'Cualit.' }}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="card-footer border-top bg-transparent d-flex justify-content-end py-2">
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="abrirModalEditarRubrica(rub)">
+                                        <i class="bi bi-pencil-square me-1"></i> Editar Rúbrica
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -267,21 +386,37 @@
                                 <textarea v-model="form.esq_descripcion" class="form-control" rows="2" placeholder="Describe los alcances pedagógicos del esquema..."></textarea>
                             </div>
                             <div class="row g-3 mb-3">
-                                <div class="col-md-4">
+                                <div :class="form.esq_modo === 'cuantitativo' ? 'col-md-4' : 'col-md-6'">
                                     <label class="form-label fw-semibold">Modo de Evaluación</label>
                                     <SelectBuscable v-model="form.esq_modo" :options="opcionesModoEsq" placeholder="Modo..." />
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Escala Mín / Máx</label>
-                                    <div class="input-group">
-                                        <input v-model.number="form.esq_escala_min" type="number" step="0.5" class="form-control" placeholder="1" required />
+                                <div :class="form.esq_modo === 'cuantitativo' ? 'col-md-4' : 'col-md-6'">
+                                    <label class="form-label fw-semibold">
+                                        {{ form.esq_modo === 'cuantitativo' ? 'Escala Mín / Máx' : 'Equivalencia Referencial (Baremo)' }}
+                                    </label>
+                                    <div v-if="form.esq_modo === 'cuantitativo'" class="input-group">
+                                        <input v-model.number="form.esq_escala_min" type="number" step="0.5" class="form-control" :class="{ 'is-invalid': form.errors.esq_escala_min }" placeholder="1" required />
                                         <span class="input-group-text">-</span>
-                                        <input v-model.number="form.esq_escala_max" type="number" step="0.5" class="form-control" placeholder="20" required />
+                                        <input v-model.number="form.esq_escala_max" type="number" step="0.5" class="form-control" :class="{ 'is-invalid': form.errors.esq_escala_max }" placeholder="20" required />
+                                    </div>
+                                    <div v-else class="form-control bg-light text-primary fw-semibold d-flex align-items-center">
+                                        <i class="bi bi-award me-2"></i>Literal A / B / C / D (Sin nota numérica mínima)
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Nota Aprobatoria</label>
-                                    <input v-model.number="form.esq_nota_aprobatoria" type="number" step="0.5" class="form-control" placeholder="16" required />
+                                <div v-if="form.esq_modo === 'cuantitativo'" class="col-md-4">
+                                    <label class="form-label fw-semibold">Nota Mínima Aprobatoria</label>
+                                    <input
+                                        v-model.number="form.esq_nota_aprobatoria"
+                                        type="number"
+                                        step="0.5"
+                                        class="form-control"
+                                        :class="{ 'is-invalid': form.errors.esq_nota_aprobatoria }"
+                                        placeholder="16"
+                                        required
+                                    />
+                                    <div v-if="form.errors.esq_nota_aprobatoria" class="invalid-feedback">
+                                        {{ form.errors.esq_nota_aprobatoria }}
+                                    </div>
                                 </div>
                             </div>
 
@@ -445,12 +580,15 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold small text-uppercase text-muted">Trayecto PNFI *</label>
-                                <select v-model="formNuevoEntregable.trayecto" class="form-select">
+                                <select v-model="formNuevoEntregable.trayecto" class="form-select" disabled>
                                     <option :value="1">Trayecto I (Alfabetización Tecnológica)</option>
                                     <option :value="2">Trayecto II (Desarrollo de Software)</option>
                                     <option :value="3">Trayecto III (Desarrollo de Software)</option>
                                     <option :value="4">Trayecto IV (Desarrollo de Software / Grado)</option>
                                 </select>
+                                <div class="form-text small text-primary">
+                                    <i class="bi bi-lock-fill me-1"></i>Trayecto asignado automáticamente según tu sección en curso.
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer border-0 bg-light p-3">
@@ -458,6 +596,112 @@
                             <button type="submit" class="btn btn-danger btn-sm fw-bold px-3" :disabled="guardandoEntregable">
                                 <span v-if="guardandoEntregable" class="spinner-border spinner-border-sm me-1"></span>
                                 <i v-else class="bi bi-check-lg me-1"></i>Guardar en Catálogo Maestro
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL EDITAR RÚBRICA DE SOCIALIZACIÓN -->
+        <div class="modal fade" id="modalEditarRubrica" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content modal-themed border-0 shadow-lg">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title fw-bold">
+                            <i class="bi bi-journal-check text-danger me-2"></i>Editar Rúbrica de Socialización
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="guardarRubrica">
+                        <div class="modal-body p-4">
+                            <div v-if="errorRubrica" class="alert alert-danger py-2 small mb-3">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ errorRubrica }}
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold">Título de la Rúbrica <span class="text-danger">*</span></label>
+                                    <input
+                                        v-model="formRubrica.titulo"
+                                        type="text"
+                                        class="form-control"
+                                        :class="{ 'is-invalid': formRubrica.errors.titulo }"
+                                        required
+                                    />
+                                    <div v-if="formRubrica.errors.titulo" class="invalid-feedback">{{ formRubrica.errors.titulo }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Peso del Actor (%) <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input
+                                            v-model.number="formRubrica.peso_porcentual"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            class="form-control"
+                                            :class="{ 'is-invalid': formRubrica.errors.peso_porcentual }"
+                                            required
+                                        />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">Criterios de la Rúbrica</label>
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" @click="agregarCriterioRubrica">
+                                    <i class="bi bi-plus-circle me-1"></i> Agregar Criterio
+                                </button>
+                            </div>
+
+                            <div v-for="(c, idx) in formRubrica.criterios" :key="idx" class="row g-2 mb-2 align-items-center">
+                                <div class="col-md-6">
+                                    <input
+                                        v-model="c.nombre_criterio"
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        placeholder="Descripción del criterio..."
+                                        required
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <select v-model="c.tipo_criterio" class="form-select form-select-sm" @change="onTipoCriterioChange(c)">
+                                        <option value="cuantitativo">Cuantitativo</option>
+                                        <option value="cualitativo">Cualitativo</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="input-group input-group-sm">
+                                        <input
+                                            v-model.number="c.puntaje_maximo"
+                                            type="number"
+                                            step="0.5"
+                                            min="0"
+                                            max="20"
+                                            class="form-control"
+                                            :disabled="c.tipo_criterio === 'cualitativo'"
+                                            required
+                                        />
+                                        <span class="input-group-text">pts</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-1 text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="eliminarCriterioRubrica(idx)" :disabled="formRubrica.criterios.length <= 1">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="small fw-semibold mt-2" :class="sumaPuntajesRubrica === 20 || !tieneCriterioCuantitativoRubrica ? 'text-success' : 'text-danger'">
+                                Suma de puntajes cuantitativos: {{ sumaPuntajesRubrica }} / 20 pts
+                                <span v-if="tieneCriterioCuantitativoRubrica && sumaPuntajesRubrica !== 20">(Debe sumar exactamente 20 pts)</span>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-danger btn-sm fw-bold px-3" :disabled="formRubrica.processing">
+                                <span v-if="formRubrica.processing" class="spinner-border spinner-border-sm me-1"></span>
+                                Guardar Rúbrica
                             </button>
                         </div>
                     </form>
@@ -476,11 +720,14 @@ import SelectBuscable from "@/Components/SelectBuscable.vue"
 
 const props = defineProps({
     esquemas: { type: Array, default: () => [] },
+    rubricas: { type: Array, default: () => [] },
     secciones: { type: Array, default: () => [] },
     esCoordinador: { type: Boolean, default: false },
     usuarioActual: { type: Object, default: () => ({}) },
     tiposEntregable: { type: Array, default: () => [] },
 })
+
+const tabEvaluacion = ref('esquemas');
 
 const seccionesSinEsquema = computed(() => {
     const assignedSecIds = new Set();
@@ -511,9 +758,11 @@ const formNuevoEntregable = ref({
 });
 
 const abrirModalNuevoEntregable = () => {
+    const primeraSec = props.secciones?.[0];
+    const trayectoAuto = Number(primeraSec?.sec_id_tra || primeraSec?.trayecto?.tra_numero || 1);
     formNuevoEntregable.value = {
         nombre: "",
-        trayecto: 1,
+        trayecto: trayectoAuto,
     };
     errorNuevoEntregable.value = "";
     const el = document.getElementById("modalNuevoEntregableMaestro");
@@ -549,6 +798,9 @@ const guardarNuevoEntregableMaestro = async () => {
                 tet_status: 1,
             });
             modalNuevoEntregable.value?.hide();
+            window.dispatchEvent(new CustomEvent("siscon:feedback", {
+                detail: { type: "success", title: "Entregable registrado", message: res.data.message || "El nuevo tipo de entregable fue guardado en el catálogo maestro." }
+            }));
         } else {
             errorNuevoEntregable.value = res.data.message || "Error al registrar el entregable.";
         }
@@ -557,6 +809,98 @@ const guardarNuevoEntregableMaestro = async () => {
     } finally {
         guardandoEntregable.value = false;
     }
+};
+
+// Gestión y Edición de Rúbricas de Socialización
+const rubricaEditId = ref(null);
+const errorRubrica = ref("");
+let modalRubricaInstance = null;
+const formRubrica = useForm({
+    titulo: "",
+    peso_porcentual: 20,
+    criterios: [],
+});
+
+const formatearRolRubrica = (rol) => {
+    const mapa = {
+        tutor: "Tutor Académico",
+        docente_proyecto: "Docente de Proyecto",
+        comunidad: "Vocero Comunitario",
+        jurado: "Jurado Evaluador",
+        estudiante: "Coevaluación Estudiantil",
+    };
+    return mapa[rol] || rol;
+};
+
+const abrirModalEditarRubrica = (rub) => {
+    rubricaEditId.value = rub.id_rubrica;
+    errorRubrica.value = "";
+    formRubrica.clearErrors();
+    formRubrica.titulo = rub.titulo || "";
+    formRubrica.peso_porcentual = Number(rub.peso_porcentual || 20);
+    formRubrica.criterios = (rub.criterios || []).map((c) => ({
+        id_criterio: c.id_criterio,
+        nombre_criterio: c.nombre_criterio,
+        tipo_criterio: c.tipo_criterio || "cuantitativo",
+        puntaje_maximo: Number(c.puntaje_maximo || 0),
+    }));
+    if (formRubrica.criterios.length === 0) {
+        formRubrica.criterios.push({ id_criterio: null, nombre_criterio: "", tipo_criterio: "cuantitativo", puntaje_maximo: 20 });
+    }
+    const el = document.getElementById("modalEditarRubrica");
+    if (el) {
+        modalRubricaInstance = modalRubricaInstance || new bootstrap.Modal(el);
+        modalRubricaInstance.show();
+    }
+};
+
+const agregarCriterioRubrica = () => {
+    formRubrica.criterios.push({ id_criterio: null, nombre_criterio: "", tipo_criterio: "cuantitativo", puntaje_maximo: 0 });
+};
+
+const eliminarCriterioRubrica = (idx) => {
+    if (formRubrica.criterios.length > 1) {
+        formRubrica.criterios.splice(idx, 1);
+    }
+};
+
+const tieneCriterioCuantitativoRubrica = computed(() =>
+    (formRubrica.criterios || []).some((c) => c.tipo_criterio === "cuantitativo")
+);
+
+const sumaPuntajesRubrica = computed(() =>
+    (formRubrica.criterios || []).reduce(
+        (acc, c) => acc + (c.tipo_criterio === "cuantitativo" ? Number(c.puntaje_maximo || 0) : 0),
+        0
+    )
+);
+
+const onTipoCriterioChange = (criterio) => {
+    if (criterio.tipo_criterio === 'cualitativo') {
+        criterio.puntaje_maximo = 0;
+    }
+};
+
+const guardarRubrica = () => {
+    errorRubrica.value = "";
+    if (!formRubrica.titulo.trim()) {
+        errorRubrica.value = "El título de la rúbrica es obligatorio.";
+        return;
+    }
+    if (tieneCriterioCuantitativoRubrica.value && Math.abs(sumaPuntajesRubrica.value - 20) > 0.01) {
+        errorRubrica.value = `La suma de los puntajes cuantitativos debe ser exactamente 20 pts (actual: ${sumaPuntajesRubrica.value} pts).`;
+        return;
+    }
+    formRubrica.put(`/profesor/rubricas/${rubricaEditId.value}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            modalRubricaInstance?.hide();
+        },
+        onError: (errs) => {
+            const msgs = Object.values(errs || {}).flat();
+            errorRubrica.value = msgs[0] || "Verifique los campos de la rúbrica.";
+        },
+    });
 };
 
 const opcionesModoEsq = [

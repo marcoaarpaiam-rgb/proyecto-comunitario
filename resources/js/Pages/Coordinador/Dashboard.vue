@@ -135,78 +135,78 @@
                 <!-- STATS -->
                 <div class="row g-3 mb-4">
                     <div class="col-xl-2 col-md-4 col-6">
-                        <div class="stat-card">
+                        <div class="stat-card h-100">
                             <div class="stat-icon blue">
                                 <i class="bi bi-people-fill"></i>
                             </div>
-                            <div>
+                            <div class="stat-info">
                                 <div class="stat-num">
                                     {{ stats.estudiantes }}
                                 </div>
-                                <div class="stat-label">Estudiantes</div>
+                                <div class="stat-label" title="Estudiantes">Estudiantes</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-2 col-md-4 col-6">
-                        <div class="stat-card">
+                        <div class="stat-card h-100">
                             <div class="stat-icon red">
                                 <i class="bi bi-diagram-3-fill"></i>
                             </div>
-                            <div>
+                            <div class="stat-info">
                                 <div class="stat-num">{{ stats.equipos }}</div>
-                                <div class="stat-label">Equipos</div>
+                                <div class="stat-label" title="Equipos">Equipos</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-2 col-md-4 col-6">
-                        <div class="stat-card">
+                        <div class="stat-card h-100">
                             <div class="stat-icon green">
                                 <i class="bi bi-building-check"></i>
                             </div>
-                            <div>
+                            <div class="stat-info">
                                 <div class="stat-num">
                                     {{ stats.comunidades }}
                                 </div>
-                                <div class="stat-label">Comunidades</div>
+                                <div class="stat-label" title="Comunidades">Comunidades</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-2 col-md-4 col-6">
-                        <div class="stat-card">
+                        <div class="stat-card h-100">
                             <div class="stat-icon orange">
                                 <i class="bi bi-hourglass-split"></i>
                             </div>
-                            <div>
+                            <div class="stat-info">
                                 <div class="stat-num">
                                     {{ stats.porVencer }}
                                 </div>
-                                <div class="stat-label">Por Vencer</div>
+                                <div class="stat-label" title="Por Vencer">Por Vencer</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-2 col-md-4 col-6">
-                        <div class="stat-card">
+                        <div class="stat-card h-100">
                             <div class="stat-icon green">
                                 <i class="bi bi-trophy-fill"></i>
                             </div>
-                            <div>
+                            <div class="stat-info">
                                 <div class="stat-num">
                                     {{ stats.aprobados }}
                                 </div>
-                                <div class="stat-label">Aprobados</div>
+                                <div class="stat-label" title="Aprobados">Aprobados</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-2 col-md-4 col-6">
-                        <div class="stat-card">
+                        <div class="stat-card h-100">
                             <div class="stat-icon purple">
                                 <i class="bi bi-person-check-fill"></i>
                             </div>
-                            <div>
+                            <div class="stat-info">
                                 <div class="stat-num">
                                     {{ stats.profesores }}
                                 </div>
-                                <div class="stat-label">Profesores</div>
+                                <div class="stat-label" title="Profesores">Profesores</div>
                             </div>
                         </div>
                     </div>
@@ -905,24 +905,29 @@ onMounted(() => {
 .stat-card {
     background: var(--bg-card);
     border-radius: 14px;
-    padding: 1.2rem;
+    padding: 1rem 0.9rem;
+    height: 100%;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
     border: 1px solid var(--border);
     transition:
         background 0.3s,
         border-color 0.3s;
 }
+.stat-info {
+    min-width: 0;
+    flex: 1;
+}
 .stat-icon {
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 44px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     flex-shrink: 0;
 }
 .stat-icon.red {
@@ -946,16 +951,19 @@ onMounted(() => {
     color: #6f42c1;
 }
 .stat-num {
-    font-size: 1.6rem;
+    font-size: clamp(1.25rem, 1.7vw, 1.55rem);
     font-weight: 800;
     color: var(--text-main);
-    line-height: 1;
+    line-height: 1.1;
 }
 .stat-label {
-    font-size: 0.8rem;
+    font-size: clamp(0.7rem, 0.85vw, 0.78rem);
     color: var(--text-muted);
     font-weight: 600;
     margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .section-card {
     background: var(--bg-card);

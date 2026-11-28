@@ -337,6 +337,8 @@ class DatabaseSeeder extends Seeder
             ['pse_id_usu'=>6, 'pse_id_sec'=>7,'pse_fecha_asignacion'=>$hoy,'pse_status'=>true,'pse_id_usu_created'=>1],
         ]);
 
+        $this->call(TipoEncuentroSeeder::class);
+
         $this->command->info('✅ Seeder completado. Se entra con USUARIO (no email) y contraseña password123:');
         $this->command->info('   coordinador · profesor (secciones 331 y 332) · lider');
         $this->command->info('   Profesores adicionales: usuario = su cédula (10000004 … 10000012)');

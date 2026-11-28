@@ -489,6 +489,12 @@
                                 <strong>Semestre Impar (Semestre {{ obtenerSemestreSeccion(equipoSeleccionado?.seccion) }} - Evaluación Cualitativa):</strong> La sección de este equipo cursa semestre impar. Solo corresponde <strong>Pre-Socialización</strong>. La Socialización Final con jurados se evalúa en el semestre par.
                             </div>
 
+                            <!-- Alerta de Bloqueo de Pre-Socialización sin Último Punto de Control cumplido -->
+                            <div v-if="moduloActivo === 'pre_socializacion' && equipoSeleccionado && !equipoSeleccionado.tiene_ultimo_punto_cumplido" class="alert alert-danger py-2 px-3 small mb-3">
+                                <i class="bi bi-lock-fill me-1"></i>
+                                <strong>Bloqueado:</strong> Este equipo aún no tiene un Punto de Control cumplido marcado como <strong>"Último punto de control del semestre"</strong>. Regístralo primero en Puntos de Control para habilitar la Pre-Socialización.
+                            </div>
+
                             <!-- Alerta de Bloqueo si no tiene Pre-Socialización aprobada -->
                             <div v-if="moduloActivo === 'socializacion_final' && equipoSeleccionado && !equipoSeleccionado.tiene_presoc_aprobada" class="alert alert-danger py-2 px-3 small mb-3">
                                 <i class="bi bi-exclamation-octagon-fill me-1"></i>
@@ -1362,6 +1368,10 @@ const copiarObservacionesUltimoPunto = () => {
 };
 
 const guardar = () => {
+    if (moduloActivo.value === "pre_socializacion" && equipoSeleccionado.value && !equipoSeleccionado.value.tiene_ultimo_punto_cumplido) {
+        errores.value = { soc_id_equ: "Bloqueado: El equipo debe tener un punto de control cumplido marcado como último punto de control del semestre." };
+        return;
+    }
     if (moduloActivo.value === "socializacion_final" && equipoSeleccionado.value && !equipoSeleccionado.value.tiene_presoc_aprobada) {
         errores.value = { soc_id_equ: "Bloqueado: El equipo debe tener aprobada la Pre-Socialización (Apto) para programar la Socialización Final." };
         return;

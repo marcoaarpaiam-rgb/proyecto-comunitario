@@ -119,7 +119,14 @@
                         </div>
 
                         <!-- SECCIÓN DE DETALLES POR PUNTO DE CONTROL -->
-                        <div class="card border-0 shadow-sm mb-4" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
+                        <div v-if="!cartaAprobada || !equipo?.proyecto_comunidad" class="card border-0 shadow-sm mb-4 p-4 text-center" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
+                            <i class="bi bi-lock-fill text-warning fs-2 d-block mb-2"></i>
+                            <h6 class="fw-bold mb-1" style="color: var(--text-main);">Puntos de Control Bloqueados</h6>
+                            <p class="small text-muted mb-0">
+                                El acceso a los Puntos de Control se habilitará cuando tu equipo tenga un proyecto comunitario vinculado y la <strong>Carta de Presentación aprobada</strong>.
+                            </p>
+                        </div>
+                        <div v-else class="card border-0 shadow-sm mb-4" style="background: var(--bg-card); border: 1px solid var(--border) !important;">
                             <div class="card-header py-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: var(--bg-card); border-bottom: 1px solid var(--border);">
                                 <div>
                                     <h6 class="fw-bold mb-0 d-flex align-items-center gap-2" style="color: var(--text-main);">
@@ -675,6 +682,7 @@ import SelectBuscable from "@/Components/SelectBuscable.vue";
 
 const props = defineProps({
     equipo: Object,
+    cartaAprobada: { type: Boolean, default: false },
     puntosControl: { type: Array, default: () => [] },
     tutor: Object,
     profesoresDisponibles: Array,

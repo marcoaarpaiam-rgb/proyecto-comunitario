@@ -10,6 +10,7 @@ import { createApp, h } from "vue";
 import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { router } from "@inertiajs/vue3";
+import GlobalFeedback from "./Components/GlobalFeedback.vue";
 
 NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
 
@@ -72,7 +73,9 @@ createInertiaApp({
             import.meta.glob("./Pages/**/*.vue"),
         ),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
+        createApp({
+            render: () => [h(App, props), h(GlobalFeedback)],
+        })
             .use(plugin)
             .mount(el);
     },

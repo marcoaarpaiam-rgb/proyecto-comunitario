@@ -135,6 +135,61 @@
 
             <div class="content-lid">
                 <BannerComunidadPendiente />
+
+                <!-- BANNER CAMBIO DE CONTRASEÑA OBLIGATORIO -->
+                <div v-if="debeCambiarPassword" class="alert alert-warning alert-dismissible border-0 shadow-sm mb-3 d-flex align-items-center gap-3" role="alert" style="border-left: 4px solid #fd7e14 !important;">
+                    <i class="bi bi-shield-lock-fill fs-4 text-warning flex-shrink-0"></i>
+                    <div class="flex-grow-1">
+                        <strong>Contraseña temporal activa.</strong>
+                        Tu contraseña por defecto es tu número de cédula. Debes cambiarla antes de continuar.
+                    </div>
+                    <button class="btn btn-warning btn-sm fw-bold" @click="abrirModalPassword">
+                        <i class="bi bi-key-fill me-1"></i>Cambiar ahora
+                    </button>
+                </div>
+
+                <!-- MODAL CAMBIO DE CONTRASEÑA -->
+                <div class="modal fade" id="mCambiarPassword" tabindex="-1" aria-labelledby="mCambiarPasswordLabel" aria-hidden="true" ref="modalPasswordEl">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" :data-theme="tema">
+                            <div class="modal-header border-0 pb-0">
+                                <h5 class="modal-title fw-bold" id="mCambiarPasswordLabel">
+                                    <i class="bi bi-key-fill text-warning me-2"></i>Cambiar Contraseña
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                            </div>
+                            <form @submit.prevent="guardarPassword">
+                                <div class="modal-body">
+                                    <div v-if="page.props.flash?.success" class="alert alert-success py-2 small">
+                                        <i class="bi bi-check-circle me-1"></i>{{ page.props.flash.success }}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Contraseña actual (tu cédula)</label>
+                                        <input v-model="formPass.password_actual" type="password" class="form-control" :class="{ 'is-invalid': errPass.password_actual }" placeholder="Ingresa tu contraseña actual" required />
+                                        <div v-if="errPass.password_actual" class="invalid-feedback">{{ errPass.password_actual }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Nueva contraseña</label>
+                                        <input v-model="formPass.password" type="password" class="form-control" :class="{ 'is-invalid': errPass.password }" placeholder="Mínimo 6 caracteres" required />
+                                        <div v-if="errPass.password" class="invalid-feedback">{{ errPass.password }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Confirmar nueva contraseña</label>
+                                        <input v-model="formPass.password_confirmation" type="password" class="form-control" placeholder="Repite la nueva contraseña" required />
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0 pt-0">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-warning btn-sm fw-bold" :disabled="formPass.processing">
+                                        <span v-if="formPass.processing" class="spinner-border spinner-border-sm me-1"></span>
+                                        <i v-else class="bi bi-save me-1"></i>Guardar Contraseña
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- BANNER -->
                 <div class="banner-lid" v-if="equipo">
                     <div>
@@ -147,14 +202,24 @@
                         </div>
                         <div class="b-sub">{{ equipo.equ_titulo }}</div>
                     </div>
-                    <Link
-                        href="/lider/entregables"
-                        class="btn btn-light btn-sm rounded-pill px-3 fw-bold"
-                        style="color: #1a1a1a"
-                    >
-                        <i class="bi bi-cloud-arrow-up me-1 text-danger"></i
-                        >Subir Entregable
-                    </Link>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <a
+                            v-if="socFinalAprobada"
+                            href="/lider/equipo/paquete-cierre"
+                            class="btn btn-success btn-sm rounded-pill px-3 fw-bold"
+                            title="Descargar carpeta ZIP para Repositorio Institucional"
+                        >
+                            <i class="bi bi-file-earmark-zip me-1"></i>Descargar ZIP
+                        </a>
+                        <Link
+                            href="/lider/entregables"
+                            class="btn btn-light btn-sm rounded-pill px-3 fw-bold"
+                            style="color: #1a1a1a"
+                        >
+                            <i class="bi bi-cloud-arrow-up me-1 text-danger"></i
+                            >Subir Entregable
+                        </Link>
+                    </div>
                 </div>
 
                 <div class="row g-3">
@@ -419,12 +484,21 @@
                                 >
                             </div>
                             <div
-                                v-if="puntosControl.length === 0"
+                                v-if="!equipo?.proyecto_comunidad || !carta?.cpr_fecha_aprobacion"
+                                class="p-4 text-center text-muted small"
+                            >
+                                <i class="bi bi-lock-fill text-warning fs-4 d-block mb-2"></i>
+                                <strong>Puntos de Control bloqueados.</strong>
+                                <div class="mt-1">Debes vincular tu proyecto comunitario y contar con la <strong>Carta de Presentación aprobada</strong> para acceder a los puntos de control.</div>
+                            </div>
+                            <div
+                                v-else-if="puntosControl.length === 0"
                                 class="p-3 text-center text-muted small py-4"
                             >
                                 Sin puntos de control
                             </div>
                             <div
+                                v-else
                                 v-for="(punto, idx) in puntosControl"
                                 :key="punto.puc_id"
                                 class="step-row"
@@ -588,7 +662,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { router, usePage, useForm } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
 import ModalConfirmar from "@/Components/ModalConfirmar.vue";
 import SidebarLider from "@/Components/SidebarLider.vue";
@@ -607,6 +681,28 @@ const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
 const notificaciones = ref([]);
 
+// --- Cambio de contraseña ---
+const debeCambiarPassword = computed(() => page.props.debeCambiarPassword ?? false);
+const modalPasswordEl = ref(null);
+const formPass = useForm({ password_actual: "", password: "", password_confirmation: "" });
+const errPass = computed(() => page.props.errors ?? {});
+
+const abrirModalPassword = () => {
+    if (modalPasswordEl.value) {
+        const m = new bootstrap.Modal(modalPasswordEl.value);
+        m.show();
+    }
+};
+const guardarPassword = () => {
+    formPass.post(route("lider.cambiar-password"), {
+        onSuccess: () => {
+            formPass.reset();
+            const modalEl = modalPasswordEl.value;
+            if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+        },
+    });
+};
+
 const iniciales = computed(() => {
     const u = page.props.auth.user;
     return (
@@ -620,6 +716,16 @@ const toggleTema = () => {
 };
 
 const modalLogout = ref(null);
+const socFinalAprobada = computed(() =>
+    (props.socializaciones || []).some(
+        (s) =>
+            Boolean(s.soc_aprobado) &&
+            (s.tipo_socializacion?.tso_orden === 2 ||
+                s.soc_id_tso == 2 ||
+                (Number(props.equipo?.equ_id_tra) === 1 &&
+                    (s.tipo_socializacion?.tso_nombre || "").toLowerCase().includes("alfabet")))
+    )
+);
 const logout = () => {
     modalLogout.value?.abrir();
 };

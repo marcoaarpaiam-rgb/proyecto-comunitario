@@ -511,46 +511,6 @@
                                 </div>
                             </form>
                         </div>
-
-                        <!-- Reset Líder -->
-                        <div class="sc">
-                            <div class="sh">
-                                <h6>
-                                    <i class="bi bi-key text-danger me-2"></i
-                                    >Resetear Contraseña de Líder
-                                </h6>
-                            </div>
-                            <div class="p-3">
-                                <p
-                                    style="
-                                        font-size: 0.82rem;
-                                        color: var(--text-muted);
-                                        margin-bottom: 0.75rem;
-                                    "
-                                >
-                                    Resetea la contraseña del líder a su cédula
-                                    como contraseña inicial.
-                                </p>
-                                <div class="d-flex gap-2">
-                                    <div class="flex-grow-1">
-                                        <SelectBuscable
-                                            v-model="liderId"
-                                            :options="opcionesLideresReset"
-                                            size="sm"
-                                            placeholder="Seleccionar líder..."
-                                            search-placeholder="Nombre o cédula..."
-                                        />
-                                    </div>
-                                    <button
-                                        class="btn btn-sm btn-danger fw-bold flex-shrink-0"
-                                        :disabled="!liderId"
-                                        @click="resetLider"
-                                    >
-                                        <i class="bi bi-key me-1"></i>Reset
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -605,21 +565,11 @@ const loadingPerfil = ref(false);
 const loadingPass = ref(false);
 const loadingFirma = ref(false);
 const firmaFile = ref(null);
-const liderId = ref("");
 
 const opcionesTipoSemestre = [
     { value: "Impar", label: "Semestre Impar (Cualitativo)" },
     { value: "Par", label: "Semestre Par (Cuantitativo / Socialización Final)" },
 ];
-
-const opcionesLideresReset = computed(() => [
-    { value: "", label: "Seleccionar líder..." },
-    ...(props.lideres || []).map((lid) => ({
-        value: lid.usu_id,
-        label: `${lid.usu_primer_nombre} ${lid.usu_primer_apellido}`,
-        sublabel: `C.I. ${lid.usu_cedula}`,
-    })),
-]);
 
 // Lapso Académico
 const formLapso = ref({
@@ -689,18 +639,6 @@ const cambiarPassword = () => {
             };
         },
     });
-};
-const resetLider = () => {
-    if (!confirm("¿Resetear la contraseña de este líder a su cédula?")) return;
-    router.post(
-        "/coordinador/configuracion/reset-lider",
-        { usu_id: liderId.value },
-        {
-            onSuccess: () => {
-                liderId.value = "";
-            },
-        },
-    );
 };
 </script>
 <style scoped>

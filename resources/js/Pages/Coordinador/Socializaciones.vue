@@ -68,13 +68,31 @@
                             registradas
                         </p>
                     </div>
-                    <div class="srch">
-                        <i class="bi bi-search"></i
-                        ><input
-                            v-model="busqueda"
-                            type="text"
-                            placeholder="Buscar equipo o tipo..."
-                        />
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div style="min-width: 185px;">
+                            <SelectBuscable
+                                v-model="filtroSeccion"
+                                :options="opcionesFiltroSeccion"
+                                size="sm"
+                                placeholder="Todas las secciones"
+                            />
+                        </div>
+                        <div style="min-width: 170px;">
+                            <SelectBuscable
+                                v-model="filtroTrayecto"
+                                :options="opcionesFiltroTrayecto"
+                                size="sm"
+                                placeholder="Todos los trayectos"
+                            />
+                        </div>
+                        <div class="srch">
+                            <i class="bi bi-search"></i
+                            ><input
+                                v-model="busqueda"
+                                type="text"
+                                placeholder="Buscar equipo o tipo..."
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -500,6 +518,7 @@
 </template>
 <script setup>
 import SidebarCoordinador from "@/Components/SidebarCoordinador.vue";
+import SelectBuscable from "@/Components/SelectBuscable.vue";
 import { ref, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { Link } from "@inertiajs/vue3";
@@ -507,7 +526,11 @@ import { Modal } from "bootstrap";
 const menuMaestras = ref(false);
 const menuAcademico = ref(false);
 const menuSistema = ref(false);
-const props = defineProps({ socializaciones: Array });
+const props = defineProps({
+    socializaciones: Array,
+    secciones: { type: Array, default: () => [] },
+    trayectos: { type: Array, default: () => [] },
+});
 const page = usePage();
 const sidebarOpen = ref(false);
 const tema = ref(localStorage.getItem("coord-theme") || "light");
@@ -537,12 +560,36 @@ const totalSocFinal = computed(() =>
 );
 
 const busqueda = ref("");
+const filtroSeccion = ref("");
+const filtroTrayecto = ref("");
+
+const opcionesFiltroSeccion = computed(() => [
+    { value: "", label: "Todas las secciones" },
+    ...(props.secciones || []).map((s) => ({
+        value: String(s.sec_id),
+        label: `Sección ${s.sec_codigo}${s.trayecto?.tra_nombre ? " — " + s.trayecto.tra_nombre : ""}`,
+    })),
+]);
+const opcionesFiltroTrayecto = computed(() => [
+    { value: "", label: "Todos los trayectos" },
+    ...(props.trayectos || []).map((t) => ({
+        value: String(t.tra_id),
+        label: t.tra_nombre,
+    })),
+]);
+
 const filtradas = computed(() => {
     let list = props.socializaciones || [];
     if (moduloActivo.value === "pre_socializacion") {
         list = list.filter((s) => s.tipo_socializacion?.tso_orden === 1 || s.soc_id_tso == 1);
     } else {
         list = list.filter((s) => s.tipo_socializacion?.tso_orden === 2 || s.soc_id_tso == 2);
+    }
+    if (filtroSeccion.value) {
+        list = list.filter((s) => String(s.equipo?.equ_id_sec || s.equipo?.seccion?.sec_id) === String(filtroSeccion.value));
+    }
+    if (filtroTrayecto.value) {
+        list = list.filter((s) => String(s.soc_id_tra || s.trayecto?.tra_id || s.equipo?.equ_id_tra || s.equipo?.seccion?.sec_id_tra) === String(filtroTrayecto.value));
     }
     if (!busqueda.value.trim()) return list;
     const q = busqueda.value.toLowerCase();

@@ -72,14 +72,22 @@
                         </p>
                     </div>
 
-                    <!-- Filtros: Sección y Búsqueda -->
+                    <!-- Filtros: Sección, Trayecto y Búsqueda -->
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <div style="min-width: 240px;">
+                        <div style="min-width: 220px;">
                             <SelectBuscable
                                 v-model="filtroSeccion"
                                 :options="opcionesSeccionesRes"
                                 size="sm"
                                 placeholder="Todas las secciones"
+                            />
+                        </div>
+                        <div style="min-width: 175px;">
+                            <SelectBuscable
+                                v-model="filtroTrayecto"
+                                :options="opcionesTrayectosFiltro"
+                                size="sm"
+                                placeholder="Todos los trayectos"
                             />
                         </div>
 
@@ -738,7 +746,15 @@ const confirmarTardio = () => {
 
 // ── Filtro y Búsqueda ────────────────────────────────────────────────
 const filtroSeccion = ref("");
+const filtroTrayecto = ref("");
 const busqueda = ref("");
+const opcionesTrayectosFiltro = computed(() => [
+    { value: "", label: "Todos los trayectos" },
+    ...(props.trayectos || []).map((tra) => ({
+        value: String(tra.tra_id),
+        label: tra.tra_nombre,
+    })),
+]);
 const opcionesSeccionesRes = computed(() => [
     { value: "", label: "Todas las secciones" },
     ...(props.secciones || []).map((sec) => ({
@@ -775,8 +791,12 @@ const resultadosFiltrados = computed(() => {
     return (props.resultados || []).filter((rpr) => {
         const equipo = obtenerEquipo(rpr);
         const secId = equipo?.equ_id_sec || equipo?.seccion?.sec_id;
+        const traId = rpr?.rpr_id_tra || rpr?.trayecto?.tra_id || equipo?.equ_id_tra || equipo?.seccion?.sec_id_tra;
 
         if (filtroSeccion.value && String(secId) !== String(filtroSeccion.value)) {
+            return false;
+        }
+        if (filtroTrayecto.value && String(traId) !== String(filtroTrayecto.value)) {
             return false;
         }
 

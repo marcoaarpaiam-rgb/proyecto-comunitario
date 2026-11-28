@@ -589,7 +589,7 @@ const entregablesFiltrados = computed(() => {
 });
 
 const paginaActual = ref(1);
-const porPagina = 3;
+const porPagina = 10;
 watch([tabEntregables, equipoFiltro], () => {
     paginaActual.value = 1;
 });

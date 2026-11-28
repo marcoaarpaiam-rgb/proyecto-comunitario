@@ -119,22 +119,28 @@
                                     <th>Ubicación</th>
                                     <th>Tipo</th>
                                     <th>Estado</th>
+                                    <th>Equipos / Proyectos</th>
                                     <th class="text-end pe-4">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="paginadas.length === 0">
                                     <td
-                                        colspan="5"
+                                        colspan="6"
                                         class="text-center py-5"
                                         style="color: var(--text-muted)"
                                     >
                                         Sin resultados
                                     </td>
                                 </tr>
-                                <tr v-for="com in paginadas" :key="com.com_id">
+                                <tr
+                                    v-for="com in paginadas"
+                                    :key="com.com_id"
+                                    style="cursor: pointer"
+                                    @click="abrirDetalleComunidad(com)"
+                                >
                                     <td class="ps-4 fw-semibold">
-                                        {{ com.com_nombre }}
+                                        <span class="text-danger text-decoration-underline-hover">{{ com.com_nombre }}</span>
                                     </td>
                                     <td
                                         style="
@@ -145,9 +151,15 @@
                                         {{ com.com_ubicacion }}
                                     </td>
                                     <td>
-                                        <span class="bs bp">{{
-                                            com.tipo_organizacion?.tor_nombre
-                                        }}</span>
+                                        <span
+                                            v-if="com.tipo_organizacion?.tor_nombre || com.tipoOrganizacion?.tor_nombre"
+                                            class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1"
+                                        >
+                                            {{ com.tipo_organizacion?.tor_nombre || com.tipoOrganizacion?.tor_nombre }}
+                                        </span>
+                                        <span v-else class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                            Sin tipo
+                                        </span>
                                     </td>
                                     <td>
                                         <span
@@ -162,31 +174,31 @@
                                             }}</span
                                         >
                                     </td>
-                                    <td class="text-end pe-4">
-                                        <span class="badge bg-secondary-subtle text-secondary">Solo consulta</span>
-                                    </td>
                                     <td>
-                                        <span class="badge bg-danger"
-                                            >{{
-                                                com.total_equipos
-                                            }}
-                                            equipo(s)</span
-                                        >
+                                        <span class="badge bg-danger">
+                                            {{ com.total_equipos || (com.proyectos_comunidad?.length || 0) }} equipo(s)
+                                        </span>
                                         <div
-                                            v-if="
-                                                com.proyectosComunidad?.length
-                                            "
+                                            v-if="(com.proyectos_comunidad || com.proyectosComunidad)?.length"
                                             class="small mt-1"
                                             style="color: var(--text-muted)"
                                         >
                                             <div
-                                                v-for="p in com.proyectosComunidad"
+                                                v-for="p in (com.proyectos_comunidad || com.proyectosComunidad).slice(0, 2)"
                                                 :key="p.pco_id"
                                             >
-                                                {{ p.equipo?.equ_codigo }} —
-                                                {{ p.equipo?.equ_titulo }}
+                                                <strong>{{ p.equipo?.equ_codigo }}</strong> — {{ p.equipo?.equ_titulo }}
                                             </div>
                                         </div>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                            @click.stop="abrirDetalleComunidad(com)"
+                                        >
+                                            <i class="bi bi-eye me-1"></i>Ver Detalle
+                                        </button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -444,6 +456,130 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL DETALLE DE COMUNIDAD (EQUIPOS, SECCIONES, TRAYECTOS Y PROYECTOS ACTIVOS E HISTÓRICOS) -->
+        <div class="modal fade" id="mDetalleComunidad" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="mh">
+                        <h5>
+                            <i class="bi bi-building text-danger me-2"></i>
+                            Detalle de Comunidad — {{ comunidadDetalle?.com_nombre }}
+                        </h5>
+                        <button class="btn btn-sm text-white p-0 fs-5" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div v-if="comunidadDetalle" class="p-3 rounded border mb-3" style="background: var(--bg-th);">
+                            <div class="row g-2 small">
+                                <div class="col-md-6">
+                                    <strong>Nombre:</strong> {{ comunidadDetalle.com_nombre }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Tipo de Organización:</strong>
+                                    <span class="badge bg-info-subtle text-info-emphasis border ms-1">
+                                        {{ radarData?.comunidad?.tipo_organizacion || comunidadDetalle.tipo_organizacion?.tor_nombre || "Sin tipo" }}
+                                    </span>
+                                </div>
+                                <div class="col-12">
+                                    <strong>Ubicación:</strong> {{ comunidadDetalle.com_ubicacion || "Sin ubicación registrada" }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="cargandoDetalle" class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-danger me-2"></div>
+                            Cargando historial de equipos y proyectos...
+                        </div>
+
+                        <template v-else>
+                            <h6 class="fw-bold text-success mb-2">
+                                <i class="bi bi-lightning-charge-fill me-1"></i>
+                                Proyectos Activos ({{ proyectosActivosDetalle.length }})
+                            </h6>
+                            <div v-if="proyectosActivosDetalle.length === 0" class="alert alert-light border small text-muted mb-3">
+                                No hay proyectos activos vinculados actualmente a esta comunidad.
+                            </div>
+                            <div v-else class="table-responsive mb-4">
+                                <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.82rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Equipo</th>
+                                            <th>Sección / Trayecto</th>
+                                            <th>Proyecto / Línea</th>
+                                            <th>Lapso</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="p in proyectosActivosDetalle" :key="p.pco_id">
+                                            <td class="fw-bold font-monospace">{{ p.equ_codigo }}</td>
+                                            <td>
+                                                <span class="badge bg-dark me-1">Sec. {{ p.seccion || "—" }}</span>
+                                                <span class="text-muted">{{ p.trayecto || "—" }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">{{ p.equ_titulo }}</div>
+                                                <div class="text-muted small">{{ p.tipo_proyecto || "" }} · {{ p.modalidad || "" }}</div>
+                                            </td>
+                                            <td>{{ p.anio_lapso || "—" }}</td>
+                                            <td>
+                                                <Link :href="`/coordinador/equipos/${p.equ_id}/expediente`" class="btn btn-xs btn-outline-primary py-0 px-2">
+                                                    Expediente
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h6 class="fw-bold text-primary mb-2">
+                                <i class="bi bi-archive-fill me-1"></i>
+                                Proyectos Históricos / Culminados ({{ proyectosCulminadosDetalle.length }})
+                            </h6>
+                            <div v-if="proyectosCulminadosDetalle.length === 0" class="alert alert-light border small text-muted mb-0">
+                                No se registran proyectos culminados anteriores en esta comunidad.
+                            </div>
+                            <div v-else class="table-responsive">
+                                <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.82rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Equipo</th>
+                                            <th>Sección / Trayecto</th>
+                                            <th>Proyecto</th>
+                                            <th>Lapso</th>
+                                            <th>Nota</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="p in proyectosCulminadosDetalle" :key="p.pco_id">
+                                            <td class="fw-bold font-monospace">{{ p.equ_codigo }}</td>
+                                            <td>
+                                                <span class="badge bg-secondary me-1">Sec. {{ p.seccion || "—" }}</span>
+                                                <span class="text-muted">{{ p.trayecto || "—" }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold">{{ p.equ_titulo }}</div>
+                                                <div class="text-muted small">{{ p.tipo_proyecto || "" }} · {{ p.modalidad || "" }}</div>
+                                            </td>
+                                            <td>{{ p.anio_lapso || "—" }}</td>
+                                            <td>
+                                                <span v-if="p.calificacion" class="badge bg-success">{{ p.calificacion }} pts</span>
+                                                <span v-else class="badge bg-success-subtle text-success">Culminado</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -528,6 +664,48 @@ const guardarNuevoTipoOrg = async () => {
 };
 let modal = null;
 let modalConf = null;
+let modalDetalle = null;
+const comunidadDetalle = ref(null);
+const cargandoDetalle = ref(false);
+const radarData = ref(null);
+
+const proyectosActivosDetalle = computed(() => {
+    if (radarData.value?.proyectos_activos) return radarData.value.proyectos_activos;
+    return (comunidadDetalle.value?.proyectos_comunidad || []).map((p) => ({
+        pco_id: p.pco_id,
+        equ_id: p.equipo?.equ_id,
+        equ_codigo: p.equipo?.equ_codigo,
+        equ_titulo: p.equipo?.equ_titulo,
+        seccion: p.equipo?.seccion?.sec_codigo,
+        trayecto: p.equipo?.seccion?.trayecto?.tra_nombre || p.equipo?.trayecto?.tra_nombre,
+        tipo_proyecto: p.tipo_proyecto?.tpr_nombre,
+        modalidad: p.modalidad?.mpr_nombre,
+        anio_lapso: "Actual",
+    }));
+});
+
+const proyectosCulminadosDetalle = computed(() => {
+    return radarData.value?.proyectos_culminados || [];
+});
+
+const abrirDetalleComunidad = async (com) => {
+    comunidadDetalle.value = com;
+    radarData.value = null;
+    cargandoDetalle.value = true;
+    const el = document.getElementById("mDetalleComunidad");
+    if (el) {
+        modalDetalle = modalDetalle || new Modal(el);
+        modalDetalle.show();
+    }
+    try {
+        const res = await window.axios.get(`/coordinador/comunidades/${com.com_id}/radar-proyectos`);
+        radarData.value = res.data;
+    } catch (e) {
+        console.error("Error cargando detalle de comunidad:", e);
+    } finally {
+        cargandoDetalle.value = false;
+    }
+};
 const inputUbicacionRef = ref(null);
 let autocompleteInstance = null;
 

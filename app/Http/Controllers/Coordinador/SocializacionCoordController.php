@@ -22,6 +22,8 @@ class SocializacionCoordController extends Controller
                 'integrantes.usuario',
                 'socializacionPrevia',
             ])->orderBy('soc_fecha', 'desc')->get(),
+            'secciones' => \App\Models\Seccion::where('sec_status', true)->with('trayecto')->orderBy('sec_codigo')->get(),
+            'trayectos' => \App\Models\Trayecto::where('tra_status', true)->orderBy('tra_numero')->get(),
         ]);
     }
 }

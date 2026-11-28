@@ -988,6 +988,16 @@ watch(
 );
 
 const enviarPostulacion = () => {
+    if (formPost.value.modo_comunidad === "nueva") {
+        const nomLower = (formPost.value.nueva_comunidad_nombre || "").trim().toLowerCase();
+        const duplicada = (props.comunidades || []).some(
+            (c) => (c.com_nombre || "").trim().toLowerCase() === nomLower
+        );
+        if (duplicada) {
+            alert("Ya existe una comunidad registrada con ese nombre en el catálogo. Selecciónala del listado existente.");
+            return;
+        }
+    }
     if (tipoProyectoAuto.value?.tpr_id) {
         formPost.value.pco_id_tpr = tipoProyectoAuto.value.tpr_id;
     }

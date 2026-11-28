@@ -27,9 +27,14 @@ class ProyectoController extends Controller
                 'modalidad',
                 'beneficiarios.tipoBeneficiario',
                 'usuarioAprobador',
-            ])->where('pco_status', true)->get(),
+            ])->where('pco_status', true)
+              ->whereNotNull('pco_id_com')
+              ->whereHas('comunidad')
+              ->get(),
             'equipos'      => Equipo::where('equ_status', true)
                 ->with(['seccion','trayecto'])->get(),
+            'secciones'    => \App\Models\Seccion::where('sec_status', true)->with('trayecto')->orderBy('sec_codigo')->get(),
+            'trayectos'    => \App\Models\Trayecto::where('tra_status', true)->orderBy('tra_numero')->get(),
             'comunidades'  => Comunidad::where('com_status', true)->get(),
             'tipos'        => TipoProyecto::where('tpr_status', true)->get(),
             'modalidades'  => ModalidadProyecto::where('mpr_status', true)->get(),

@@ -112,7 +112,12 @@ class LiderController extends Controller
         $trayectoNum = (int) ($equipo->equ_id_tra ?: ($equipo->trayecto?->tra_numero ?: 1));
 
         $socFinalAprobada = \App\Models\Socializacion::where('soc_id_equ', $equipo->equ_id)
-            ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 2))
+            ->where(function ($q) use ($trayectoNum) {
+                $q->whereHas('tipoSocializacion', fn($sq) => $sq->where('tso_orden', 2));
+                if ($trayectoNum === 1) {
+                    $q->orWhereHas('tipoSocializacion', fn($sq) => $sq->whereRaw('LOWER(tso_nombre) LIKE ?', ['%alfabet%']));
+                }
+            })
             ->where('soc_aprobado', true)
             ->exists();
 
@@ -186,32 +191,52 @@ class LiderController extends Controller
             }
         }
 
-        // Determinar si es entregable final / cierre de proyecto
-        $esFinal = (bool) ($request->entr_es_entregable_final || $request->boolean('entr_es_entregable_final'));
-        if (!empty($request->entr_id_cep)) {
-            $cepItem = \App\Models\CatalogoEntregablePnfi::find($request->entr_id_cep);
-            if ($cepItem) {
-                $nombreLower = mb_strtolower($cepItem->cep_nombre, 'UTF-8');
-                if (str_contains($nombreLower, 'final') || str_contains($nombreLower, 'repositorio') || str_contains($nombreLower, 'acta de socialización') || str_contains($nombreLower, 'acta de aprobación')) {
-                    $esFinal = true;
+        // Bloquear toda carga hasta que la Socialización Final (o Alfabetización Tecnológica en Trayecto I) esté aprobada
+        $socFinalAprobada = \App\Models\Socializacion::where('soc_id_equ', $equipo->equ_id)
+            ->where(function ($q) use ($trayectoNum) {
+                $q->whereHas('tipoSocializacion', fn($sq) => $sq->where('tso_orden', 2));
+                if ($trayectoNum === 1) {
+                    $q->orWhereHas('tipoSocializacion', fn($sq) => $sq->whereRaw('LOWER(tso_nombre) LIKE ?', ['%alfabet%']));
                 }
+            })
+            ->where('soc_aprobado', true)
+            ->exists();
+
+        if (!$socFinalAprobada) {
+            $msgBloqueo = $trayectoNum === 1
+                ? 'La carga de entregables está bloqueada hasta que la Alfabetización Tecnológica o Socialización Final de tu equipo esté aprobada.'
+                : 'La carga de entregables está bloqueada hasta que la Socialización Final de tu equipo esté formalmente aprobada por el jurado evaluador.';
+            return back()->withErrors(['archivo' => $msgBloqueo]);
+        }
+
+        // Resolver vinculación al Catálogo Oficial PNFI automáticamente en el backend si no vino explícita
+        if (empty($request->entr_id_cep)) {
+            $semestreActivo = app(\App\Services\DiagnosticoProyectoService::class)->obtenerSemestreSeccion((int) ($equipo->equ_id_sec ?? 0));
+            $semestreNumero = str_contains($semestreActivo, '2') ? '2' : '1';
+            $tetNombre = !empty($request->entr_id_tet)
+                ? TipoEntregableTrayecto::where('tet_id', $request->entr_id_tet)->value('tet_nombre')
+                : null;
+
+            $cepQuery = \App\Models\CatalogoEntregablePnfi::where('cep_id_trayecto', $equipo->equ_id_tra)
+                ->where('cep_activo', true)
+                ->where(function ($q) use ($semestreActivo, $semestreNumero) {
+                    $q->where('cep_semestre', $semestreActivo)
+                      ->orWhere('cep_semestre', $semestreNumero)
+                      ->orWhere('cep_semestre', "Semestre {$semestreNumero}");
+                });
+
+            $cepMatch = null;
+            if ($tetNombre) {
+                $cepMatch = (clone $cepQuery)->whereRaw('LOWER(TRIM(cep_nombre)) LIKE ?', ['%' . mb_strtolower(trim($tetNombre), 'UTF-8') . '%'])->first();
+            }
+            if (!$cepMatch) {
+                $cepMatch = $cepQuery->orderBy('cep_orden')->first();
+            }
+            if ($cepMatch) {
+                $request->merge(['entr_id_cep' => $cepMatch->cep_id]);
             }
         }
 
-        // Bloquear carga de entregables finales si la Socialización Final no está aprobada
-        if ($esFinal) {
-            $socFinalAprobada = \App\Models\Socializacion::where('soc_id_equ', $equipo->equ_id)
-                ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 2))
-                ->where('soc_aprobado', true)
-                ->exists();
-
-            if (!$socFinalAprobada) {
-                return back()->withErrors([
-                    'archivo' => 'La carga de entregables finales está bloqueada hasta que la Socialización Final de tu equipo esté formalmente aprobada por el jurado evaluador.'
-                ]);
-            }
-        }
-        
         // Si no viene entr_id_tet pero viene entr_id_cep, mapear un default para compatibilidad con esquemas viejos
         $idTet = $request->entr_id_tet;
         if (empty($idTet) && !empty($request->entr_id_cep)) {
@@ -393,9 +418,16 @@ class LiderController extends Controller
 
         $misAsistencias = $asistenciasGrupo->where('usu_id', auth()->id())->take(8)->values();
 
+        $cartaAprobada = ($equipo->proyectoComunidad && $equipo->proyectoComunidad->pco_id)
+            ? \App\Models\CartaPresentacion::where('cpr_id_pco', $equipo->proyectoComunidad->pco_id)
+                ->whereNotNull('cpr_fecha_aprobacion')
+                ->exists()
+            : false;
+
         return Inertia::render('Lider/MiEquipo', [
             'equipo' => $equipo,
-            'puntosControl' => $puntosControl,
+            'cartaAprobada' => $cartaAprobada,
+            'puntosControl' => $cartaAprobada ? $puntosControl : collect([]),
             'diagnostico' => $diagnostico,
             'acuerdosPendientes' => $acuerdosPendientes,
             'misAsistencias' => $misAsistencias,
@@ -491,6 +523,16 @@ class LiderController extends Controller
             'pco_id_tpr.required'                   => 'La línea de investigación es obligatoria.',
             'pco_id_mpr.required'                   => 'La modalidad del proyecto es obligatoria.',
         ]);
+
+        if ($request->modo_comunidad === 'nueva') {
+            $nombreComLower = mb_strtolower(trim($request->nueva_comunidad_nombre), 'UTF-8');
+            $comunidadDuplicada = \App\Models\Comunidad::whereRaw('LOWER(TRIM(com_nombre)) = ?', [$nombreComLower])->exists();
+            if ($comunidadDuplicada) {
+                return back()->withErrors([
+                    'nueva_comunidad_nombre' => 'Ya existe una comunidad registrada con ese nombre en el catálogo. Selecciónala del listado existente.',
+                ]);
+            }
+        }
 
         \DB::transaction(function () use ($request, $equipo, $lider) {
             if ($request->modo_comunidad === 'nueva') {
@@ -679,6 +721,16 @@ class LiderController extends Controller
             return back()->withErrors(['rco_cedula' => 'Esa cédula pertenece a un usuario del sistema.']);
         }
 
+        if ($request->modo_comunidad === 'nueva') {
+            $nombreComLower = mb_strtolower(trim($request->nueva_comunidad_nombre), 'UTF-8');
+            $comunidadDuplicada = \App\Models\Comunidad::whereRaw('LOWER(TRIM(com_nombre)) = ?', [$nombreComLower])->exists();
+            if ($comunidadDuplicada) {
+                return back()->withErrors([
+                    'nueva_comunidad_nombre' => 'Ya existe una comunidad registrada con ese nombre en el catálogo. Selecciónala del listado existente.',
+                ]);
+            }
+        }
+
         \DB::transaction(function () use ($request, $equipo, $lider) {
             $persona = \App\Models\Usuario::firstOrCreate(
                 ['usu_cedula' => $request->rco_cedula],
@@ -838,5 +890,26 @@ class LiderController extends Controller
         ]);
 
         return back()->with('success', 'Contraseña actualizada correctamente.');
+    }
+
+    public function descargarPaqueteCierre()
+    {
+        $equipo = $this->getEquipo();
+        abort_unless($equipo, 404, 'No tienes un equipo asignado.');
+
+        $trayectoNum = (int) ($equipo->equ_id_tra ?: ($equipo->trayecto?->tra_numero ?: 1));
+        $socAprobada = \App\Models\Socializacion::where('soc_id_equ', $equipo->equ_id)
+            ->where(function ($q) use ($trayectoNum) {
+                $q->whereHas('tipoSocializacion', fn($sq) => $sq->where('tso_orden', 2));
+                if ($trayectoNum === 1) {
+                    $q->orWhereHas('tipoSocializacion', fn($sq) => $sq->whereRaw('LOWER(tso_nombre) LIKE ?', ['%alfabet%']));
+                }
+            })
+            ->where('soc_aprobado', true)
+            ->exists();
+
+        abort_unless($socAprobada, 403, 'El paquete ZIP para el Repositorio Institucional se habilita al aprobar la Socialización Final.');
+
+        return app(\App\Http\Controllers\Coordinador\EquipoController::class)->generarPaqueteCierre($equipo->equ_id);
     }
 }

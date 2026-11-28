@@ -28,8 +28,18 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <a
+                        v-if="socFinalAprobada"
+                        href="/lider/equipo/paquete-cierre"
+                        class="btn btn-outline-success btn-sm fw-bold rounded-pill px-3"
+                        title="Descargar carpeta ZIP para Repositorio Institucional"
+                    >
+                        <i class="bi bi-file-earmark-zip me-1"></i>Descargar ZIP
+                    </a>
                     <button
                         class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
+                        :disabled="!socFinalAprobada"
+                        :title="!socFinalAprobada ? 'Disponible al aprobar la Socialización Final (o Alfabetización Tecnológica en Trayecto I)' : 'Subir entregable'"
                         @click="abrirModal"
                     >
                         <i class="bi bi-cloud-arrow-up me-1"></i>Subir
@@ -72,14 +82,14 @@
                     v-if="!socFinalAprobada"
                     class="alert py-2 mb-3 d-flex align-items-center gap-2"
                     style="
-                        background: rgba(13, 110, 253, 0.05);
-                        border: 1px solid rgba(13, 110, 253, 0.2);
+                        background: rgba(255, 193, 7, 0.12);
+                        border: 1px solid rgba(255, 193, 7, 0.4);
                         border-radius: 10px;
                     "
                 >
-                    <i class="bi bi-info-circle-fill text-primary flex-shrink-0"></i>
+                    <i class="bi bi-lock-fill text-warning flex-shrink-0"></i>
                     <div class="small">
-                        <strong>Fase Formativa / Entregables Parciales:</strong> Puedes cargar entregables de avance. Los <strong>Entregables Finales</strong> se desbloquearán una vez que la <strong>Socialización Final</strong> sea aprobada por el jurado evaluador.
+                        <strong>Carga de Entregables Bloqueada:</strong> La subida de entregables se habilitará automáticamente una vez que la <strong>Socialización Final</strong> (o <strong>Alfabetización Tecnológica</strong> en Trayecto I) tenga resultado aprobado.
                     </div>
                 </div>
                 <div
@@ -379,19 +389,6 @@
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">
-                                    Vincular a Catálogo Oficial PNFI <span class="text-muted fw-normal small">({{ semestreActivo }})</span>
-                                </label>
-                                <SelectBuscable
-                                    v-model="form.entr_id_cep"
-                                    :options="opcionesCatalogoPnfi"
-                                    placeholder="-- Ninguno / Entregable adicional --"
-                                />
-                                <div class="form-text small" style="color: var(--text-muted)">
-                                    Vincular al catálogo oficial actualiza la ruta crítica y la Situación del Proyecto.
-                                </div>
-                            </div>
-                            <div class="mb-3">
                                 <label class="form-label fw-semibold"
                                     >Archivo
                                     <span class="text-danger">*</span></label
@@ -539,7 +536,7 @@ const mostrarListaVerificacion = ref(true);
 const tema = ref(localStorage.getItem("lid-theme") || "light");
 
 const pagina = ref(1);
-const porPagina = 3;
+const porPagina = 10;
 const totalPaginas = computed(() => Math.ceil((props.entregables?.length || 0) / porPagina));
 const desde = computed(() => (pagina.value - 1) * porPagina);
 const hasta = computed(() => desde.value + porPagina);

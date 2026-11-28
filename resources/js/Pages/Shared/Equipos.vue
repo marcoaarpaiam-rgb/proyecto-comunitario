@@ -28,15 +28,12 @@
                         <i class="bi bi-list fs-5"></i>
                     </button>
                     <div class="tb-title">
-                        <i
-                            class="bi bi-people me-2 text-danger d-none d-sm-inline"
-                        ></i
-                        >{{ esProfesor ? "Mis Equipos" : "Equipos" }}
+                        {{ esProfesor ? "Mis Equipos" : "Equipos" }}
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button
-                        v-if="puedeCrear && esProfesor"
+                        v-if="puedeCrear && esProfesor && seccion"
                         class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
                         @click="abrirModalCrear"
                     >
@@ -205,6 +202,30 @@
                                 v-model="busqueda"
                                 type="text"
                                 placeholder="Buscar por código o título..."
+                            />
+                        </div>
+                        <div v-if="!seccion" style="min-width: 185px;">
+                            <SelectBuscable
+                                v-model="filtroSeccion"
+                                :options="opcionesFiltroSeccion"
+                                size="sm"
+                                placeholder="Todas las secciones"
+                            />
+                        </div>
+                        <div v-if="!seccion" style="min-width: 175px;">
+                            <SelectBuscable
+                                v-model="filtroTrayecto"
+                                :options="opcionesFiltroTrayecto"
+                                size="sm"
+                                placeholder="Todos los trayectos"
+                            />
+                        </div>
+                        <div v-if="!seccion && !esProfesor && (props.profesores || []).length > 0" style="min-width: 205px;">
+                            <SelectBuscable
+                                v-model="filtroProfesor"
+                                :options="opcionesFiltroProfesor"
+                                size="sm"
+                                placeholder="Todos los profesores"
                             />
                         </div>
                         <span
@@ -3876,6 +3897,7 @@ const props = defineProps({
     equiposDisueltos: { type: Array, default: () => [] },
     secciones: Array,
     trayectos: Array,
+    profesores: { type: Array, default: () => [] },
     estudiantes: Array,
     comunidades: { type: Array, default: () => [] },
     tiposProyecto: { type: Array, default: () => [] },
@@ -4518,6 +4540,36 @@ watch([busqueda, verDisueltos, filtroSemaforo], () => {
     pagina.value = 1;
 });
 
+const filtroSeccion = ref("");
+const filtroTrayecto = ref("");
+const filtroProfesor = ref("");
+
+const opcionesFiltroSeccion = computed(() => [
+    { value: "", label: "Todas las secciones" },
+    ...(props.secciones || []).map((s) => ({
+        value: String(s.sec_id),
+        label: `Sección ${s.sec_codigo}${s.trayecto?.tra_nombre ? " — " + s.trayecto.tra_nombre : ""}`,
+    })),
+]);
+const opcionesFiltroTrayecto = computed(() => [
+    { value: "", label: "Todos los trayectos" },
+    ...(props.trayectos || []).map((t) => ({
+        value: String(t.tra_id),
+        label: t.tra_nombre,
+    })),
+]);
+const opcionesFiltroProfesor = computed(() => [
+    { value: "", label: "Todos los profesores" },
+    ...(props.profesores || []).map((p) => ({
+        value: String(p.usu_id),
+        label: `${p.usu_primer_nombre} ${p.usu_primer_apellido}`,
+    })),
+]);
+
+watch([filtroSeccion, filtroTrayecto, filtroProfesor], () => {
+    pagina.value = 1;
+});
+
 const listaActual = computed(() => {
     const raw = verDisueltos.value ? props.equiposDisueltos : props.equipos;
     if (Array.isArray(raw)) return raw;
@@ -4526,6 +4578,18 @@ const listaActual = computed(() => {
 });
 const equiposFiltrados = computed(() => {
     let list = listaActual.value || [];
+    if (filtroSeccion.value) {
+        list = list.filter((e) => String(e.equ_id_sec || e.seccion?.sec_id) === String(filtroSeccion.value));
+    }
+    if (filtroTrayecto.value) {
+        list = list.filter((e) => String(e.equ_id_tra || e.trayecto?.tra_id || e.seccion?.sec_id_tra) === String(filtroTrayecto.value));
+    }
+    if (filtroProfesor.value) {
+        list = list.filter((e) => {
+            const profId = e.seccion?.profesor_actual?.pse_id_usu || e.seccion?.profesorActual?.pse_id_usu || e.seccion?.profesor_actual?.usuario?.usu_id;
+            return String(profId) === String(filtroProfesor.value);
+        });
+    }
     if (busqueda.value.trim()) {
         const q = busqueda.value.toLowerCase();
         list = list.filter(

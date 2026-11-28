@@ -17,8 +17,15 @@ class ComunidadController extends Controller
                 ->withCount(['proyectosComunidad as total_equipos' => fn($q) =>
                     $q->whereHas('equipo', fn($q2) => $q2->where('equ_status', true))
                 ])
-                ->with(['proyectosComunidad.equipo' => fn($q) =>
-                    $q->where('equ_status', true)->select('equ_id','equ_codigo','equ_titulo','equ_id_sec')
+                ->with([
+                    'tipoOrganizacion',
+                    'proyectosComunidad' => fn($q) => $q->where('pco_status', true)->with([
+                        'equipo' => fn($q2) => $q2->select('equ_id', 'equ_codigo', 'equ_titulo', 'equ_id_sec', 'equ_id_tra', 'equ_status'),
+                        'equipo.seccion.trayecto',
+                        'equipo.trayecto',
+                        'tipoProyecto',
+                        'modalidad',
+                    ]),
                 ])
                 ->orderBy('com_nombre')
                 ->get(),
@@ -52,7 +59,7 @@ class ComunidadController extends Controller
             'com_id_usu_created' => auth()->id(),
         ]);
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if (!$request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
             return response()->json([
                 'success'   => true,
                 'comunidad' => $comunidad->load('tipoOrganizacion'),

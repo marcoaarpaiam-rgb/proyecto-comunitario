@@ -32,10 +32,7 @@
                     <div class="tb-title d-flex align-items-center gap-2">
                         <i class="bi bi-journal-check text-danger fs-5 d-none d-sm-inline"></i>
                         <span>Rúbricas Oficiales — Evaluación por Trayecto</span>
-                        <span v-if="esProfesor" class="badge bg-danger-subtle text-danger border border-danger-subtle small ms-2">
-                            Módulo Docente
-                        </span>
-                        <span v-else class="badge bg-dark-subtle text-dark border small ms-2">
+                        <span v-if="!esProfesor" class="badge bg-dark-subtle text-dark border small ms-2">
                             Coordinación PNF
                         </span>
                     </div>

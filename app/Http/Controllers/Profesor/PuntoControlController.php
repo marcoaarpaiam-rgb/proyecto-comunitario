@@ -154,8 +154,13 @@ class PuntoControlController extends Controller
             ];
         }
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('tipos_encuentro_puntual')
+            && TipoEncuentro::where('tep_activo', true)->count() === 0) {
+            (new \Database\Seeders\TipoEncuentroSeeder())->run();
+        }
+
         $tiposEncuentro = \Illuminate\Support\Facades\Schema::hasTable('tipos_encuentro_puntual')
-            ? TipoEncuentro::where('tep_activo', true)->get()
+            ? TipoEncuentro::where('tep_activo', true)->orderBy('tep_id')->get()
             : collect([]);
 
         return Inertia::render('Profesor/PuntosControl', [
@@ -260,6 +265,10 @@ class PuntoControlController extends Controller
             'desea_reprogramar'            => 'nullable|boolean',
             'nueva_fecha'                  => 'nullable|date',
             'nueva_semana'                 => 'nullable|integer|min:1|max:18',
+            'es_ultimo_punto'              => 'nullable|boolean',
+            'siguiente_puc_nombre'         => 'nullable|string|max:150',
+            'siguiente_puc_fecha'          => 'nullable|date',
+            'siguiente_puc_semana'         => 'nullable|integer|min:1|max:18',
         ];
 
         $messages = [
@@ -273,6 +282,28 @@ class PuntoControlController extends Controller
         $punto = PuntoControl::findOrFail($id);
 
         $this->autorizarEquipoId($punto->puc_id_equ);
+
+        // Validar programación del siguiente punto de control (si se proporcionó y no es último punto)
+        $crearSiguiente = $request->boolean('seq_cumplido')
+            && !$request->boolean('es_ultimo_punto')
+            && ($request->filled('siguiente_puc_nombre') || $request->filled('siguiente_puc_fecha'));
+
+        if ($crearSiguiente) {
+            if (!$request->filled('siguiente_puc_nombre') || !$request->filled('siguiente_puc_fecha')) {
+                return back()->withErrors([
+                    'siguiente_puc_fecha' => 'Para programar el siguiente punto de control debes indicar tanto el nombre como la fecha límite.',
+                ]);
+            }
+            $hoy = now()->toDateString();
+            if ($request->siguiente_puc_fecha < $hoy) {
+                return back()->withErrors([
+                    'siguiente_puc_fecha' => 'La fecha del siguiente punto de control no puede ser anterior a hoy.',
+                ]);
+            }
+            if ($errSig = \App\Models\PeriodoAcademico::validarFechaEnRango($request->siguiente_puc_fecha)) {
+                return back()->withErrors(['siguiente_puc_fecha' => $errSig]);
+            }
+        }
 
         // Si no cumplió y el profesor seleccionó reprogramar
         if (!$request->seq_cumplido && $request->boolean('desea_reprogramar')) {
@@ -408,10 +439,14 @@ class PuntoControlController extends Controller
                 ->where('apc_id_usu', $asistencia['usu_id'])
                 ->first();
 
+            $justificado = (bool)($asistencia['justificado'] ?? false);
+            $asistio     = $justificado ? false : (bool)($asistencia['asistio'] ?? false);
+            $participo   = ($asistio && !$justificado) ? (bool)($asistencia['participo'] ?? false) : false;
+
             $datos = [
-                'apc_asistio'            => (bool)($asistencia['asistio'] ?? false),
-                'apc_justificado'        => (bool)($asistencia['justificado'] ?? false),
-                'apc_participo'          => (bool)($asistencia['participo'] ?? false),
+                'apc_asistio'            => $asistio,
+                'apc_justificado'        => $justificado,
+                'apc_participo'          => $participo,
                 'apc_valoracion_literal' => $asistencia['valoracion_literal'] ?? null,
                 'apc_nivel_logro'        => $asistencia['nivel_logro'] ?? null,
                 'apc_justificativo'      => $asistencia['justificativo'] ?? null,
@@ -473,7 +508,65 @@ class PuntoControlController extends Controller
             }
         }
 
-        return back()->with('success', 'Seguimiento y asistencia registrados correctamente' . ($punto->puc_es_ultimo_punto ? ' y observaciones transferidas a la Pre-Socialización.' : '.'));
+        // Crear automáticamente el siguiente punto de control si el profesor lo programó en este seguimiento
+        $mensajeSiguiente = '';
+        if ($crearSiguiente) {
+            $ultimoOrden = PuntoControl::where('puc_id_equ', $punto->puc_id_equ)
+                ->where('puc_status', true)
+                ->max('puc_orden') ?? $punto->puc_orden;
+
+            $criteriosSig = [];
+            if (!empty($request->seq_observaciones)) {
+                $criteriosSig[] = [
+                    'origen' => "Observaciones del Punto previo ({$punto->puc_nombre})",
+                    'texto'  => $request->seq_observaciones,
+                ];
+            }
+
+            $semSig = $request->filled('siguiente_puc_semana')
+                ? (int) $request->siguiente_puc_semana
+                : min(18, max(1, (int) ($punto->puc_semana ?? 1) + 2));
+
+            $nuevoPunto = PuntoControl::create([
+                'puc_id_equ'               => $punto->puc_id_equ,
+                'puc_id_tra'               => $punto->puc_id_tra,
+                'puc_nombre'               => trim($request->siguiente_puc_nombre),
+                'puc_descripcion'          => "Generado como continuación del punto \"{$punto->puc_nombre}\".",
+                'puc_semana'               => $semSig,
+                'puc_criterios_evaluacion' => $criteriosSig,
+                'puc_fecha_limite'         => $request->siguiente_puc_fecha,
+                'puc_orden'                => $ultimoOrden + 1,
+                'puc_dias_aviso'           => $punto->puc_dias_aviso ?? 7,
+                'puc_es_entregable'        => false,
+                'puc_es_ultimo_punto'      => false,
+                'puc_status'               => true,
+                'puc_id_usu_created'       => auth()->id(),
+            ]);
+
+            $lider = \App\Models\EquipoIntegrante::where('ein_id_equ', $punto->puc_id_equ)
+                ->where('ein_es_lider', true)
+                ->where('ein_status', true)
+                ->first();
+            if ($lider) {
+                $tnoId = \App\Models\TipoNotificacion::where('tno_nombre', 'like', '%punto%')
+                    ->orWhere('tno_nombre', 'like', '%control%')
+                    ->value('tno_id') ?? \App\Models\TipoNotificacion::first()?->tno_id;
+                if ($tnoId) {
+                    \App\Models\Notificacion::create([
+                        'not_id_usu'           => $lider->ein_id_usu,
+                        'not_id_tno'           => $tnoId,
+                        'not_id_equ'           => $punto->puc_id_equ,
+                        'not_id_puc'           => $nuevoPunto->puc_id,
+                        'not_mensaje'          => "Se programó el siguiente Punto de Control: \"{$nuevoPunto->puc_nombre}\" para el {$nuevoPunto->puc_fecha_limite}.",
+                        'not_leida'            => false,
+                        'not_fecha_generacion' => now(),
+                    ]);
+                }
+            }
+            $mensajeSiguiente = " y se programó el siguiente punto \"{$nuevoPunto->puc_nombre}\"";
+        }
+
+        return back()->with('success', 'Seguimiento y asistencia registrados correctamente' . ($punto->puc_es_ultimo_punto ? ' y observaciones transferidas a la Pre-Socialización.' : ($mensajeSiguiente . '.')));
     }
 
     public function reprogramar(\Illuminate\Http\Request $request, $id)
@@ -503,6 +596,28 @@ class PuntoControlController extends Controller
         $punto = PuntoControl::findOrFail($id);
 
         $this->autorizarEquipoId($punto->puc_id_equ);
+
+        // Validar programación del siguiente punto de control (si se proporcionó y no es último punto)
+        $crearSiguiente = $request->boolean('seq_cumplido')
+            && !$request->boolean('es_ultimo_punto')
+            && ($request->filled('siguiente_puc_nombre') || $request->filled('siguiente_puc_fecha'));
+
+        if ($crearSiguiente) {
+            if (!$request->filled('siguiente_puc_nombre') || !$request->filled('siguiente_puc_fecha')) {
+                return back()->withErrors([
+                    'siguiente_puc_fecha' => 'Para programar el siguiente punto de control debes indicar tanto el nombre como la fecha límite.',
+                ]);
+            }
+            $hoy = now()->toDateString();
+            if ($request->siguiente_puc_fecha < $hoy) {
+                return back()->withErrors([
+                    'siguiente_puc_fecha' => 'La fecha del siguiente punto de control no puede ser anterior a hoy.',
+                ]);
+            }
+            if ($errSig = \App\Models\PeriodoAcademico::validarFechaEnRango($request->siguiente_puc_fecha)) {
+                return back()->withErrors(['siguiente_puc_fecha' => $errSig]);
+            }
+        }
 
         // No reprogramar si ya fue evaluado
         $seguimientoExistente = SeguimientoEquipo::where('seq_id_equ', $punto->puc_id_equ)

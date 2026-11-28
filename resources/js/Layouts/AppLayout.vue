@@ -511,12 +511,6 @@ const menuCoordinador = [
                 href: "/coordinador/maestras/tipos-entregable",
             },
             {
-                label: "Tipos Evento Equipo",
-                svg: svgs.calendar,
-                icon: "bi bi-calendar-event",
-                href: "/coordinador/maestras/tipos-evento-equipo",
-            },
-            {
                 label: "Turnos",
                 svg: svgs.clock,
                 icon: "bi bi-clock",
@@ -618,7 +612,7 @@ const menuProfesor = [
         href: "/evaluaciones",
     },
     {
-        label: "Esquemas de Evaluación",
+        label: "Evaluación y Rúbricas",
         svg: svgs.table,
         icon: "bi bi-sliders",
         href: "/profesor/esquemas-evaluacion",

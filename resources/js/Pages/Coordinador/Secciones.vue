@@ -73,6 +73,24 @@
                             Consulta académica del PNF Informática &bull; Inicio en Semestre Impar y Cierre en Semestre Par
                         </p>
                     </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm"
+                            :disabled="sincronizandoSogac"
+                            @click="sincronizarSogac"
+                        >
+                            <span v-if="sincronizandoSogac" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-arrow-repeat me-1"></i>
+                            Sincronizar Transición SOGAC
+                        </button>
+                        <Link
+                            href="/coordinador/transicion-semestral"
+                            class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold"
+                        >
+                            <i class="bi bi-clock-history me-1"></i>Historial y Cierre
+                        </Link>
+                    </div>
                 </div>
 
                 <div
@@ -112,16 +130,16 @@
                             <span class="small fw-bold text-uppercase text-muted me-1">Filtrar Semestre:</span>
                             <button
                                 type="button"
-                                class="btn btn-sm fw-bold px-3 rounded-pill"
-                                :class="filtroTipoSemestre === 'todos' ? 'btn-dark text-white' : 'btn-outline-dark bg-white'"
+                                class="btn btn-sm fw-bold px-3 rounded-pill btn-filtro-todos"
+                                :class="{ active: filtroTipoSemestre === 'todos' }"
                                 @click="filtroTipoSemestre = 'todos'"
                             >
                                 Todas ({{ (secciones || []).length }})
                             </button>
                             <button
                                 type="button"
-                                class="btn btn-sm fw-bold px-3 rounded-pill"
-                                :class="filtroTipoSemestre === 'impar' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark bg-white'"
+                                class="btn btn-sm fw-bold px-3 rounded-pill btn-filtro-impar"
+                                :class="{ active: filtroTipoSemestre === 'impar' }"
                                 @click="filtroTipoSemestre = 'impar'"
                                 title="Secciones que inician proyecto en semestre impar"
                             >
@@ -130,8 +148,8 @@
                             </button>
                             <button
                                 type="button"
-                                class="btn btn-sm fw-bold px-3 rounded-pill"
-                                :class="filtroTipoSemestre === 'par' ? 'btn-danger text-white' : 'btn-outline-danger bg-white'"
+                                class="btn btn-sm fw-bold px-3 rounded-pill btn-filtro-par"
+                                :class="{ active: filtroTipoSemestre === 'par' }"
                                 @click="filtroTipoSemestre = 'par'"
                                 title="Secciones que cierran proyecto en semestre par"
                             >
@@ -142,9 +160,9 @@
 
                         <div class="small text-muted">
                             <i class="bi bi-arrow-left-right text-danger me-1"></i>
-                            <a href="/coordinador/transicion-semestral" class="fw-bold text-danger text-decoration-none">
-                                Abrir Módulo de Transición y Cierre &rarr;
-                            </a>
+                            <Link href="/coordinador/transicion-semestral" class="fw-bold text-danger text-decoration-none">
+                                Gestión de Transición y Cierre &rarr;
+                            </Link>
                         </div>
                     </div>
 
@@ -566,6 +584,16 @@ const itemAEliminar = ref(null);
 let modal = null;
 let modalConf = null;
 const filtroTipoSemestre = ref("todos");
+const sincronizandoSogac = ref(false);
+const sincronizarSogac = () => {
+    sincronizandoSogac.value = true;
+    router.post("/coordinador/transicion-semestral/sincronizar-sogac", {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            sincronizandoSogac.value = false;
+        },
+    });
+};
 watch([busqueda, filtroTipoSemestre], () => {
     pagina.value = 1;
 });
@@ -1007,6 +1035,39 @@ const confirmarDesactivar = () => {
     background: rgba(0, 0, 0, 0.5);
     z-index: 1035;
     display: none;
+}
+.btn-filtro-todos {
+    background-color: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border: 1.5px solid #495057 !important;
+}
+.btn-filtro-todos.active,
+.btn-filtro-todos:hover {
+    background-color: #212529 !important;
+    color: #ffffff !important;
+    border-color: #212529 !important;
+}
+.btn-filtro-impar {
+    background-color: var(--bg-card) !important;
+    color: #997404 !important;
+    border: 1.5px solid #ffc107 !important;
+}
+.btn-filtro-impar.active,
+.btn-filtro-impar:hover {
+    background-color: #ffc107 !important;
+    color: #1a1a1a !important;
+    border-color: #ffc107 !important;
+}
+.btn-filtro-par {
+    background-color: var(--bg-card) !important;
+    color: #dc3545 !important;
+    border: 1.5px solid #dc3545 !important;
+}
+.btn-filtro-par.active,
+.btn-filtro-par:hover {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+    border-color: #dc3545 !important;
 }
 @media (min-width: 992px) {
     .sb {

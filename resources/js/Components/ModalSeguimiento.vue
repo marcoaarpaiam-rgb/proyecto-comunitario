@@ -273,11 +273,14 @@
 
                             <!-- Acuerdos -->
                             <div class="card border p-3 mb-3" style="background: var(--bg-th); border-color: var(--border) !important;">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label class="form-label fw-bold mb-0">Acuerdos y Compromisos</label>
                                     <button v-if="!modoSoloLecturaSeg" type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" @click="agregarAcuerdo">
                                         <i class="bi bi-plus-circle me-1"></i>Agregar
                                     </button>
+                                </div>
+                                <div class="form-text small mb-2">
+                                    <i class="bi bi-info-circle me-1 text-primary"></i>Registra las tareas o correcciones pendientes con fecha límite para el próximo encuentro (alimenta el Semáforo de Ruta Crítica).
                                 </div>
                                 <div v-if="!formSeg.acuerdos?.length" class="text-muted small">Sin acuerdos registrados.</div>
                                 <div v-for="(acue, aIdx) in formSeg.acuerdos" :key="aIdx" class="row g-2 mb-2 align-items-center p-2 rounded border" style="background: var(--bg-card);">
@@ -309,13 +312,52 @@
                             </div>
 
                             <div class="mb-3">
-                                <div class="d-flex align-items-center gap-3 p-3 rounded border" style="background: var(--bg-th); border-color: var(--border) !important;">
-                                    <div class="form-check form-switch m-0 p-0 d-flex align-items-center flex-shrink-0">
-                                        <input class="form-check-input m-0" type="checkbox" id="chkSegUltimo" v-model="formSeg.es_ultimo_punto" :disabled="modoSoloLecturaSeg" style="cursor: pointer; width: 2.2em; height: 1.2em;" />
+                                <div class="p-3 rounded border" style="background: var(--bg-th); border-color: var(--border) !important;">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="form-check form-switch m-0 p-0 d-flex align-items-center flex-shrink-0">
+                                            <input class="form-check-input m-0" type="checkbox" id="chkSegUltimo" v-model="formSeg.es_ultimo_punto" :disabled="modoSoloLecturaSeg" style="cursor: pointer; width: 2.2em; height: 1.2em;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-check-label fw-bold m-0" for="chkSegUltimo" style="cursor: pointer;">
+                                                ¿Es el último punto de control del semestre?
+                                            </label>
+                                            <div class="text-muted small">
+                                                Al marcarlo como cumplido y último punto, se transfieren las observaciones y se habilita la Pre-Socialización.
+                                            </div>
+                                        </div>
                                     </div>
-                                    <label class="form-check-label fw-bold m-0" for="chkSegUltimo" style="cursor: pointer;">
-                                        Transferir observaciones a la Pre-Socialización
-                                    </label>
+
+                                    <!-- Programación directa del siguiente punto de control -->
+                                    <div v-if="!formSeg.es_ultimo_punto && !modoSoloLecturaSeg" class="mt-3 pt-3 border-top">
+                                        <div class="fw-bold small text-primary mb-2">
+                                            <i class="bi bi-calendar-plus me-1"></i>Siguiente Punto de Control (Opcional — se creará automáticamente al guardar)
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-md-7">
+                                                <label class="form-label small fw-semibold mb-1">Nombre del siguiente punto</label>
+                                                <input
+                                                    v-model="formSeg.siguiente_puc_nombre"
+                                                    type="text"
+                                                    class="form-control form-control-sm"
+                                                    :class="{ 'is-invalid': erroresSeg.siguiente_puc_nombre }"
+                                                    placeholder="Ej: Revisión Avance Metodológico / Prototipo"
+                                                />
+                                                <div v-if="erroresSeg.siguiente_puc_nombre" class="invalid-feedback">{{ erroresSeg.siguiente_puc_nombre }}</div>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <label class="form-label small fw-semibold mb-1">Fecha límite</label>
+                                                <input
+                                                    v-model="formSeg.siguiente_puc_fecha"
+                                                    type="date"
+                                                    :min="fechaHoy"
+                                                    :max="$page?.props?.periodoActivo?.fecha_fin"
+                                                    class="form-control form-control-sm"
+                                                    :class="{ 'is-invalid': erroresSeg.siguiente_puc_fecha }"
+                                                />
+                                                <div v-if="erroresSeg.siguiente_puc_fecha" class="invalid-feedback">{{ erroresSeg.siguiente_puc_fecha }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -330,16 +372,33 @@
                                                 <span class="text-muted small ms-2">CI: {{ int.usuario?.usu_cedula }}</span>
                                             </div>
                                             <div class="d-flex align-items-center gap-3 flex-wrap">
-                                                <label class="form-check-label small">
-                                                    <input type="checkbox" class="form-check-input me-1" v-model="formSeg.asistencias[int.ein_id_usu].asistio" :disabled="modoSoloLecturaSeg" />
+                                                <label class="form-check-label small" :class="{ 'text-muted': formSeg.asistencias[int.ein_id_usu].justificado }">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="form-check-input me-1"
+                                                        v-model="formSeg.asistencias[int.ein_id_usu].asistio"
+                                                        :disabled="modoSoloLecturaSeg || formSeg.asistencias[int.ein_id_usu].justificado"
+                                                        @change="onToggleAsistio(int.ein_id_usu)"
+                                                    />
                                                     Asistió
                                                 </label>
-                                                <label class="form-check-label small">
-                                                    <input type="checkbox" class="form-check-input me-1" v-model="formSeg.asistencias[int.ein_id_usu].participo" :disabled="modoSoloLecturaSeg" />
+                                                <label class="form-check-label small" :class="{ 'text-muted': !formSeg.asistencias[int.ein_id_usu].asistio || formSeg.asistencias[int.ein_id_usu].justificado }">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="form-check-input me-1"
+                                                        v-model="formSeg.asistencias[int.ein_id_usu].participo"
+                                                        :disabled="modoSoloLecturaSeg || !formSeg.asistencias[int.ein_id_usu].asistio || formSeg.asistencias[int.ein_id_usu].justificado"
+                                                    />
                                                     Participó
                                                 </label>
                                                 <label class="form-check-label small">
-                                                    <input type="checkbox" class="form-check-input me-1" v-model="formSeg.asistencias[int.ein_id_usu].justificado" :disabled="modoSoloLecturaSeg" />
+                                                    <input
+                                                        type="checkbox"
+                                                        class="form-check-input me-1"
+                                                        v-model="formSeg.asistencias[int.ein_id_usu].justificado"
+                                                        :disabled="modoSoloLecturaSeg"
+                                                        @change="onToggleJustificado(int.ein_id_usu)"
+                                                    />
                                                     Justificado
                                                 </label>
                                                 <div v-if="esSemestreImpar" style="min-width: 170px;">
@@ -489,6 +548,8 @@ const formSeg = ref({
     seq_equivalencia_referencial: "",
     seq_aprobado_cualitativo: null,
     es_ultimo_punto: false,
+    siguiente_puc_nombre: "",
+    siguiente_puc_fecha: "",
     desea_reprogramar: false,
     nueva_fecha: "",
     nueva_semana: "",
@@ -517,6 +578,25 @@ const syncLiteralEstudiante = (usuId) => {
     formSeg.value.asistencias[usuId].nivel_logro = item ? item.nivel : "";
 };
 
+const onToggleAsistio = (usuId) => {
+    const a = formSeg.value.asistencias?.[usuId];
+    if (!a) return;
+    if (a.asistio) {
+        a.justificado = false;
+    } else {
+        a.participo = false;
+    }
+};
+
+const onToggleJustificado = (usuId) => {
+    const a = formSeg.value.asistencias?.[usuId];
+    if (!a) return;
+    if (a.justificado) {
+        a.asistio = false;
+        a.participo = false;
+    }
+};
+
 const agregarAcuerdo = () => {
     formSeg.value.acuerdos.push({ descripcion: "", fecha_limite: "", estado: "pendiente" });
 };
@@ -533,10 +613,13 @@ const abrir = (puc, soloLectura = false) => {
 
     (puc.equipo?.integrantes || []).forEach((i) => {
         const prev = prevMap[i.ein_id_usu];
+        const justificadoInit = prev ? Boolean(prev.apc_justificado) : false;
+        const asistioInit = justificadoInit ? false : (prev ? Boolean(prev.apc_asistio) : true);
+        const participoInit = (asistioInit && !justificadoInit && prev) ? Boolean(prev.apc_participo) : false;
         initialAsist[i.ein_id_usu] = {
-            asistio: prev ? Boolean(prev.apc_asistio) : true,
-            participo: prev ? Boolean(prev.apc_participo) : false,
-            justificado: prev ? Boolean(prev.apc_justificado) : false,
+            asistio: asistioInit,
+            participo: participoInit,
+            justificado: justificadoInit,
             valoracion_literal: prev?.apc_valoracion_literal || "",
             nivel_logro: prev?.apc_nivel_logro || "",
             observacion: prev?.apc_observaciones || "",
@@ -556,6 +639,8 @@ const abrir = (puc, soloLectura = false) => {
         seq_equivalencia_referencial: prevSeg?.seq_equivalencia_referencial || "",
         seq_aprobado_cualitativo: prevSeg?.seq_aprobado_cualitativo ?? null,
         es_ultimo_punto: Boolean(puc.puc_es_ultimo_punto),
+        siguiente_puc_nombre: "",
+        siguiente_puc_fecha: "",
         desea_reprogramar: false,
         nueva_fecha: puc.puc_fecha_reprogramada || "",
         nueva_semana: puc.puc_semana || "",

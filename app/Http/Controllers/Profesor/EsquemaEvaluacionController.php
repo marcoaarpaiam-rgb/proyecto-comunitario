@@ -69,8 +69,27 @@ class EsquemaEvaluacionController extends Controller
             ->orderBy('esq_id', 'desc')
             ->get();
 
+        $trayectosProf = $secciones->pluck('sec_id_tra')->filter()->unique()->values();
+        $rubricas = \Illuminate\Support\Facades\DB::table('rubricas as r')
+            ->leftJoin('trayecto as t', 't.tra_id', '=', 'r.id_trayecto')
+            ->where('r.activo', true)
+            ->when(!$esCoordinador && $trayectosProf->isNotEmpty(), fn($q) => $q->whereIn('r.id_trayecto', $trayectosProf))
+            ->select('r.*', 't.tra_nombre')
+            ->orderBy('r.id_trayecto')
+            ->orderBy('r.semestre')
+            ->orderBy('r.rol_evaluador')
+            ->get()
+            ->map(function ($rub) {
+                $rub->criterios = \Illuminate\Support\Facades\DB::table('criterios_rubrica')
+                    ->where('id_rubrica', $rub->id_rubrica)
+                    ->orderBy('orden')
+                    ->get();
+                return $rub;
+            });
+
         return Inertia::render('Profesor/EsquemasEvaluacion', [
             'esquemas'        => $esquemas,
+            'rubricas'        => $rubricas,
             'secciones'       => $secciones,
             'esCoordinador'   => $esCoordinador,
             'usuarioActual'   => [
@@ -98,11 +117,18 @@ class EsquemaEvaluacionController extends Controller
             'esq_escala_max'       => 'required|numeric|gt:esq_escala_min',
             'esq_criterios'        => 'nullable|array',
             'esq_descripcion'      => 'nullable|string',
-            'esq_nota_aprobatoria' => 'nullable|numeric|min:0',
+            'esq_nota_aprobatoria' => $request->esq_modo === 'cuantitativo' ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
             'esq_es_plantilla'     => 'nullable|boolean',
+        ], [
+            'esq_nombre.required'           => 'El nombre del esquema es obligatorio.',
+            'esq_escala_max.gt'             => 'La escala máxima debe ser mayor a la mínima.',
+            'esq_nota_aprobatoria.required' => 'La nota mínima aprobatoria es obligatoria en modalidad cuantitativa.',
         ]);
 
         $esPlantilla = $esCoordinador ? $request->boolean('esq_es_plantilla', false) : false;
+        $notaAprob = $request->esq_modo === 'cualitativo_respaldado'
+            ? 0
+            : (float) $request->input('esq_nota_aprobatoria', 16.00);
 
         $esquema = EsquemaEvaluacion::create([
             'esq_nombre'          => $request->esq_nombre,
@@ -112,7 +138,7 @@ class EsquemaEvaluacionController extends Controller
             'esq_escala_min'      => $request->esq_escala_min,
             'esq_escala_max'      => $request->esq_escala_max,
             'esq_criterios'       => $request->esq_criterios,
-            'esq_nota_aprobatoria'=> $request->input('esq_nota_aprobatoria', 16.00),
+            'esq_nota_aprobatoria'=> $notaAprob,
             'esq_activo'          => true,
             'esq_es_plantilla'    => $esPlantilla,
         ]);
@@ -139,20 +165,29 @@ class EsquemaEvaluacionController extends Controller
             'esq_escala_max'       => 'required|numeric|gt:esq_escala_min',
             'esq_criterios'        => 'nullable|array',
             'esq_descripcion'      => 'nullable|string',
-            'esq_nota_aprobatoria' => 'nullable|numeric|min:0',
+            'esq_nota_aprobatoria' => $request->esq_modo === 'cuantitativo' ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+        ], [
+            'esq_nombre.required'           => 'El nombre del esquema es obligatorio.',
+            'esq_escala_max.gt'             => 'La escala máxima debe ser mayor a la mínima.',
+            'esq_nota_aprobatoria.required' => 'La nota mínima aprobatoria es obligatoria en modalidad cuantitativa.',
         ]);
+
+        $notaAprob = $request->esq_modo === 'cualitativo_respaldado'
+            ? 0
+            : (float) $request->input('esq_nota_aprobatoria', 16.00);
 
         // Si el esquema es del profesor o el usuario es coordinador, se actualiza directamente
         if ((int) $esquema->esq_id_usu_creador === (int) $profesor->usu_id || $esCoordinador) {
-            $esquema->update($request->only([
+            $datosUpdate = $request->only([
                 'esq_nombre',
                 'esq_descripcion',
                 'esq_modo',
                 'esq_escala_min',
                 'esq_escala_max',
                 'esq_criterios',
-                'esq_nota_aprobatoria',
-            ]));
+            ]);
+            $datosUpdate['esq_nota_aprobatoria'] = $notaAprob;
+            $esquema->update($datosUpdate);
 
             return back()->with('success', 'Esquema actualizado correctamente.');
         }
@@ -168,7 +203,7 @@ class EsquemaEvaluacionController extends Controller
                 'esq_escala_min'      => $request->esq_escala_min,
                 'esq_escala_max'      => $request->esq_escala_max,
                 'esq_criterios'       => $request->esq_criterios,
-                'esq_nota_aprobatoria'=> $request->input('esq_nota_aprobatoria', 16.00),
+                'esq_nota_aprobatoria'=> $notaAprob,
                 'esq_activo'          => true,
                 'esq_es_plantilla'    => false,
             ]);
@@ -307,5 +342,100 @@ class EsquemaEvaluacionController extends Controller
         }
 
         return back()->with('success', 'Esquemas de evaluación oficiales asignados correctamente a tus secciones.');
+    }
+
+    /**
+     * Actualizar título, peso y criterios de una rúbrica de socialización/evaluación.
+     */
+    public function updateRubrica(Request $request, $id)
+    {
+        $rubrica = \Illuminate\Support\Facades\DB::table('rubricas')->where('id_rubrica', $id)->first();
+        if (!$rubrica) {
+            return back()->withErrors(['rubrica' => 'Rúbrica no encontrada.']);
+        }
+
+        $request->validate([
+            'titulo'                      => 'required|string|max:200',
+            'peso_porcentual'             => 'required|numeric|min:1|max:100',
+            'criterios'                   => 'required|array|min:1',
+            'criterios.*.nombre_criterio' => 'required|string|max:250',
+            'criterios.*.tipo_criterio'   => 'required|in:cuantitativo,cualitativo',
+            'criterios.*.puntaje_maximo'  => 'required|numeric|min:0|max:20',
+        ], [
+            'titulo.required'                      => 'El título de la rúbrica es obligatorio.',
+            'peso_porcentual.required'             => 'El peso porcentual es obligatorio.',
+            'criterios.required'                   => 'Debe incluir al menos un criterio de evaluación.',
+            'criterios.*.nombre_criterio.required' => 'Todos los criterios deben tener un nombre descriptivo.',
+            'criterios.*.puntaje_maximo.required'  => 'Indique el puntaje máximo para cada criterio.',
+        ]);
+
+        $criteriosInput = $request->input('criterios', []);
+        $sumaCuantitativa = 0;
+        foreach ($criteriosInput as $crit) {
+            if (($crit['tipo_criterio'] ?? 'cuantitativo') === 'cuantitativo') {
+                $sumaCuantitativa += (float) ($crit['puntaje_maximo'] ?? 0);
+            }
+        }
+
+        if ($sumaCuantitativa > 0 && abs($sumaCuantitativa - 20.0) > 0.01) {
+            return back()->withErrors([
+                'criterios' => "La suma de los puntajes máximos de los criterios cuantitativos debe ser exactamente 20 pts (actualmente suma {$sumaCuantitativa} pts)."
+            ]);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($id, $request, $criteriosInput) {
+            \Illuminate\Support\Facades\DB::table('rubricas')
+                ->where('id_rubrica', $id)
+                ->update([
+                    'titulo'          => trim($request->titulo),
+                    'peso_porcentual' => (float) $request->peso_porcentual,
+                    'updated_at'      => now(),
+                ]);
+
+            $idsConservados = [];
+            foreach (array_values($criteriosInput) as $idx => $crit) {
+                $idCrit = !empty($crit['id_criterio']) ? (int) $crit['id_criterio'] : null;
+                $puntaje = ($crit['tipo_criterio'] === 'cualitativo') ? 0 : (float) $crit['puntaje_maximo'];
+
+                if ($idCrit) {
+                    \Illuminate\Support\Facades\DB::table('criterios_rubrica')
+                        ->where('id_criterio', $idCrit)
+                        ->where('id_rubrica', $id)
+                        ->update([
+                            'nombre_criterio' => trim($crit['nombre_criterio']),
+                            'tipo_criterio'   => $crit['tipo_criterio'],
+                            'puntaje_maximo'  => $puntaje,
+                            'orden'           => $idx + 1,
+                        ]);
+                    $idsConservados[] = $idCrit;
+                } else {
+                    $nuevoId = \Illuminate\Support\Facades\DB::table('criterios_rubrica')->insertGetId([
+                        'id_rubrica'      => $id,
+                        'nombre_criterio' => trim($crit['nombre_criterio']),
+                        'tipo_criterio'   => $crit['tipo_criterio'],
+                        'puntaje_maximo'  => $puntaje,
+                        'orden'           => $idx + 1,
+                    ]);
+                    $idsConservados[] = $nuevoId;
+                }
+            }
+
+            // Eliminar únicamente los criterios removidos que no tengan evaluaciones emitidas
+            $criteriosExistentes = \Illuminate\Support\Facades\DB::table('criterios_rubrica')
+                ->where('id_rubrica', $id)
+                ->pluck('id_criterio')
+                ->all();
+            $aEliminar = array_diff($criteriosExistentes, $idsConservados);
+            foreach ($aEliminar as $idElim) {
+                $tieneDetalles = \Illuminate\Support\Facades\DB::table('evaluacion_detalles')
+                    ->where('id_criterio', $idElim)
+                    ->exists();
+                if (!$tieneDetalles) {
+                    \Illuminate\Support\Facades\DB::table('criterios_rubrica')->where('id_criterio', $idElim)->delete();
+                }
+            }
+        });
+
+        return back()->with('success', 'Rúbrica de socialización guardada correctamente.');
     }
 }

@@ -48,18 +48,6 @@ class TablaMaestraController extends Controller
                 'subtitulo'=> 'Estudiantes, Profesores, Comunidad, etc.',
                 'max'      => 100,
             ],
-            'tipos-evento-equipo' => [
-                'tabla'    => 'tipo_evento_equipo',
-                'pk'       => 'tee_id',
-                'campo'    => 'tee_nombre',
-                'status'   => 'tee_status',
-                'created'  => 'tee_id_usu_created',
-                'updated'  => 'tee_id_usu_updated',
-                'vista'    => 'Coordinador/Maestras/TiposEventoEquipo',
-                'titulo'   => 'Tipos de Evento de Equipo',
-                'subtitulo'=> 'Disuelto, Reactivado, Modificado, etc.',
-                'max'      => 50,
-            ],
             'turnos' => [
                 'tabla'    => 'turno',
                 'pk'       => 'tur_id',

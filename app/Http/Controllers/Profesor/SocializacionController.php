@@ -44,6 +44,13 @@ class SocializacionController extends Controller
                 $eq->presoc_estado = $preSoc ? ($preSoc->soc_apto === true ? 'Apto' : ($preSoc->soc_apto === false ? 'No Apto' : 'Pendiente')) : 'Sin registrar';
                 $eq->fecha_presoc = $preSoc?->soc_fecha;
 
+                // Verificar si tiene último punto de control cumplido (candado para Pre-Socialización)
+                $ultimoPucCumplido = $eq->puntosControl->first(function ($p) {
+                    return $p->puc_status && $p->puc_es_ultimo_punto
+                        && $p->seguimientos->where('seq_cumplido', true)->isNotEmpty();
+                });
+                $eq->tiene_ultimo_punto_cumplido = (bool) $ultimoPucCumplido;
+
                 // Obtener observaciones del último punto de control
                 $ultimoPuc = $eq->puntosControl->where('puc_es_ultimo_punto', true)->first()
                     ?? $eq->puntosControl->sortByDesc('puc_orden')->first();
@@ -116,7 +123,33 @@ class SocializacionController extends Controller
             ]);
         }
 
+        if ($tipoSoc->tso_orden === 1) {
+            // Pre-socialización: requiere al menos un punto de control cumplido marcado como último punto del semestre
+            $tieneUltimoPuntoCumplido = \App\Models\PuntoControl::where('puc_id_equ', $request->soc_id_equ)
+                ->where('puc_status', true)
+                ->where('puc_es_ultimo_punto', true)
+                ->whereHas('seguimientos', fn($q) => $q->where('seq_cumplido', true))
+                ->exists();
+
+            if (!$tieneUltimoPuntoCumplido) {
+                return back()->withErrors([
+                    'soc_id_equ' => 'Bloqueado: No se puede habilitar ni registrar la Pre-Socialización porque el equipo aún no tiene un Punto de Control cumplido marcado como "Último punto de control del semestre".'
+                ]);
+            }
+        }
+
         if ($tipoSoc->tso_orden === 2) {
+            // Verificar que exista rúbrica activa para el trayecto antes de programar la defensa
+            $tieneRubrica = \Illuminate\Support\Facades\DB::table('rubricas')
+                ->where('id_trayecto', $equipo->equ_id_tra)
+                ->where('activo', true)
+                ->exists();
+            if (!$tieneRubrica) {
+                return back()->withErrors([
+                    'soc_id_equ' => 'Bloqueado: Debes tener configurada al menos una Rúbrica de Socialización activa en "Evaluación y Rúbricas" antes de programar la defensa.'
+                ]);
+            }
+
             // Es socialización final — verificar que existe pre-soc aprobada (apta)
             $preSocAprobada = Socializacion::where('soc_id_equ', $request->soc_id_equ)
                 ->whereHas('tipoSocializacion', fn($q) => $q->where('tso_orden', 1))
@@ -217,6 +250,17 @@ class SocializacionController extends Controller
         if ($numSemestre % 2 !== 0) {
             return back()->withErrors([
                 'fecha' => "El semestre impar (Semestre {$numSemestre}) es cualitativo y no cuenta con Socialización Final de defensa. La Socialización Final corresponde al semestre par."
+            ]);
+        }
+
+        // Verificar rúbrica activa antes de programar la defensa
+        $tieneRubrica = \Illuminate\Support\Facades\DB::table('rubricas')
+            ->where('id_trayecto', $equipo->equ_id_tra)
+            ->where('activo', true)
+            ->exists();
+        if (!$tieneRubrica) {
+            return back()->withErrors([
+                'fecha' => 'Bloqueado: Debes configurar al menos una Rúbrica de Socialización activa en "Evaluación y Rúbricas" antes de programar la defensa.'
             ]);
         }
 

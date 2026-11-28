@@ -98,13 +98,6 @@
                 >
                     <i class="bi bi-trophy"></i> Resultados
                 </Link>
-                <Link
-                    href="/coordinador/transicion-semestral"
-                    class="sb-lnk"
-                    :class="{ active: currentPath.startsWith('/coordinador/transicion-semestral') }"
-                >
-                    <i class="bi bi-arrow-left-right"></i> Transición Semestral
-                </Link>
 
                 <!-- Tablas Maestras -->
                 <div
@@ -160,13 +153,6 @@
                         :class="{ active: currentPath.includes('/tipos-entregable') }"
                     >
                         <i class="bi bi-file-earmark"></i> Tipos Entregable
-                    </Link>
-                    <Link
-                        href="/coordinador/maestras/tipos-evento-equipo"
-                        class="sb-lnk"
-                        :class="{ active: currentPath.includes('/tipos-evento-equipo') }"
-                    >
-                        <i class="bi bi-calendar-event"></i> Eventos Equipo
                     </Link>
                     <Link
                         href="/coordinador/maestras/turnos"

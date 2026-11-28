@@ -77,6 +77,7 @@ class EquipoController extends Controller
         $equiposQuery = Equipo::with([
             'seccion.trayecto',
             'seccion.turno',
+            'seccion.profesorActual.usuario',
             'trayecto',
             'integrantes.usuario',
             'proyectoComunidad.comunidad.tipoOrganizacion',
@@ -169,11 +170,17 @@ class EquipoController extends Controller
 
         $vista = $esProfesor ? 'Profesor/MisEquipos' : 'Shared/Equipos';
 
+        $profesores = Usuario::where('usu_status', true)
+            ->whereHas('roles', fn($q) => $q->where('rol_nombre', 'profesor_proyecto')->where('uro_status', true))
+            ->orderBy('usu_primer_apellido')
+            ->get(['usu_id', 'usu_primer_nombre', 'usu_primer_apellido', 'usu_cedula']);
+
         return Inertia::render($vista, [
             'equipos'             => $equiposCollection,
             'diagnosticosEquipos' => $diagnosticosEquipos,
             'secciones'           => $seccionesQuery->get(),
             'trayectos'           => Trayecto::where('tra_status', true)->get(),
+            'profesores'          => $profesores,
             'equiposDisueltos'    => $equiposDisueltosQuery->get(),
             'estudiantes'         => $estudiantes,
             'comunidades'         => \App\Models\Comunidad::where('com_status', true)
@@ -183,7 +190,7 @@ class EquipoController extends Controller
             'modalidades'         => \App\Models\ModalidadProyecto::where('mpr_status', true)->get(),
             'tiposOrganizacion'   => \App\Models\TipoOrganizacion::where('tor_status', true)->orderBy('tor_nombre')->get(),
             'tipoBeneficiario'    => \App\Models\TipoBeneficiario::where('tbe_status', true)->get(),
-            'puedeCrear'          => $esProfesor,
+            'puedeCrear'          => false, // Creación de equipos exclusiva desde Mis Secciones -> Detalle de Sección
             'modoProfesor'        => $esProfesor,
             'sede'                => config('siscon.sede', 'ACA'),
         ]);

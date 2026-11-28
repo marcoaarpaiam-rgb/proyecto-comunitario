@@ -443,7 +443,7 @@ const iniciales = computed(() => {
 
 const busqueda = ref(props.filtros?.buscar || "");
 const pagina = ref(1);
-const porPagina = 3;
+const porPagina = 10;
 const form = ref({ nombre: "", extra: "" });
 const opcionesTrayectosMaestra = [
     { value: "", label: "Seleccionar..." },
