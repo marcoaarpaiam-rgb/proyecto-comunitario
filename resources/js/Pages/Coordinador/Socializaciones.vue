@@ -391,14 +391,7 @@
                                             </button>
                                         </div>
 
-                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <a
-                                                :href="obtenerUrlJurado(socSeleccionadaDetalle)"
-                                                target="_blank"
-                                                class="btn btn-sm btn-dark text-white fw-bold"
-                                            >
-                                                <i class="bi bi-box-arrow-up-right me-1"></i>Abrir Panel de Jurado
-                                            </a>
+                                        <div class="d-flex justify-content-end align-items-center flex-wrap gap-2">
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-outline-secondary"
@@ -479,8 +472,9 @@
                                     </div>
 
                                     <!-- Acta Final PDF -->
-                                    <div class="col-sm-4" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
+                                    <div class="col-sm-6" v-if="socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id">
                                         <a
+                                            v-if="tieneActaFinal(socSeleccionadaDetalle)"
                                             :href="'/evaluaciones/pdf/' + (socSeleccionadaDetalle.equipo?.proyectoComunidad?.pco_id || socSeleccionadaDetalle.equipo?.proyecto_comunidad?.pco_id)"
                                             target="_blank"
                                             class="btn btn-danger btn-sm w-100 fw-bold p-2 text-truncate"
@@ -488,6 +482,15 @@
                                         >
                                             <i class="bi bi-file-earmark-pdf-fill me-1"></i>Acta Final PDF
                                         </a>
+                                        <button
+                                            v-else
+                                            type="button"
+                                            class="btn btn-outline-secondary btn-sm w-100 fw-bold p-2 text-truncate"
+                                            @click="mostrarAvisoActaPendiente"
+                                            title="El proyecto aún no tiene Acta Final cerrada"
+                                        >
+                                            <i class="bi bi-file-earmark-pdf me-1"></i>Acta Final PDF (Pendiente)
+                                        </button>
                                     </div>
 
                                     <!-- Planilla Vinculación Excel -->
@@ -530,6 +533,7 @@ const props = defineProps({
     socializaciones: Array,
     secciones: { type: Array, default: () => [] },
     trayectos: { type: Array, default: () => [] },
+    actasProyectosIds: { type: Array, default: () => [] },
 });
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -618,6 +622,15 @@ const tokenJuradoActivo = (soc) => {
         soc?.equipo?.proyecto_comunidad?.token_jurado ||
         null
     );
+};
+
+const tieneActaFinal = (soc) => {
+    const pcoId = soc?.equipo?.proyectoComunidad?.pco_id || soc?.equipo?.proyecto_comunidad?.pco_id;
+    return Boolean(pcoId && (props.actasProyectosIds || []).includes(Number(pcoId)));
+};
+
+const mostrarAvisoActaPendiente = () => {
+    alert("Este proyecto aún no cuenta con un Acta Final cerrada. Debe culminar la Socialización Final en Semestre Par para generar el Acta PDF.");
 };
 
 const obtenerUrlJurado = (soc) => {

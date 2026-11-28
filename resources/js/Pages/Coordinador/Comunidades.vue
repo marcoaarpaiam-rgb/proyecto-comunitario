@@ -209,6 +209,8 @@
                         style="
                             padding: 0.75rem 1rem;
                             display: flex;
+                            flex-wrap: wrap;
+                            gap: 0.75rem;
                             justify-content: space-between;
                             align-items: center;
                             border-top: 1px solid var(--border);
@@ -221,7 +223,7 @@
                             }}
                             de {{ filtradas.length }}</span
                         >
-                        <div class="d-flex gap-1">
+                        <div class="d-flex flex-wrap gap-1">
                             <button
                                 class="btn btn-sm btn-outline-secondary"
                                 :disabled="pagina === 1"

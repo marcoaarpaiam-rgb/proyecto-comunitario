@@ -142,8 +142,8 @@
                         :key="eq.equ_id"
                         class="card-p"
                     >
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                            <div>
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                            <div style="min-width: 0; flex: 1 1 260px;">
                                 <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                     <span class="badge bg-dark font-monospace">{{ eq.equ_codigo }}</span>
                                     <span class="badge bg-secondary-subtle text-secondary border">
@@ -193,7 +193,7 @@
                                 </div>
                             </div>
 
-                            <div class="d-flex flex-wrap align-items-center gap-2">
+                            <div class="d-flex flex-wrap align-items-center justify-content-md-end gap-2" style="flex: 0 1 auto;">
                                 <SemaforoEquipo
                                     v-if="diagnosticosEquipos[eq.equ_id]"
                                     :diagnostico="diagnosticosEquipos[eq.equ_id]"
@@ -201,14 +201,14 @@
                                 />
                                 <button
                                     v-if="esPendienteAprobacion(eq)"
-                                    class="btn btn-warning btn-sm fw-bold"
+                                    class="btn btn-warning btn-sm fw-bold text-nowrap"
                                     @click="abrirRevisionComunidad(eq)"
                                 >
                                     <i class="bi bi-clipboard2-check me-1"></i>Revisar Postulación
                                 </button>
                                 <Link
                                     :href="`/profesor/equipos/${eq.equ_id}/expediente`"
-                                    class="btn btn-outline-primary btn-sm"
+                                    class="btn btn-outline-primary btn-sm text-nowrap"
                                     title="Consultar expediente completo"
                                 >
                                     <i class="bi bi-eye me-1"></i>Consultar

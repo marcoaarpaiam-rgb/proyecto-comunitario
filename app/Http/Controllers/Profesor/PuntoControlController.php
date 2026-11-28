@@ -184,6 +184,20 @@ class PuntoControlController extends Controller
         // Obtener el trayecto del equipo automáticamente
         $equipo = \App\Models\Equipo::findOrFail($request->puc_id_equ);
 
+        // Regla de negocio: No permitir crear puntos de control sin esquema de evaluación configurado
+        $tieneEsquema = \Illuminate\Support\Facades\DB::table('esquema_seccion as es')
+            ->join('esquemas_evaluacion as ee', 'es.esq_sec_id_esq', '=', 'ee.esq_id')
+            ->where('es.esq_sec_id_sec', $equipo->equ_id_sec)
+            ->where('es.esq_sec_activo', 1)
+            ->where('ee.esq_activo', 1)
+            ->exists();
+
+        if (!$tieneEsquema) {
+            return back()->withErrors([
+                'puc_id_equ' => 'Debes confirmar o configurar primero el Esquema de Evaluación para la sección de este equipo antes de crear Puntos de Control.',
+            ]);
+        }
+
         $ultimoOrden = PuntoControl::where('puc_id_equ', $request->puc_id_equ)
             ->where('puc_status', true)
             ->max('puc_orden') ?? 0;

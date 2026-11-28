@@ -462,13 +462,21 @@ onMounted(() => {
     background: var(--bg-th);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 0.6rem 0.4rem;
+    padding: 0.6rem 0.35rem;
     text-align: center;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
 }
 .sp-val {
-    font-size: 1.25rem;
+    font-size: clamp(0.75rem, 1.05vw, 1.1rem);
     font-weight: 800;
-    line-height: 1.1;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .sp-lbl {
     font-size: 0.72rem;

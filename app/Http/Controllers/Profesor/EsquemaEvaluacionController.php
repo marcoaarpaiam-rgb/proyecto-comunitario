@@ -314,10 +314,42 @@ class EsquemaEvaluacionController extends Controller
             ->where('pse_status', true)
             ->pluck('pse_id_sec');
 
+        if ($request->filled('sec_id')) {
+            $idsSecciones = $idsSecciones->filter(fn($id) => (int) $id === (int) $request->sec_id);
+        }
+
         $lapsoActivo = \App\Models\PeriodoAcademico::lapsoActivoTexto();
         $esqCualitativo = EsquemaEvaluacion::where('esq_activo', true)->where('esq_modo', 'cualitativo_respaldado')->first();
-        $esqCuantitativo = EsquemaEvaluacion::where('esq_activo', true)->where('esq_modo', 'cuantitativo')->first();
+        if (!$esqCualitativo) {
+            $esqCualitativo = EsquemaEvaluacion::create([
+                'esq_nombre'           => 'Evaluación Cualitativa Literal PNFI',
+                'esq_descripcion'      => 'Esquema oficial para semestres impares con baremo literal A/B/C/D.',
+                'esq_modo'             => 'cualitativo_respaldado',
+                'esq_escala_min'       => 1,
+                'esq_escala_max'       => 20,
+                'esq_nota_aprobatoria' => null,
+                'esq_criterios'        => json_encode(['criterios' => []]),
+                'esq_es_plantilla'     => true,
+                'esq_activo'           => true,
+            ]);
+        }
 
+        $esqCuantitativo = EsquemaEvaluacion::where('esq_activo', true)->where('esq_modo', 'cuantitativo')->first();
+        if (!$esqCuantitativo) {
+            $esqCuantitativo = EsquemaEvaluacion::create([
+                'esq_nombre'           => 'Evaluación Cuantitativa PST UPTP',
+                'esq_descripcion'      => 'Esquema oficial para semestres pares (escala 1 a 20 pts, mínima aprobatoria 16 pts).',
+                'esq_modo'             => 'cuantitativo',
+                'esq_escala_min'       => 1,
+                'esq_escala_max'       => 20,
+                'esq_nota_aprobatoria' => 16,
+                'esq_criterios'        => json_encode(['criterios' => []]),
+                'esq_es_plantilla'     => true,
+                'esq_activo'           => true,
+            ]);
+        }
+
+        $asignadas = 0;
         foreach ($idsSecciones as $secId) {
             $seccion = Seccion::find($secId);
             if (!$seccion) continue;
@@ -338,10 +370,11 @@ class EsquemaEvaluacionController extends Controller
                         'updated_at'     => now(),
                     ]
                 );
+                $asignadas++;
             }
         }
 
-        return back()->with('success', 'Esquemas de evaluación oficiales asignados correctamente a tus secciones.');
+        return back()->with('success', "Esquema(s) oficial(es) confirmado(s) correctamente para {$asignadas} sección(es).");
     }
 
     /**

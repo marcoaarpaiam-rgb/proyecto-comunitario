@@ -529,16 +529,6 @@
                                 </h6>
                                 <div class="d-flex gap-2 align-items-center flex-wrap">
                                     <a
-                                        v-if="socFinalProgramada && equipo.proyecto_comunidad?.token_jurado"
-                                        :href="`/evaluacion-jurado/${equipo.proyecto_comunidad.token_jurado}`"
-                                        target="_blank"
-                                        class="btn btn-sm btn-warning text-dark fw-bold"
-                                        style="font-size: 0.82rem; min-height: 44px; display: inline-flex; align-items: center;"
-                                        title="Abrir panel temporal de 12 horas para jurados y responsable de la comunidad"
-                                    >
-                                        <i class="bi bi-link-45deg me-1"></i>Panel Jurado (12h)
-                                    </a>
-                                    <a
                                         v-if="socFinalProgramada && equipo.proyecto_comunidad"
                                         :href="`/evaluaciones/recorrido/${equipo.proyecto_comunidad.pco_id}`"
                                         class="btn btn-sm btn-outline-danger"
@@ -684,7 +674,7 @@
                                             </div>
                                             <div class="small text-muted">
                                                 <span v-if="equipo.proyecto_comunidad?.token_jurado">
-                                                    Acceso activo: <a :href="'/evaluacion-jurado/' + equipo.proyecto_comunidad.token_jurado" target="_blank" class="fw-bold text-danger text-decoration-underline">Panel Temporal de Evaluación</a>
+                                                    <i class="bi bi-check-circle-fill text-success me-1"></i>Enlace temporal de 12h activo para el jurado.
                                                 </span>
                                                 <span v-else>
                                                     Genere el enlace temporal de 12 horas en la gestión de Socializaciones.

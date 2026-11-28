@@ -695,7 +695,7 @@
                                 </div>
                                 <div>{{ responsable.rco_telefono ?? "—" }}</div>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <div
                                     class="small fw-bold"
                                     style="color: var(--text-muted)"
@@ -703,15 +703,6 @@
                                     Email
                                 </div>
                                 <div>{{ responsable.rco_email ?? "—" }}</div>
-                            </div>
-                            <div class="col-6">
-                                <div
-                                    class="small fw-bold"
-                                    style="color: var(--text-muted)"
-                                >
-                                    Desde
-                                </div>
-                                <div>{{ responsable.rco_fecha_inicio }}</div>
                             </div>
                         </div>
 
@@ -783,7 +774,7 @@
                                         placeholder="0412-1234567"
                                     />
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12">
                                     <label class="form-label small fw-bold"
                                         >Email</label
                                     >
@@ -792,18 +783,6 @@
                                         class="form-control form-control-sm"
                                         v-model="formResponsable.rco_email"
                                         placeholder="correo@ejemplo.com"
-                                    />
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold"
-                                        >Fecha de inicio *</label
-                                    >
-                                    <input
-                                        type="date"
-                                        class="form-control form-control-sm"
-                                        v-model="
-                                            formResponsable.rco_fecha_inicio
-                                        "
                                     />
                                 </div>
                             </div>
@@ -997,6 +976,26 @@ const enviarPostulacion = () => {
             alert("Ya existe una comunidad registrada con ese nombre en el catálogo. Selecciónala del listado existente.");
             return;
         }
+    } else if (formPost.value.pco_id_com && Number(props.equipo?.equ_id_tra) === 1) {
+        const comSel = (props.comunidades || []).find(
+            (c) => String(c.com_id) === String(formPost.value.pco_id_com)
+        );
+        const yaTieneAlfabetizacion = (comSel?.proyectos || []).some(
+            (p) =>
+                p.pco_status !== false &&
+                p.pco_id_equ !== props.equipo?.equ_id &&
+                Number(p.equipo?.equ_id_tra) === 1
+        );
+        if (yaTieneAlfabetizacion) {
+            window.dispatchEvent(new CustomEvent("siscon:feedback", {
+                detail: {
+                    type: "error",
+                    title: "Comunidad no disponible para Alfabetización",
+                    message: "Esta comunidad ya tiene un proyecto de Alfabetización Tecnológica registrado. Selecciona otra comunidad.",
+                },
+            }));
+            return;
+        }
     }
     if (tipoProyectoAuto.value?.tpr_id) {
         formPost.value.pco_id_tpr = tipoProyectoAuto.value.tpr_id;
@@ -1021,7 +1020,6 @@ const formResponsable = ref({
     rco_cargo: "",
     rco_telefono: "",
     rco_email: "",
-    rco_fecha_inicio: "",
 });
 
 const guardarResponsable = () => {

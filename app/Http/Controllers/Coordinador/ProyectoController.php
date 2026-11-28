@@ -70,6 +70,24 @@ class ProyectoController extends Controller
 
         // Validación contra proyectos duplicados o similares en la misma comunidad con requerimiento de justificación
         $equipoActual = Equipo::find($request->pco_id_equ);
+
+        $esAlfabetizacion = ($equipoActual && (int) $equipoActual->equ_id_tra === 1)
+            || str_contains(mb_strtolower((string) (TipoProyecto::where('tpr_id', $request->pco_id_tpr)->value('tpr_nombre') ?? ''), 'UTF-8'), 'alfabet');
+        if ($esAlfabetizacion) {
+            $yaTieneAlfabet = ProyectoComunidad::where('pco_id_com', (int) $request->pco_id_com)
+                ->where('pco_status', true)
+                ->where('pco_id_equ', '!=', $request->pco_id_equ)
+                ->where(function ($q) {
+                    $q->whereHas('equipo', fn($eq) => $eq->where('equ_status', true)->where('equ_id_tra', 1))
+                      ->orWhereHas('tipoProyecto', fn($tp) => $tp->whereRaw('LOWER(tpr_nombre) LIKE ?', ['%alfabet%']));
+                })
+                ->exists();
+            if ($yaTieneAlfabet) {
+                return back()->withErrors([
+                    'pco_id_com' => 'Esta comunidad ya tiene un proyecto de Alfabetización Tecnológica registrado. No se permite registrar otro proyecto de Alfabetización en la misma comunidad.',
+                ]);
+            }
+        }
         $tituloActual = $equipoActual?->equ_titulo ?? '';
         $justificacion = $request->justificacion_duplicidad ?? $request->pco_justificacion_duplicidad;
 

@@ -36,6 +36,8 @@
                     </button>
                     <button
                         class="btn btn-danger btn-sm fw-bold rounded-pill px-3"
+                        :disabled="Boolean(filtroSeccion && seccionFiltroSinEsquema)"
+                        :title="filtroSeccion && seccionFiltroSinEsquema ? 'Primero debes confirmar el Esquema de Evaluación para esta sección' : 'Crear nuevo punto de control'"
                         @click="abrirModal()"
                     >
                         <i class="bi bi-plus-lg me-1"></i>Nuevo Punto
@@ -986,10 +988,11 @@ const confirmandoEsquema = ref(false);
 
 const confirmarEsquemaRecomendado = () => {
     confirmandoEsquema.value = true;
-    if (filtroSeccion.value && seccionFiltroSinEsquema.value) {
-        const info = seccionFiltroSinEsquema.value;
+    const info = seccionFiltroSinEsquema.value;
+    const esqId = info?.id_esquema_recomendado || info?.esq_id;
+    if (filtroSeccion.value && info && esqId) {
         router.post("/profesor/esquemas-evaluacion/asignar", {
-            esq_sec_id_esq: info.id_esquema_recomendado || info.esq_id,
+            esq_sec_id_esq: esqId,
             esq_sec_id_sec: filtroSeccion.value,
             esq_sec_lapso: info.lapso,
             accion: "asignar",
@@ -998,7 +1001,9 @@ const confirmarEsquemaRecomendado = () => {
             onFinish: () => { confirmandoEsquema.value = false; }
         });
     } else {
-        router.post("/profesor/esquemas-evaluacion/auto-asignar", {}, {
+        router.post("/profesor/esquemas-evaluacion/auto-asignar", {
+            sec_id: filtroSeccion.value || null,
+        }, {
             preserveScroll: true,
             onFinish: () => { confirmandoEsquema.value = false; }
         });
@@ -1441,6 +1446,26 @@ const paginasV = computed(() => {
     return p;
 });
 const abrirModal = () => {
+    if (filtroSeccion.value && seccionFiltroSinEsquema.value) {
+        window.dispatchEvent(new CustomEvent("siscon:feedback", {
+            detail: {
+                type: "error",
+                title: "Esquema de Evaluación Requerido",
+                message: "Debes confirmar el Esquema de Evaluación de esta sección antes de crear un Punto de Control.",
+            },
+        }));
+        return;
+    }
+    if (!filtroSeccion.value && (props.secciones || []).length > 0 && seccionesSinEsquema.value.length === (props.secciones || []).length) {
+        window.dispatchEvent(new CustomEvent("siscon:feedback", {
+            detail: {
+                type: "error",
+                title: "Esquema de Evaluación Requerido",
+                message: "Tus secciones aún no tienen un Esquema de Evaluación confirmado. Haz clic en 'Confirmar Esquemas Oficiales' primero.",
+            },
+        }));
+        return;
+    }
     modalPuntoRef.value?.abrir();
 };
 const guardar = () => {

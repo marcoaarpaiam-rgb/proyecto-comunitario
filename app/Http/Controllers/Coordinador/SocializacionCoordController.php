@@ -24,6 +24,7 @@ class SocializacionCoordController extends Controller
             ])->orderBy('soc_fecha', 'desc')->get(),
             'secciones' => \App\Models\Seccion::where('sec_status', true)->with('trayecto')->orderBy('sec_codigo')->get(),
             'trayectos' => \App\Models\Trayecto::where('tra_status', true)->orderBy('tra_numero')->get(),
+            'actasProyectosIds' => \Illuminate\Support\Facades\DB::table('actas_finales_trayecto')->pluck('id_proyecto')->toArray(),
         ]);
     }
 }

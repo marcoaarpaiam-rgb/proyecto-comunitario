@@ -534,6 +534,36 @@ class LiderController extends Controller
             }
         }
 
+        if ($request->modo_comunidad === 'nueva') {
+            $nombreComLower = mb_strtolower(trim($request->nueva_comunidad_nombre), 'UTF-8');
+            $comunidadDuplicada = \App\Models\Comunidad::whereRaw('LOWER(TRIM(com_nombre)) = ?', [$nombreComLower])->exists();
+            if ($comunidadDuplicada) {
+                return back()->withErrors([
+                    'nueva_comunidad_nombre' => 'Ya existe una comunidad registrada con ese nombre en el catálogo. Selecciónala del listado existente.',
+                ]);
+            }
+        } elseif (!empty($request->pco_id_com)) {
+            $esAlfabetizacionEquipo = ((int) $equipo->equ_id_tra === 1)
+                || str_contains(mb_strtolower((string) (\App\Models\TipoProyecto::where('tpr_id', $request->pco_id_tpr)->value('tpr_nombre') ?? ''), 'UTF-8'), 'alfabet');
+
+            if ($esAlfabetizacionEquipo) {
+                $yaTieneAlfabetizacion = \App\Models\ProyectoComunidad::where('pco_id_com', (int) $request->pco_id_com)
+                    ->where('pco_status', true)
+                    ->where('pco_id_equ', '!=', $equipo->equ_id)
+                    ->where(function ($q) {
+                        $q->whereHas('equipo', fn($eq) => $eq->where('equ_status', true)->where('equ_id_tra', 1))
+                          ->orWhereHas('tipoProyecto', fn($tp) => $tp->whereRaw('LOWER(tpr_nombre) LIKE ?', ['%alfabet%']));
+                    })
+                    ->exists();
+
+                if ($yaTieneAlfabetizacion) {
+                    return back()->withErrors([
+                        'pco_id_com' => 'Esta comunidad ya tiene un proyecto de Alfabetización Tecnológica registrado. No se permite registrar otro proyecto de Alfabetización en la misma comunidad.',
+                    ]);
+                }
+            }
+        }
+
         \DB::transaction(function () use ($request, $equipo, $lider) {
             if ($request->modo_comunidad === 'nueva') {
                 $comunidad = \App\Models\Comunidad::create([
@@ -707,28 +737,16 @@ class LiderController extends Controller
             'rco_cargo'        => 'required|string|max:100',
             'rco_telefono'     => 'nullable|string|max:20',
             'rco_email'        => 'nullable|email|max:150',
-            'rco_fecha_inicio' => 'required|date',
         ], [
             'rco_cedula.required'       => 'La cédula del responsable es obligatoria.',
             'rco_nombre.required'       => 'El nombre es obligatorio.',
             'rco_apellido.required'     => 'El apellido es obligatorio.',
             'rco_cargo.required'        => 'El cargo es obligatorio.',
-            'rco_fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
         ]);
 
         $existente = \App\Models\Usuario::where('usu_cedula', $request->rco_cedula)->first();
         if ($existente && $existente->usu_tiene_acceso) {
             return back()->withErrors(['rco_cedula' => 'Esa cédula pertenece a un usuario del sistema.']);
-        }
-
-        if ($request->modo_comunidad === 'nueva') {
-            $nombreComLower = mb_strtolower(trim($request->nueva_comunidad_nombre), 'UTF-8');
-            $comunidadDuplicada = \App\Models\Comunidad::whereRaw('LOWER(TRIM(com_nombre)) = ?', [$nombreComLower])->exists();
-            if ($comunidadDuplicada) {
-                return back()->withErrors([
-                    'nueva_comunidad_nombre' => 'Ya existe una comunidad registrada con ese nombre en el catálogo. Selecciónala del listado existente.',
-                ]);
-            }
         }
 
         \DB::transaction(function () use ($request, $equipo, $lider) {
@@ -750,17 +768,19 @@ class LiderController extends Controller
             \App\Models\ResponsableComunidad::where('rco_id_com', $comunidadId)->where('rco_status', true)
                 ->update(['rco_status' => false, 'rco_fecha_fin' => now()->toDateString()]);
 
+            $fechaInicioResp = $request->rco_fecha_inicio ?: now()->toDateString();
+
             \App\Models\ResponsableComunidad::create([
                 'rco_id_usu'         => $persona->usu_id,
                 'rco_id_com'         => $comunidadId,
-                'rco_fecha_inicio'   => $request->rco_fecha_inicio,
+                'rco_fecha_inicio'   => $fechaInicioResp,
                 'rco_status'         => true,
                 'rco_id_usu_created' => $lider->usu_id,
             ]);
 
             \App\Models\PersonaCargo::create([
                 'pca_cargo'          => $request->rco_cargo,
-                'pca_fecha_inicio'   => $request->rco_fecha_inicio,
+                'pca_fecha_inicio'   => $fechaInicioResp,
                 'pca_status'         => true,
                 'pca_id_usu'         => $persona->usu_id,
                 'pca_id_usu_created' => $lider->usu_id,
